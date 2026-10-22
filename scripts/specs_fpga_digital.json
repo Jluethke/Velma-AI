@@ -1,0 +1,891 @@
+[
+  {
+    "chain_name": "timing-closure-methodology",
+    "description": "Achieve timing closure on an FPGA or ASIC design through systematic static timing analysis, critical path optimization, and clock uncertainty budgeting.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "timing", "sta", "clock"],
+    "steps": [
+      {
+        "flow_name": "timing-constraint-specification",
+        "description": "Define all timing constraints for the design: clock definitions, generated clocks, input/output delays, and timing exceptions (false paths, multicycle paths, max delay overrides).",
+        "inputs": [
+          {"name": "design-netlist", "desc": "Synthesized design netlist or RTL with target device"},
+          {"name": "interface-timing-specs", "desc": "Timing requirements for every external interface (setup/hold at pins, clock-to-output, propagation delays from datasheets)"},
+          {"name": "clock-architecture", "desc": "All clock sources, PLLs, clock dividers, and derived clocks with their frequency and phase relationships"}
+        ],
+        "outputs": [
+          {"name": "constraint-file", "desc": "SDC or XDC constraint file with all clock definitions, I/O delays, false paths, multicycle paths, and max/min delay exceptions"},
+          {"name": "constraint-coverage-report", "desc": "List of every clock domain and I/O port showing which constraints cover them and which remain unconstrained"}
+        ],
+        "process": [
+          "Define every primary clock with create_clock: period derived from frequency, waveform edges for non-50% duty cycle, source pin at the clock input pad or oscillator output.",
+          "Define generated clocks with create_generated_clock for every PLL output, clock divider, and clock mux output. Specify the master clock, division/multiplication factor, and source pin. Do not let the tool auto-derive these: explicit generated clocks prevent incorrect timing paths.",
+          "Specify input delays (set_input_delay) for every input port relative to its capturing clock. Use both -max (setup) and -min (hold) values derived from the upstream device's Tco and board trace delay.",
+          "Specify output delays (set_output_delay) for every output port relative to its launching clock. Derive from the downstream device's Tsu and Th, plus board trace delay.",
+          "Identify and constrain false paths: paths that are structurally present but functionally impossible (mux select lines that prevent both paths from being active, test-only paths, asynchronous reset fanout). Use set_false_path with -from/-to/-through to be as specific as possible. Overly broad false paths hide real failures.",
+          "Identify multicycle paths: paths where data is stable for more than one clock cycle before being captured (enable-gated registers, multi-cycle arithmetic). Use set_multicycle_path with the correct multiplier and -hold adjustment (multiplier minus 1 for same-edge, multiplier for different-edge).",
+          "Run a constraint coverage check: verify every clock domain has constraints, every I/O port has input or output delay, and no ports are unconstrained. Unconstrained paths are untimed and will silently fail in hardware."
+        ],
+        "tags": ["fpga", "timing", "constraints", "sdc"]
+      },
+      {
+        "flow_name": "static-timing-analysis-execution",
+        "description": "Run static timing analysis across all relevant operating conditions (corners) and interpret the results to identify failing paths and their root causes.",
+        "inputs": [
+          {"name": "constraint-file", "desc": "Complete SDC/XDC constraint file"},
+          {"name": "constraint-coverage-report", "desc": "Constraint coverage verification results"}
+        ],
+        "outputs": [
+          {"name": "timing-summary", "desc": "Worst negative slack (WNS), total negative slack (TNS), and worst hold slack for every clock domain and inter-clock path"},
+          {"name": "critical-path-list", "desc": "Top 20 failing or near-failing paths with full breakdown: launch clock, capture clock, data path delay, clock path delay, clock uncertainty, required time, arrival time, slack"}
+        ],
+        "process": [
+          "Run STA at the slow corner (high temperature, low voltage, worst-case process) for setup analysis. This is the binding constraint for maximum operating frequency.",
+          "Run STA at the fast corner (low temperature, high voltage, best-case process) for hold analysis. Hold violations cannot be fixed by slowing the clock; they must be structurally resolved.",
+          "For each failing path, decompose the slack: slack = required_time - arrival_time. Required time = capture_edge + Tsu - clock_uncertainty. Arrival time = launch_edge + Tclk_launch + Tlogic + Trouting. Identify whether the failure is logic-dominated (too many LUT levels) or routing-dominated (long physical distance).",
+          "Check clock uncertainty contributions: PLL jitter, duty cycle distortion, clock network skew. If uncertainty consumes more than 15% of the clock period, investigate PLL settings or clock tree structure.",
+          "Identify paths crossing clock domains. If they are not covered by false_path or set_max_delay constraints, they represent metastability risks. Flag them for CDC analysis.",
+          "Generate a ranked list of all paths with negative slack, sorted by slack magnitude. Include the datapath breakdown (each cell delay and routing delay in the chain) so optimization targets are visible."
+        ],
+        "tags": ["fpga", "timing", "sta", "analysis"]
+      },
+      {
+        "flow_name": "critical-path-optimization",
+        "description": "Systematically reduce delay on failing timing paths through RTL restructuring, retiming, pipelining, logic optimization, and physical constraints.",
+        "inputs": [
+          {"name": "timing-summary", "desc": "Setup and hold timing results across corners"},
+          {"name": "critical-path-list", "desc": "Failing paths with detailed delay breakdowns"}
+        ],
+        "outputs": [
+          {"name": "optimization-changes", "desc": "Specific RTL, constraint, or physical changes applied to each failing path with before/after slack"},
+          {"name": "post-optimization-timing", "desc": "Updated timing summary after all changes, confirming closure or identifying remaining failures"}
+        ],
+        "process": [
+          "For logic-dominated paths (many LUT levels), identify the deepest combinational chain. Options: (a) insert a pipeline register to split the path across two cycles (requires protocol awareness for latency change), (b) restructure the logic tree to reduce depth (e.g., convert a priority chain to a parallel comparison with a final mux), (c) use DSP blocks for arithmetic-heavy paths.",
+          "For routing-dominated paths, apply physical constraints: floorplan related logic into the same region (Pblock in Vivado, LogicLock in Quartus), use register duplication (retiming) to move registers closer to the fanout endpoints, or constrain placement with RLOC or LOC attributes.",
+          "For hold violations, add delay to the data path. In FPGA, this means inserting buffer registers or using IDELAY primitives. Never fix hold by adding routing delay via tool directives; it is not process-corner-safe.",
+          "For paths failing due to clock skew between domains, consider moving to a single clock domain, adding a synchronization structure (FIFO or handshake), or adjusting PLL phase relationships if both clocks are derived from the same source.",
+          "Apply register balancing (retiming) where the tool supports it: allow the synthesis tool to move registers forward or backward through combinational logic to equalize path delays. Verify that retiming does not change the functional behavior (check reset values, enable signals, and pipeline depth assumptions).",
+          "After each change, re-run STA incrementally. Track slack improvement per change. If a change improves one path but worsens another (due to resource contention or routing congestion), evaluate the net effect before committing.",
+          "Document every optimization with its rationale. A future designer must understand why a pipeline stage exists or why logic was restructured, because removing it will reintroduce the timing failure."
+        ],
+        "tags": ["fpga", "timing", "optimization", "retiming"]
+      },
+      {
+        "flow_name": "timing-signoff-checklist",
+        "description": "Verify that timing is fully closed across all conditions and that no paths are untimed, incorrectly constrained, or masked by overly broad exceptions.",
+        "inputs": [
+          {"name": "optimization-changes", "desc": "All changes applied and their timing impact"},
+          {"name": "post-optimization-timing", "desc": "Final timing summary"}
+        ],
+        "outputs": [
+          {"name": "timing-signoff-report", "desc": "Complete signoff report confirming closure status, listing any waivers with justification, and documenting constraint coverage"},
+          {"name": "remaining-risks", "desc": "Any paths with positive but marginal slack (under 10% of period), waivers for non-closable paths, and temperature/voltage operating restrictions if applicable"}
+        ],
+        "process": [
+          "Confirm zero negative slack on setup analysis at the slow corner for every constrained clock domain. Any remaining negative slack is a hard failure.",
+          "Confirm zero negative slack on hold analysis at the fast corner. Hold failures cause intermittent data corruption that is extremely difficult to debug in the lab.",
+          "Re-verify constraint coverage: every clock domain constrained, every I/O port with delays, every CDC path either false-pathed (with documented justification) or constrained with set_max_delay.",
+          "Audit all false_path and multicycle_path exceptions. For each one, verify the justification is still valid. A false path on a mux select is valid only if the select is truly static during data transfer. A multicycle path is valid only if the enable signal enforces the multi-cycle contract.",
+          "Check for paths with marginal positive slack (less than 10% of the clock period). These paths may fail under temperature or voltage variation beyond the analyzed corners, or with slight manufacturing variation on the specific device. Flag them for monitoring.",
+          "Verify that the timing model matches the actual device: speed grade, temperature grade, voltage supply levels. A design timed for commercial grade will fail if deployed on an industrial-grade device with wider temperature range.",
+          "Generate the signoff report with: WNS and TNS for every domain, constraint coverage percentage, list of all timing exceptions with justification, list of marginal paths, and any operating restrictions."
+        ],
+        "tags": ["fpga", "timing", "signoff", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "clock-domain-crossing-design",
+    "description": "Design safe clock domain crossing structures by analyzing metastability, selecting the correct synchronization method for each signal type, and verifying CDC correctness.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "cdc", "metastability", "synchronization"],
+    "steps": [
+      {
+        "flow_name": "cdc-signal-inventory",
+        "description": "Identify every signal that crosses between clock domains and classify each by type (single-bit control, multi-bit bus, pulse, gray-coded counter) to determine the required synchronization method.",
+        "inputs": [
+          {"name": "design-rtl", "desc": "RTL source code or netlist of the design"},
+          {"name": "clock-domain-map", "desc": "List of all clock domains with their frequencies and phase relationships"}
+        ],
+        "outputs": [
+          {"name": "cdc-signal-list", "desc": "Every signal crossing clock domains, classified by type: single-bit level, single-bit pulse, multi-bit bus, gray-coded bus, handshake group, or asynchronous reset"},
+          {"name": "crossing-risk-assessment", "desc": "Risk level for each crossing based on frequency ratio, data rate, and consequences of metastable failure"}
+        ],
+        "process": [
+          "Enumerate every register-to-register path where the source and destination are in different clock domains. The source domain is defined by the clock that drives the source register; the destination domain by the clock driving the destination register.",
+          "Classify each crossing signal: (a) single-bit level signal that changes slowly relative to the destination clock, (b) single-bit pulse that is high for exactly one source clock cycle, (c) multi-bit data bus that must be captured atomically, (d) address or counter value suitable for gray-code encoding, (e) group of signals that form a transaction and must be captured coherently, (f) asynchronous reset that fans out to multiple domains.",
+          "For each crossing, calculate the metastability risk. MTBF = 1 / (f_dest * f_data * T_resolve), where T_resolve is the metastability resolution time constant for the target technology. For a two-flop synchronizer in a modern FPGA, MTBF is typically decades for data rates below 10% of the destination clock frequency. If the calculated MTBF is below the system's required operating lifetime, add synchronizer stages.",
+          "Identify which crossings the design already synchronizes and which are raw unsynchronized crossings. Raw crossings are immediate metastability hazards.",
+          "Assess the consequence of failure for each crossing: a metastable control signal may cause one wrong decision, while a metastable address pointer in a FIFO can corrupt an entire data stream."
+        ],
+        "tags": ["fpga", "cdc", "metastability", "analysis"]
+      },
+      {
+        "flow_name": "synchronizer-structure-selection",
+        "description": "Select and implement the correct synchronization structure for each CDC signal type: two-flop for single bits, gray-code for counters, handshake for buses, and async FIFO for streaming data.",
+        "inputs": [
+          {"name": "cdc-signal-list", "desc": "Classified crossing signals with their types"},
+          {"name": "crossing-risk-assessment", "desc": "Risk level and MTBF calculations for each crossing"}
+        ],
+        "outputs": [
+          {"name": "synchronizer-design", "desc": "Specific synchronizer structure for each crossing: schematic, RTL implementation, and timing constraints required"},
+          {"name": "synchronizer-latency-budget", "desc": "Latency (in destination clock cycles) introduced by each synchronizer, for system-level timing analysis"}
+        ],
+        "process": [
+          "For single-bit level signals (enables, status flags, mode selects): implement a two-flop synchronizer. Both flops must be in the destination clock domain, placed physically close (same slice in FPGA), with no combinational logic between them. Constrain with set_max_delay (typically one destination clock period) between the source register and the first synchronizer flop. The signal must be stable for at least one full destination clock period plus the setup time of the first flop.",
+          "For single-bit pulses that are high for exactly one source clock cycle: use a toggle synchronizer (pulse-to-toggle in source domain, two-flop synchronizer on the toggle signal, toggle-to-pulse in destination domain) when the source clock is faster than the destination. When the destination is faster, a two-flop synchronizer on the pulse works if the pulse width exceeds the destination clock period plus setup time.",
+          "For multi-bit data buses where all bits must be captured coherently: use a handshake protocol. The source presents the data and asserts a request signal. The request is synchronized to the destination domain (two-flop). The destination captures the data (which is stable because the source holds it until acknowledged) and asserts an acknowledge. The acknowledge is synchronized back to the source. The source can then change the data. Throughput is limited to one transfer per approximately 4-6 clock cycles of the slower domain.",
+          "For counters (FIFO pointers, address generators): convert to gray code in the source domain before crossing. Gray code changes only one bit per increment, so a two-flop synchronizer on each bit captures a value that is at most one count stale, never corrupted. Constrain all bits of the gray-coded bus to arrive within one destination clock cycle of each other (set_max_delay with -datapath_only).",
+          "For streaming data that must cross domains continuously at high throughput: use an asynchronous FIFO. The write port operates in the source clock domain; the read port in the destination domain. Pointers are gray-coded and synchronized as above. FIFO depth must absorb the burst rate mismatch plus the synchronization latency.",
+          "For asynchronous resets: use an asynchronous assert, synchronous deassert pattern. The reset assertion is immediate (no synchronizer delay). The reset deassertion passes through a two-flop synchronizer clocked by the destination domain, ensuring all registers in that domain release reset on the same clock edge."
+        ],
+        "tags": ["fpga", "cdc", "synchronizer", "fifo", "handshake"]
+      },
+      {
+        "flow_name": "cdc-constraint-implementation",
+        "description": "Write the timing constraints that make synchronizers work correctly in the physical implementation: max delay on crossing paths, false paths where appropriate, and placement constraints for synchronizer registers.",
+        "inputs": [
+          {"name": "synchronizer-design", "desc": "Synchronizer structures with their implementation details"},
+          {"name": "synchronizer-latency-budget", "desc": "Latency requirements for each synchronizer"}
+        ],
+        "outputs": [
+          {"name": "cdc-constraints", "desc": "SDC/XDC constraints specific to all CDC paths: set_max_delay, set_false_path, ASYNC_REG attributes, and placement constraints"},
+          {"name": "constraint-rationale", "desc": "Justification for each constraint, explaining why it is safe and what failure mode it prevents"}
+        ],
+        "process": [
+          "For every two-flop synchronizer: set the ASYNC_REG attribute on both flops. This tells the tool to place them in the same slice (minimizing routing delay between them, which maximizes metastability resolution time) and prevents the tool from optimizing them away.",
+          "Apply set_max_delay -datapath_only between the source register and the first synchronizer flop. The value should be one destination clock period. The -datapath_only flag excludes clock skew, which is appropriate because the source and destination clocks are unrelated and skew between them is meaningless.",
+          "Do NOT use set_false_path on synchronized CDC paths. A false path removes the path from timing analysis entirely, which means the tool may route it with arbitrarily long delay. The set_max_delay constraint ensures the data arrives within a bounded time, which is necessary for the synchronizer to function.",
+          "For gray-coded bus crossings: apply set_max_delay with the same value to ALL bits of the bus. This ensures all bits arrive at the synchronizer flops within the same clock period, preventing different bits from being captured on different clock edges (which would give a non-gray-code value and corrupt the pointer).",
+          "For handshake crossings: constrain the request and acknowledge signals with set_max_delay as above. The data bus between source and destination does not need a CDC constraint because it is stable (held by the handshake protocol) when captured.",
+          "Document why each constraint is applied and what failure mode it prevents. Future constraint file edits must preserve these CDC constraints; removing them silently introduces metastability."
+        ],
+        "tags": ["fpga", "cdc", "constraints", "timing"]
+      },
+      {
+        "flow_name": "cdc-verification-method",
+        "description": "Verify CDC correctness using structural analysis, formal verification, and simulation-based techniques to catch synchronization errors that functional simulation misses.",
+        "inputs": [
+          {"name": "cdc-constraints", "desc": "All CDC timing constraints applied to the design"},
+          {"name": "constraint-rationale", "desc": "Justification for each CDC constraint"}
+        ],
+        "outputs": [
+          {"name": "cdc-verification-report", "desc": "Results from structural CDC analysis, formal CDC verification, and any simulation-based CDC checks, listing all findings and their resolution status"},
+          {"name": "cdc-signoff", "desc": "Confirmation that all clock domain crossings are properly synchronized, constrained, and verified, or a list of accepted risks with justification"}
+        ],
+        "process": [
+          "Run a structural CDC analysis tool (Questa CDC, Spyglass CDC, or the equivalent FPGA vendor tool). The tool traces all paths between clock domains and flags: unsynchronized crossings, reconvergence (two CDC paths that merge at a downstream register, causing potential data incoherence), multi-bit crossings without proper synchronization, and combinational logic between synchronizer flops.",
+          "For each structural finding, classify it: (a) real bug requiring a synchronizer, (b) false positive due to a path that is functionally impossible (document why and waive it), (c) already handled by a higher-level protocol (document the protocol and waive it).",
+          "Run formal CDC verification where available. Formal tools prove that the synchronization protocol is correct for all possible timing relationships, not just the ones exercised by simulation. Formal verification catches corner cases like simultaneous assertion of request and acknowledge in a handshake, or gray-code pointer values during FIFO empty-to-non-empty transitions.",
+          "For simulation-based CDC checking: run the design with all clock domains on independent, non-integer-related frequencies. This exposes timing relationships that a single-frequency simulation masks. Inject clock jitter in simulation to exercise the worst-case synchronizer input timing.",
+          "Verify that the design functions correctly after a clock is stopped and restarted (clock gating). Synchronizers must recover without data corruption or protocol deadlock.",
+          "Compile the signoff report: every crossing accounted for, every synchronizer verified, every waiver justified. This report is the evidence that the design will not suffer metastability-related failures in production hardware."
+        ],
+        "tags": ["fpga", "cdc", "verification", "formal"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fifo-design-methodology",
+    "description": "Design synchronous and asynchronous FIFOs from specification through implementation, with correct empty/full generation, depth calculation, and verification.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "fifo", "memory", "data-path"],
+    "steps": [
+      {
+        "flow_name": "fifo-requirements-analysis",
+        "description": "Derive FIFO depth, width, and type (synchronous vs asynchronous) from the system data rates, burst lengths, and clock relationships.",
+        "inputs": [
+          {"name": "data-interface-spec", "desc": "Write-side and read-side data widths, clock frequencies, and burst characteristics (max burst length, average data rate, peak data rate)"},
+          {"name": "system-latency-budget", "desc": "Maximum allowable latency from write to read, and any flow-control signaling requirements (backpressure, almost-full thresholds)"}
+        ],
+        "outputs": [
+          {"name": "fifo-specification", "desc": "FIFO type (sync/async), data width, depth (power of two), empty/full generation method, and required status signals (almost-full, almost-empty, fill level)"},
+          {"name": "depth-calculation-worksheet", "desc": "Step-by-step depth derivation showing worst-case fill scenario, with margin for synchronization latency in async FIFOs"}
+        ],
+        "process": [
+          "Determine if the FIFO is synchronous (single clock domain) or asynchronous (write and read clocks are independent). If both sides share a clock or have a known phase relationship, use synchronous. If clocks are unrelated, use asynchronous.",
+          "Calculate minimum depth for a synchronous FIFO: depth >= (burst_length * write_rate / read_rate) when write_rate > read_rate during bursts. The FIFO must absorb the peak-to-average rate mismatch. If both rates are equal, depth equals the maximum burst length.",
+          "For an asynchronous FIFO, add synchronization latency overhead: the write pointer takes 2-3 destination clock cycles to propagate to the read side (and vice versa). During this latency, the full/empty flags are conservative (may indicate full when not quite full). Add enough depth to absorb data written during this latency: extra_depth = sync_latency_cycles * write_rate.",
+          "Round depth up to the next power of two. Binary and gray-code pointer arithmetic require power-of-two depth for correct wrap-around behavior.",
+          "Define status signals: empty (read side, prevents underflow), full (write side, prevents overflow), almost-full (write side, triggers upstream backpressure N entries before full), almost-empty (read side, signals downstream to prepare for stall), programmable-full/empty thresholds if configurable, fill-level count for monitoring.",
+          "Verify the depth is sufficient by modeling the worst-case scenario: maximum-length burst at peak write rate with minimum read rate, including synchronization delay. If the FIFO overflows in this scenario, increase depth."
+        ],
+        "tags": ["fpga", "fifo", "specification", "depth-calculation"]
+      },
+      {
+        "flow_name": "fifo-pointer-and-flag-design",
+        "description": "Design the FIFO pointer logic and empty/full flag generation, using gray-code pointers for asynchronous FIFOs and binary pointers for synchronous FIFOs.",
+        "inputs": [
+          {"name": "fifo-specification", "desc": "FIFO type, depth, width, and required status signals"},
+          {"name": "depth-calculation-worksheet", "desc": "Depth derivation and margin analysis"}
+        ],
+        "outputs": [
+          {"name": "pointer-logic-design", "desc": "Write pointer, read pointer, and address generation logic with wrap-around handling and gray-code conversion (for async)"},
+          {"name": "flag-generation-logic", "desc": "Empty and full flag logic with precise generation conditions, plus almost-full/almost-empty threshold logic"}
+        ],
+        "process": [
+          "For a synchronous FIFO: use binary write and read pointers of width log2(depth)+1 (the extra bit distinguishes full from empty when pointers wrap). Write pointer increments on write-enable when not full; read pointer increments on read-enable when not empty. Empty when write_ptr == read_ptr. Full when write_ptr[MSB] != read_ptr[MSB] and write_ptr[MSB-1:0] == read_ptr[MSB-1:0].",
+          "For an asynchronous FIFO: use gray-code pointers. Convert binary write pointer to gray code: gray = binary ^ (binary >> 1). Synchronize the gray-coded write pointer to the read clock domain (two-flop synchronizer) and the gray-coded read pointer to the write clock domain.",
+          "Generate empty flag in the read clock domain: empty when the synchronized write pointer (in gray code) equals the read pointer (in gray code). This comparison is done in gray code directly; no conversion back to binary is needed for the equality check.",
+          "Generate full flag in the write clock domain: full when the write pointer and synchronized read pointer differ in the top two bits and match in all remaining bits (in gray code). This is the gray-code equivalent of the binary full condition.",
+          "For almost-full: convert both pointers to binary in the write domain, compute fill level = write_ptr_binary - synced_read_ptr_binary (unsigned subtraction with wrap). Almost-full when fill_level >= (depth - threshold). Note: the fill level in the write domain is conservative (may overcount) because the read pointer is delayed by synchronization.",
+          "For almost-empty: same approach in the read domain using synced_write_ptr and read_ptr. The fill level may undercount, making the almost-empty flag conservative (asserts slightly early).",
+          "Address generation: the memory address is the lower bits of the binary pointer (excluding the MSB used for wrap detection). For gray-code pointers in async FIFO, maintain a separate binary counter in each domain for the memory address; the gray-code pointer is used only for flag generation and synchronization."
+        ],
+        "tags": ["fpga", "fifo", "pointers", "gray-code"]
+      },
+      {
+        "flow_name": "fifo-memory-implementation",
+        "description": "Implement the FIFO storage element using the target FPGA's memory resources (block RAM, distributed RAM, or shift registers) based on depth, width, and access pattern requirements.",
+        "inputs": [
+          {"name": "pointer-logic-design", "desc": "Write and read pointer logic with address generation"},
+          {"name": "flag-generation-logic", "desc": "Empty/full and threshold flag logic"}
+        ],
+        "outputs": [
+          {"name": "fifo-rtl", "desc": "Complete FIFO RTL implementation with memory, pointer logic, flag generation, and interface ports"},
+          {"name": "resource-utilization-estimate", "desc": "Expected FPGA resource usage: BRAM count or LUT count, registers for pointers and synchronizers"}
+        ],
+        "process": [
+          "Select memory type based on depth and width: (a) Distributed RAM (LUT-based) for shallow FIFOs (depth <= 64, width <= 32), offers combinational read (first-word-fall-through with no extra latency). (b) Block RAM for deeper FIFOs, offers registered read output (one cycle read latency). (c) Shift register (SRL) for very small, fixed-depth FIFOs in Xilinx FPGAs.",
+          "For block RAM: instantiate as true dual-port RAM with independent read and write ports (required for async FIFO). Configure for write-first or read-first mode based on whether simultaneous read and write to the same address must return new or old data. For most FIFOs, this does not occur because read and write pointers are never equal when both are active (the FIFO would be empty).",
+          "Implement first-word-fall-through (FWFT) mode if required: when the FIFO transitions from empty to non-empty, the first word appears on the read data output before the read signal is asserted. For block RAM, this requires a bypass register: when writing to an empty FIFO, the data bypasses the RAM and loads directly into the output register.",
+          "For the async FIFO, ensure the memory write and read ports are clocked by their respective domains. The write address comes from the binary write pointer; the read address from the binary read pointer. The gray-code pointers are separate from the memory addresses.",
+          "Add write-enable gating: write_en = external_write_enable AND NOT full. Add read-enable gating: read_en = external_read_enable AND NOT empty. These prevent corruption from writes to a full FIFO or reads from an empty FIFO.",
+          "Estimate resources: each block RAM is typically 18Kb or 36Kb. A 1024-deep x 32-wide FIFO uses one 36Kb BRAM. Pointer logic uses approximately 2 * (log2(depth)+1) registers per domain plus synchronizer registers. Gray-code conversion uses XOR gates (negligible)."
+        ],
+        "tags": ["fpga", "fifo", "memory", "bram", "implementation"]
+      },
+      {
+        "flow_name": "fifo-verification-method",
+        "description": "Verify FIFO correctness through targeted simulation, formal properties, and corner-case testing for empty/full transitions, pointer wrap-around, and simultaneous read/write.",
+        "inputs": [
+          {"name": "fifo-rtl", "desc": "Complete FIFO implementation"},
+          {"name": "resource-utilization-estimate", "desc": "Expected resource usage for synthesis verification"}
+        ],
+        "outputs": [
+          {"name": "fifo-verification-report", "desc": "Test results covering: data integrity across all fill levels, empty/full flag correctness, pointer wrap-around, simultaneous read/write, underflow/overflow protection, and async clock relationship sweep"},
+          {"name": "fifo-verified-status", "desc": "Signoff status: pass/fail with any known limitations or operating restrictions"}
+        ],
+        "process": [
+          "Data integrity test: write a known sequence (incrementing pattern), read it back, verify order and values match. Run at every fill level from 1 to depth. This catches address generation errors and memory corruption.",
+          "Empty/full flag test: fill the FIFO completely, verify full asserts and write is blocked. Read one entry, verify full deasserts. Empty the FIFO completely, verify empty asserts and read is blocked. Write one entry, verify empty deasserts. This catches off-by-one errors in pointer comparison.",
+          "Pointer wrap-around test: write exactly depth entries (pointer wraps from max to 0), then read depth entries. Verify data integrity across the wrap boundary. This catches gray-code conversion errors at the MSB transition.",
+          "Simultaneous read/write test: with FIFO partially filled, assert both read and write on the same cycle. Verify fill level remains constant, data integrity is maintained, and flags update correctly. Repeat at empty and full boundaries.",
+          "For async FIFO: sweep the clock frequency ratio from 1:10 to 10:1 in simulation. At each ratio, run a sustained data transfer and verify zero data loss. Add random jitter to both clocks to exercise worst-case synchronizer timing.",
+          "Almost-full/almost-empty threshold test: fill the FIFO to threshold minus one, verify flag is deasserted. Write one more, verify flag asserts. Read to go below threshold, verify flag deasserts. Test at multiple programmable threshold values if supported.",
+          "Overflow and underflow protection test: attempt to write to a full FIFO, verify the write is ignored and existing data is not corrupted. Attempt to read from an empty FIFO, verify the read returns no valid data and pointers do not change.",
+          "Formal verification: if available, prove the properties: (a) data written is always read in the same order, (b) full and empty flags are never simultaneously asserted, (c) fill level is always between 0 and depth inclusive, (d) no data is lost or duplicated."
+        ],
+        "tags": ["fpga", "fifo", "verification", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fsm-design-methodology",
+    "description": "Design finite state machines for FPGA implementation with correct encoding, safe error recovery, registered outputs, and verification coverage.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "fsm", "state-machine", "control"],
+    "steps": [
+      {
+        "flow_name": "fsm-specification-extraction",
+        "description": "Extract a complete state machine specification from the system requirements: states, transitions, conditions, outputs, and timing constraints.",
+        "inputs": [
+          {"name": "protocol-specification", "desc": "The protocol, control sequence, or behavior that the FSM must implement, including all operating modes and error conditions"},
+          {"name": "interface-requirements", "desc": "Input signals, output signals, timing requirements, and latency constraints for the FSM's external interfaces"}
+        ],
+        "outputs": [
+          {"name": "state-transition-table", "desc": "Complete list of states, for each state: all valid input combinations and the resulting next state and output values"},
+          {"name": "state-diagram", "desc": "Visual or textual state diagram showing all states, transitions, and conditions for human review"}
+        ],
+        "process": [
+          "List all distinct operating modes or phases. Each becomes a candidate state. Include: idle/reset state, active states for each operating phase, wait states for handshakes or delays, error states for fault conditions, and a safe/recovery state.",
+          "For each state, enumerate all input combinations that cause a transition. Use a decision tree: for N binary inputs, there are 2^N combinations, but most are 'stay in current state'. Identify only the combinations that trigger a transition.",
+          "Define outputs for each state. Choose Moore (outputs depend only on state) when output timing must be predictable and glitch-free. Choose Mealy (outputs depend on state and inputs) when the FSM must react within the same clock cycle as an input change. Mealy outputs must be registered at the FSM output to prevent combinational glitches on the output pins.",
+          "Add timeout transitions: if the FSM can be stuck waiting for an input that never arrives (due to an external fault), add a timer-based transition to an error or recovery state. Define the timeout value from the worst-case expected response time plus margin.",
+          "Verify completeness: every state has a defined behavior for every possible input combination. Any undefined combination must explicitly remain in the current state, not be left as a don't-care that the synthesis tool may interpret unpredictably.",
+          "Review the specification with the system designer. State machines are difficult to modify after implementation; missing transitions or states discovered late require re-verification."
+        ],
+        "tags": ["fpga", "fsm", "specification", "protocol"]
+      },
+      {
+        "flow_name": "fsm-encoding-and-implementation",
+        "description": "Implement the FSM in RTL with an encoding style optimized for the target FPGA, including safe state handling and output registration.",
+        "inputs": [
+          {"name": "state-transition-table", "desc": "Complete state, transition, and output specification"},
+          {"name": "state-diagram", "desc": "Visual state diagram for reference"}
+        ],
+        "outputs": [
+          {"name": "fsm-rtl", "desc": "Synthesizable RTL implementation with chosen encoding, registered outputs, and safe-state recovery logic"},
+          {"name": "encoding-rationale", "desc": "Justification for the chosen encoding style and its impact on resource usage and timing"}
+        ],
+        "process": [
+          "Select state encoding based on the target and state count: One-hot encoding uses one flip-flop per state. On FPGAs, this is often fastest because next-state logic reduces to a simple OR of transition conditions (one LUT level). Suitable for FSMs with fewer than ~32 states. Binary encoding uses log2(N) flip-flops. Saves registers but requires more combinational logic for decoding. Use for FSMs with many states (>32) or when register count is constrained. Gray encoding minimizes transitions between adjacent states; use only when the state encoding feeds a CDC crossing or an external bus.",
+          "Implement the FSM as a two-process or three-process style: (a) Two-process: one sequential process for state register, one combinational process for next-state and output logic. (b) Three-process: separate combinational processes for next-state and outputs. (c) Single-process: everything in one clocked process. Single-process is cleanest for simple FSMs; two-process gives explicit separation for review.",
+          "Add illegal state recovery. For one-hot encoding: add a default case that detects when zero or more than one state bit is set and forces a return to the idle state. For binary encoding: add a default case in the case statement. Synthesis tools can optimize away unreachable states unless told not to: use the 'safe' FSM attribute (syn_encoding = 'safe' in Synplify, SAFE_STATE in Vivado) to force the tool to include recovery logic.",
+          "Register all outputs. Even for Moore machines, the output logic may have enough combinational depth to create setup time problems. Register the outputs in the state register process. This adds one clock cycle of latency but guarantees glitch-free outputs and simplifies timing closure.",
+          "For Mealy outputs that must not have the one-cycle latency penalty: register them, but pipeline the downstream logic to absorb the latency. Alternatively, use a look-ahead technique where the output is computed from the next-state value (which is available in the combinational process) rather than the current state.",
+          "Implement the reset. Use synchronous reset for FPGAs (it maps to the FDRE primitive's reset input and does not consume additional logic). The reset state must be the idle/safe state. All output registers must also reset to their safe values."
+        ],
+        "tags": ["fpga", "fsm", "encoding", "implementation"]
+      },
+      {
+        "flow_name": "fsm-decomposition-method",
+        "description": "Decompose large or complex FSMs into hierarchical or parallel sub-machines to reduce complexity, improve timing, and enable independent verification.",
+        "inputs": [
+          {"name": "fsm-rtl", "desc": "Initial FSM implementation, potentially large or complex"},
+          {"name": "encoding-rationale", "desc": "Encoding choice and resource impact"}
+        ],
+        "outputs": [
+          {"name": "decomposed-fsm-design", "desc": "Architecture showing how the FSM is split into sub-machines with defined interfaces between them"},
+          {"name": "interface-protocol", "desc": "Signals and handshake protocol between sub-machines, ensuring they coordinate correctly"}
+        ],
+        "process": [
+          "Identify independent control threads. If the FSM has groups of states that operate independently (e.g., a transmit path and a receive path), split them into separate FSMs that run in parallel. They communicate through shared status signals, not shared states.",
+          "Identify hierarchical structure. If the FSM has a high-level mode (idle, configure, run, shutdown) with sub-modes within each, implement as a hierarchical FSM: a top-level FSM selects the mode, and sub-FSMs implement the detailed behavior within each mode. The top-level FSM enables/disables sub-FSMs and routes their status signals.",
+          "Define the interface between sub-machines: (a) start/done handshake (top FSM asserts start, sub-FSM runs and asserts done when complete), (b) shared status registers that sub-FSMs update and the top FSM reads, (c) a command register that the top FSM writes to direct sub-FSM behavior.",
+          "Verify that the decomposition does not change the external behavior. The decomposed design must produce identical outputs for identical input sequences. Create a compliance test that exercises the original FSM and the decomposed design in parallel and compares outputs on every cycle.",
+          "Each sub-FSM is now small enough to encode, optimize, and verify independently. Apply encoding selection and safe-state logic to each sub-FSM individually.",
+          "If sub-FSMs are in different clock domains (e.g., a control FSM in the processor clock domain and a data FSM in the interface clock domain), the interface between them is a CDC crossing and must be synchronized appropriately."
+        ],
+        "tags": ["fpga", "fsm", "decomposition", "hierarchy"]
+      },
+      {
+        "flow_name": "fsm-verification-coverage",
+        "description": "Verify FSM correctness through state and transition coverage, illegal state injection, and assertion-based checking of temporal properties.",
+        "inputs": [
+          {"name": "decomposed-fsm-design", "desc": "Final FSM architecture with sub-machines and interfaces"},
+          {"name": "interface-protocol", "desc": "Inter-FSM communication protocol specification"}
+        ],
+        "outputs": [
+          {"name": "fsm-verification-report", "desc": "Coverage report showing state coverage, transition coverage, and results of illegal state injection, assertion checking, and timeout testing"},
+          {"name": "fsm-signoff", "desc": "Signoff statement that all states are reachable, all transitions are exercised, and all error recovery paths are verified"}
+        ],
+        "process": [
+          "Measure state coverage: every defined state must be visited at least once during simulation. If a state is unreachable, it is either dead code (remove it) or the test is incomplete (add a stimulus that reaches it).",
+          "Measure transition coverage: every defined transition (from-state, input-condition, to-state) must be exercised at least once. Arc coverage is more thorough than state coverage because a state may be reachable by multiple paths.",
+          "Inject illegal states. Force the state register to every value not in the defined state set and verify the FSM recovers to the safe state within one clock cycle. For one-hot encoding, inject zero-hot and multi-hot values. For binary encoding, inject unused code points. This verifies the safe-state recovery logic.",
+          "Write temporal assertions (SVA or PSL): (a) No state lasts longer than its maximum allowed duration. (b) After a start signal, the FSM eventually reaches the done state (liveness property). (c) The FSM never asserts mutually exclusive outputs simultaneously. (d) The FSM returns to idle within N cycles of a reset assertion.",
+          "Test timeout transitions. Block the expected input indefinitely and verify the FSM transitions to the error state after the specified timeout. Verify the error state can be exited via the defined recovery mechanism (reset or explicit recovery command).",
+          "Run regression with random input sequences: constrained random stimulus exercises unexpected input combinations that directed tests miss. Random testing over long runs (millions of cycles) catches rare state-input combinations that trigger bugs.",
+          "For hierarchical FSMs: verify the top-level FSM's behavior when sub-FSMs report errors, when sub-FSMs take longer than expected, and when multiple sub-FSMs complete simultaneously."
+        ],
+        "tags": ["fpga", "fsm", "verification", "coverage", "assertions"]
+      }
+    ]
+  },
+  {
+    "chain_name": "high-speed-serial-interface-fpga",
+    "description": "Implement a high-speed serial interface on an FPGA: SERDES configuration, channel characterization, equalization tuning, encoding, and protocol layer bring-up.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "serdes", "high-speed", "serial"],
+    "steps": [
+      {
+        "flow_name": "serdes-channel-characterization",
+        "description": "Characterize the physical channel (PCB traces, connectors, cables) using S-parameter measurements or simulation to determine loss, crosstalk, and impedance discontinuities.",
+        "inputs": [
+          {"name": "board-layout-data", "desc": "PCB stackup, trace lengths, via counts, connector specifications, and any cable segments in the serial link path"},
+          {"name": "data-rate-target", "desc": "Target line rate in Gbps, encoding type, and protocol standard (PCIe gen, Ethernet speed, custom)"}
+        ],
+        "outputs": [
+          {"name": "channel-loss-profile", "desc": "Insertion loss (dB) vs frequency from DC to Nyquist, return loss, near-end and far-end crosstalk, and impedance profile along the channel"},
+          {"name": "channel-compliance-assessment", "desc": "Whether the channel meets the protocol's reference channel specification, and margin or deficit at Nyquist frequency"}
+        ],
+        "process": [
+          "Measure or simulate the channel S-parameters (S21 for insertion loss, S11 for return loss, S31/S41 for crosstalk). The frequency range must extend to at least the Nyquist frequency of the data rate (half the line rate) and preferably to the third harmonic.",
+          "Plot insertion loss (S21 magnitude in dB) vs frequency. The loss at Nyquist determines how much the received eye is closed. Most serial protocols specify a maximum insertion loss at Nyquist: PCIe Gen3 allows approximately 23dB, Ethernet 25G allows approximately 20dB.",
+          "Check return loss (S11): it should be below -10dB across the signal bandwidth. High return loss indicates impedance discontinuities (via transitions, connector interfaces, stub lengths) that create reflections and close the eye.",
+          "Measure or extract via stub lengths. A via stub creates a resonant notch at f = c / (4 * stub_length * sqrt(er)). If this notch falls within the signal bandwidth, it can catastrophically degrade the link. Back-drilling the stub is the physical fix.",
+          "Assess crosstalk from adjacent lanes. Far-end crosstalk (FEXT) from aggressor lanes reduces the available eye opening. If FEXT exceeds the protocol budget, increase lane-to-lane spacing or add guard traces.",
+          "Compare measured channel characteristics against the protocol's reference channel model. If the channel exceeds the reference loss, the SERDES equalization must compensate for the additional loss, which reduces margin."
+        ],
+        "tags": ["fpga", "serdes", "channel", "s-parameters"]
+      },
+      {
+        "flow_name": "serdes-equalization-tuning",
+        "description": "Configure transmitter pre-emphasis and receiver equalization to open the data eye for the characterized channel, using eye diagram analysis and BER measurement.",
+        "inputs": [
+          {"name": "channel-loss-profile", "desc": "Channel insertion loss, return loss, and crosstalk characterization"},
+          {"name": "channel-compliance-assessment", "desc": "Channel loss relative to protocol reference"}
+        ],
+        "outputs": [
+          {"name": "equalization-settings", "desc": "TX pre-emphasis taps (pre-cursor, main cursor, post-cursor), RX CTLE settings (peaking frequency, gain), and DFE tap values with the resulting eye opening measurements"},
+          {"name": "eye-diagram-results", "desc": "Eye diagram captures at the receiver with measured eye height, eye width, jitter components (Rj, Dj, Tj), and BER at the target confidence level"}
+        ],
+        "process": [
+          "Start with TX pre-emphasis. The transmitter boosts high-frequency content to compensate for channel loss. Configure the TX emphasis taps: post-cursor emphasis compensates for ISI from the previous bit, pre-cursor emphasis compensates for ISI from the next bit. Start with the vendor's recommended settings for the channel loss range.",
+          "Tune TX emphasis iteratively: increase post-cursor emphasis until the far-end eye opens. Excessive emphasis reduces eye height (because it attenuates the main cursor). Find the sweet spot where eye width and height are balanced. Use the FPGA's built-in IBERT or equivalent eye scan tool to visualize the eye.",
+          "Configure RX continuous-time linear equalizer (CTLE). CTLE is a high-pass filter that boosts high-frequency signal components to compensate for the channel's low-pass characteristic. Set the peaking frequency near Nyquist and adjust the gain. Too much CTLE gain amplifies crosstalk and noise.",
+          "If the channel loss exceeds what CTLE can compensate, enable the decision-feedback equalizer (DFE). DFE uses feedback from previously decided bits to cancel ISI from those bits. DFE taps are typically auto-adapted by the SERDES hardware. Verify convergence by monitoring the tap values over time; they should stabilize.",
+          "Measure the resulting eye diagram. Key metrics: eye height (vertical opening at the sampling point, in mV), eye width (horizontal opening at the decision threshold, in UI), total jitter at the target BER (e.g., Tj at 1e-12 BER), and jitter decomposition into random jitter (Rj, Gaussian) and deterministic jitter (Dj, bounded).",
+          "Verify BER. Run a PRBS pattern (PRBS-7, PRBS-23, or PRBS-31 depending on the protocol) for a sufficient duration to establish the target BER. For 1e-12 BER, transmit at least 1e13 bits (approximately 1000 seconds at 10Gbps). Any errors indicate insufficient equalization or a channel defect.",
+          "Document the final equalization settings. These settings are specific to this board and channel; different board revisions or cable lengths require re-tuning."
+        ],
+        "tags": ["fpga", "serdes", "equalization", "eye-diagram"]
+      },
+      {
+        "flow_name": "serdes-encoding-and-alignment",
+        "description": "Implement the line encoding (8b10b, 64b66b, or other), comma detection for word alignment, and channel bonding for multi-lane interfaces.",
+        "inputs": [
+          {"name": "equalization-settings", "desc": "Tuned TX and RX equalization parameters"},
+          {"name": "eye-diagram-results", "desc": "Verified eye opening and BER performance"}
+        ],
+        "outputs": [
+          {"name": "encoding-layer-rtl", "desc": "RTL for encoding, comma detection, word alignment, and channel bonding, configured for the target protocol"},
+          {"name": "alignment-verification-results", "desc": "Verification that comma detection achieves alignment within the specified number of characters, and multi-lane skew is within budget"}
+        ],
+        "process": [
+          "Implement line encoding. 8b10b maps 8-bit data to 10-bit symbols, providing DC balance and guaranteed transition density for clock recovery. It uses K-characters (commas) for alignment. Overhead is 25%. 64b66b maps 64 data bits to a 66-bit block with a 2-bit sync header. Overhead is 3.125%. Select based on the protocol standard.",
+          "For 8b10b: implement the encoder using lookup tables. Track running disparity (RD+ and RD-) to maintain DC balance. Implement comma detection: K28.5 (0xBC) produces bit patterns 0011111010 or 1100000101 that are unique and cannot appear in any valid data stream. The receiver searches for this pattern to establish word alignment.",
+          "For 64b66b: implement the scrambler (x^58 + x^39 + 1 polynomial) and sync header insertion. The 2-bit sync header (01 for data blocks, 10 for control blocks) provides alignment. The receiver uses the sync header pattern to lock: it tries every bit position and checks if the sync header pattern appears at the expected 66-bit interval. Lock is declared after N consecutive valid headers.",
+          "Word alignment: the receiver deserializer produces a raw bit stream. The aligner shifts the bit stream until the comma or sync header is detected at the word boundary. Once aligned, the aligner locks and only re-aligns if alignment is lost (indicated by disparity errors for 8b10b or invalid sync headers for 64b66b).",
+          "For multi-lane interfaces: implement channel bonding to compensate for inter-lane skew. Each lane achieves word alignment independently. The receiver then adjusts per-lane FIFO delays so that a bonding character (a specific K-character sent simultaneously on all lanes) is received at the same time on all lanes. Maximum deskew is the bonding FIFO depth times the parallel clock period.",
+          "Verify alignment: inject bit errors into the comma pattern and verify the aligner does not mis-align. Inject lane-to-lane skew up to the maximum deskew range and verify channel bonding compensates. Measure alignment lock time from initial bit stream to valid data output."
+        ],
+        "tags": ["fpga", "serdes", "encoding", "8b10b", "64b66b"]
+      },
+      {
+        "flow_name": "serdes-protocol-layer-bringup",
+        "description": "Bring up the protocol layer above the SERDES physical layer: link training, flow control, error detection, and end-to-end data integrity verification.",
+        "inputs": [
+          {"name": "encoding-layer-rtl", "desc": "Working encoding, alignment, and channel bonding logic"},
+          {"name": "alignment-verification-results", "desc": "Verified alignment and deskew performance"}
+        ],
+        "outputs": [
+          {"name": "protocol-layer-implementation", "desc": "Complete protocol stack from SERDES to user data interface, including link training, flow control, and error handling"},
+          {"name": "link-bringup-results", "desc": "Verification of end-to-end data transfer at target throughput with measured BER, error recovery behavior, and latency"}
+        ],
+        "process": [
+          "Implement link training (for protocols that require it, such as PCIe or Ethernet auto-negotiation). Link training negotiates the data rate, lane count, and equalization settings with the link partner. The FPGA's SERDES primitive often includes a link training state machine; configure it with the channel's optimal equalization coefficients as training hints.",
+          "Implement flow control. Credit-based flow control (PCIe, FC): the receiver advertises buffer credits; the transmitter sends data only when credits are available. Pause-based flow control (Ethernet): the receiver sends pause frames when its buffer fills. Implement the credit counter or pause state machine with correct decrement/increment logic.",
+          "Implement error detection and reporting. For 8b10b: detect disparity errors and invalid characters. For 64b66b: detect invalid sync headers and scrambler desynchronization. For protocol-level integrity: implement CRC checking on received packets (CRC-32 for most protocols). Count error types in hardware registers accessible via a management interface.",
+          "Implement error recovery. When the link detects persistent errors (BER exceeds threshold), initiate a link re-training or reset sequence. Implement an error rate monitor that counts errors over a sliding window and triggers re-training when the error rate exceeds a configured threshold.",
+          "End-to-end verification: transmit known data patterns through the entire protocol stack and verify data integrity at the receiver. Measure throughput: actual data rate considering encoding overhead, flow control pauses, and protocol headers. Measure latency: time from data presented at the transmit interface to data available at the receive interface.",
+          "Stress testing: run the link for extended periods (hours to days) under thermal stress (operate the FPGA at the maximum temperature rating) to catch marginal timing or equalization issues that only appear under stress."
+        ],
+        "tags": ["fpga", "serdes", "protocol", "link-training"]
+      }
+    ]
+  },
+  {
+    "chain_name": "dsp-pipeline-design",
+    "description": "Design DSP processing pipelines on FPGA with correct fixed-point arithmetic, pipeline architecture, and resource optimization for throughput targets.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "dsp", "signal-processing", "pipeline"],
+    "steps": [
+      {
+        "flow_name": "fixed-point-word-length-selection",
+        "description": "Determine the bit width for every signal in the DSP path from the system SNR requirement, propagating word lengths through each arithmetic operation.",
+        "inputs": [
+          {"name": "algorithm-specification", "desc": "The DSP algorithm to implement: equations, filter coefficients, sample rate, and performance targets (SNR, dynamic range, distortion)"},
+          {"name": "system-snr-requirement", "desc": "Minimum required signal-to-noise ratio at the output, in dB, including contributions from quantization noise"}
+        ],
+        "outputs": [
+          {"name": "word-length-assignment", "desc": "Bit width (integer bits and fractional bits) for every signal in the processing chain: inputs, coefficients, intermediate products, accumulators, and outputs"},
+          {"name": "quantization-noise-budget", "desc": "Noise contribution from each quantization point, total quantization noise, and margin relative to the SNR requirement"}
+        ],
+        "process": [
+          "Start from the output SNR requirement. The quantization noise floor for a B-bit fixed-point signal is approximately SNRq = 6.02*B + 1.76 dB (for uniformly distributed quantization error). The output word length must provide at least the required SNR plus margin for processing gain/loss.",
+          "Work backward through the algorithm. For each addition: the output word length is max(A, B) + 1 bits to prevent overflow (the +1 is the carry bit). For each multiplication: the full-precision product is A + B bits. Truncating or rounding the product introduces quantization noise.",
+          "Assign coefficient word lengths. Filter coefficients are constants; their quantization shifts the filter response. Simulate the filter with quantized coefficients and verify the passband ripple and stopband rejection still meet spec. Typically 16-18 bits suffices for FIR coefficients with moderate stopband requirements.",
+          "Size accumulators. For an N-tap FIR filter, the accumulator must be wide enough to hold the sum of N products without overflow: accumulator_bits = input_bits + coeff_bits + ceil(log2(N)). Do not truncate between multiply and accumulate; accumulate at full precision and truncate only at the output.",
+          "Select truncation vs rounding at each quantization point. Truncation (discard LSBs) introduces a DC bias of -0.5 LSB. Rounding (round to nearest) eliminates the DC bias but costs one additional adder. Convergent rounding (round half to even) eliminates the bias from the rounding operation itself.",
+          "Handle overflow. Saturation (clamp to max/min value) prevents catastrophic wrap-around distortion but introduces nonlinear distortion. Wrap-around is cheaper in hardware but produces large errors. Use saturation for signals that may occasionally clip (e.g., AGC output). Use guard bits (extra MSBs) to prevent overflow entirely when the maximum signal level is known.",
+          "Verify the complete word-length assignment by running a bit-accurate fixed-point simulation of the algorithm. Compare the output against a floating-point reference to measure the actual quantization-induced SNR degradation."
+        ],
+        "tags": ["fpga", "dsp", "fixed-point", "word-length"]
+      },
+      {
+        "flow_name": "pipeline-architecture-design",
+        "description": "Design the pipeline structure to meet the throughput target, balancing pipeline depth against latency and resource usage.",
+        "inputs": [
+          {"name": "word-length-assignment", "desc": "Bit widths for all signals in the processing chain"},
+          {"name": "quantization-noise-budget", "desc": "Noise allocation across the pipeline"}
+        ],
+        "outputs": [
+          {"name": "pipeline-architecture", "desc": "Block diagram showing every pipeline stage, register boundaries, multiplier and adder placement, and data flow with latency annotation"},
+          {"name": "throughput-analysis", "desc": "Achievable clock frequency from the deepest combinational path in any stage, and the resulting sample throughput"}
+        ],
+        "process": [
+          "Identify the throughput target. If the DSP must process one sample per clock cycle (fully pipelined), every stage must complete within one clock period. If the DSP can process one sample every N cycles (underclocked or time-multiplexed), the pipeline can be shallower.",
+          "Map the algorithm to pipeline stages. Each stage must have a combinational delay less than the clock period minus setup time and clock uncertainty. For FPGA: a DSP48 multiply-accumulate runs at the fabric speed grade's maximum (typically 400-700 MHz). A LUT-based adder chain longer than ~4 levels may limit the frequency.",
+          "Use the FPGA's DSP primitive pipeline registers. The DSP48 (Xilinx) or DSP block (Intel) has internal pipeline registers at the input (A, B, C), multiplier output (M), and accumulator output (P). Enable all pipeline registers to achieve maximum clock frequency. This adds latency (typically 3-4 cycles through the DSP block) but does not affect throughput.",
+          "For filter implementations: choose between direct form (multiply and accumulate sequentially; uses one multiplier time-shared over N taps; low resource, low throughput) and transpose form (all multiplications in parallel, accumulated through a pipelined adder tree; N multipliers; high throughput). Systolic architecture places a register between each tap, enabling very high clock rates at the cost of latency.",
+          "Insert pipeline registers between functional blocks: after the input interface, between filter stages, before the output interface. Each register adds one cycle of latency but breaks timing-critical paths. Mark the total pipeline latency (input to output in clock cycles) in the architecture document.",
+          "For multi-channel DSP: time-multiplex the pipeline across channels. If the pipeline can run at F MHz and the sample rate is Fs, one pipeline can process F/Fs channels. Implement a channel counter that rotates the input data and routes the output to the correct channel."
+        ],
+        "tags": ["fpga", "dsp", "pipeline", "architecture"]
+      },
+      {
+        "flow_name": "dsp-resource-optimization",
+        "description": "Optimize the DSP implementation for FPGA resource usage: map operations to DSP primitives, share multipliers across time slots, and use distributed arithmetic for coefficient-fixed filters.",
+        "inputs": [
+          {"name": "pipeline-architecture", "desc": "Pipeline block diagram with stage boundaries"},
+          {"name": "throughput-analysis", "desc": "Required throughput and achievable clock rate"}
+        ],
+        "outputs": [
+          {"name": "optimized-rtl", "desc": "Resource-optimized RTL with DSP primitive instantiations, multiplier sharing, and memory usage annotations"},
+          {"name": "resource-report", "desc": "DSP block count, BRAM count, LUT count, and register count with comparison to the target device's available resources"}
+        ],
+        "process": [
+          "Map multiplications to DSP primitives. Each DSP48E2 (Xilinx UltraScale+) provides a 27x18 multiply with 48-bit accumulator. If the operand widths exceed the primitive width, decompose into partial products: (A_hi * 2^18 + A_lo) * B = A_hi*B*2^18 + A_lo*B, using two DSP blocks and a shifted addition.",
+          "Use the DSP block's pre-adder for symmetric FIR filters. A symmetric FIR has coefficients h[k] = h[N-1-k]. The pre-adder computes x[n-k] + x[n-N+1+k] before multiplication, cutting the multiplier count in half. Enable the pre-adder in the DSP primitive configuration.",
+          "Share multipliers when throughput allows. If the pipeline runs at 500 MHz but the sample rate is 100 MSps, each multiplier can be time-shared across 5 operations. Implement a multiplexer on the multiplier inputs and a demuxer on the output, controlled by a phase counter synchronized to the sample clock.",
+          "For coefficient-fixed filters: consider distributed arithmetic. Instead of multiplying each sample by a coefficient, decompose the sample bit-by-bit and use lookup tables (LUTs) addressed by the sample bits. The LUT outputs are pre-computed partial sums of the coefficients. This replaces multipliers with BRAM or distributed ROM.",
+          "Use BRAM for delay lines longer than ~32 samples. A shift register implemented in flip-flops consumes one register per bit per tap. BRAM provides 1024+ locations in one block. Write the incoming sample and read the delayed sample from BRAM in the same clock cycle using a simple dual-port configuration.",
+          "Estimate total resources and compare against the target device. If the design exceeds available DSP blocks, reduce parallelism (more time-multiplexing) or switch to a larger device. If it exceeds BRAM, convert short delay lines back to SRL (shift register LUT) primitives.",
+          "Verify that resource optimization does not change the numerical result. Run the optimized implementation against the bit-accurate reference model and confirm zero output difference."
+        ],
+        "tags": ["fpga", "dsp", "optimization", "resources"]
+      },
+      {
+        "flow_name": "dsp-numerical-verification",
+        "description": "Verify the DSP implementation's numerical accuracy by comparing against a floating-point reference model across the signal range, including edge cases.",
+        "inputs": [
+          {"name": "optimized-rtl", "desc": "Resource-optimized DSP implementation"},
+          {"name": "resource-report", "desc": "Resource usage summary"}
+        ],
+        "outputs": [
+          {"name": "accuracy-verification-report", "desc": "Maximum error, RMS error, and SNR degradation compared to the floating-point reference, across full-scale, small-signal, and DC input conditions"},
+          {"name": "dsp-signoff", "desc": "Signoff statement that the implementation meets the accuracy specification under all input conditions"}
+        ],
+        "process": [
+          "Generate test vectors covering the full input range: full-scale sine wave (exercises dynamic range), low-level sine wave at -60 dBFS (exercises noise floor), DC input at mid-scale (exercises DC offset from truncation), impulse input (exercises the filter's impulse response), and random input (exercises all bit patterns statistically).",
+          "Run each test vector through both the floating-point reference model and the fixed-point RTL simulation. Capture the output from both at every sample.",
+          "Compute the error metrics: (a) maximum absolute error (peak quantization error, in LSBs and in dB relative to full scale), (b) RMS error (average noise power, in dB), (c) SQNR (signal-to-quantization-noise ratio) = 10*log10(signal_power / error_power). The SQNR must exceed the system SNR requirement.",
+          "Test overflow conditions: apply an input that produces maximum accumulator values. Verify saturation logic activates correctly and the output is the clamped value, not a wrap-around glitch.",
+          "Test coefficient accuracy: compare the implemented filter's frequency response (from an FFT of the impulse response) against the ideal response. Measure passband ripple and stopband rejection. If the filter spec is exceeded due to coefficient quantization, increase coefficient word length.",
+          "Verify pipeline correctness: the output must be a delayed version of the mathematically correct result. Measure the pipeline delay and verify it matches the architecture document. Any cycle offset indicates a register was incorrectly placed or omitted.",
+          "Run long-duration tests (millions of samples) to detect limit-cycle oscillations. In IIR filters with feedback, quantization in the feedback path can cause the output to oscillate with a small periodic pattern instead of settling to the correct DC value."
+        ],
+        "tags": ["fpga", "dsp", "verification", "accuracy"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fpga-verification-methodology",
+    "description": "Build a verification environment for an FPGA design using layered testbench architecture, constrained random stimulus, functional coverage, and assertions.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "verification", "testbench", "coverage"],
+    "steps": [
+      {
+        "flow_name": "verification-plan-development",
+        "description": "Create a verification plan that maps every design requirement to specific verification tasks, coverage goals, and pass/fail criteria.",
+        "inputs": [
+          {"name": "design-specification", "desc": "Functional specification of the design under test, including all operating modes, interfaces, and error conditions"},
+          {"name": "design-rtl", "desc": "RTL source code of the design under test"}
+        ],
+        "outputs": [
+          {"name": "verification-plan", "desc": "Structured plan listing every feature to verify, the verification method (directed test, constrained random, formal, or hardware test), the coverage metric (functional cover point or assertion), and the pass/fail criterion"},
+          {"name": "coverage-model-specification", "desc": "List of all functional coverage groups, cover points, cross coverage items, and the target coverage percentage"}
+        ],
+        "process": [
+          "Extract verifiable features from the design specification. Each feature is a specific behavior: 'the FIFO signals full when the write pointer wraps and equals the read pointer.' Features fall into: normal operation, boundary conditions, error conditions, and configuration options.",
+          "For each feature, choose the verification method: (a) Directed test: for complex protocol sequences or specific corner cases that constrained random would take too long to hit. (b) Constrained random: for broad coverage of input combinations with automatic coverage tracking. (c) Formal: for safety properties (never overflow, always respond within N cycles) and equivalence checking. (d) Hardware: for timing-dependent behavior that cannot be verified in RTL simulation.",
+          "Define functional coverage for each feature. A cover point records whether a specific condition has been observed during simulation. Cover groups organize related cover points. Cross coverage captures combinations of cover points that must co-occur. Example: cross coverage of FIFO fill level with read/write enable combinations.",
+          "Set the target coverage: 100% for all defined cover points (every feature must be exercised). If a cover point cannot be reached in simulation (e.g., a hardware-only condition), mark it as excluded with a documented reason.",
+          "Define pass/fail criteria: zero assertion failures, zero protocol violations, coverage targets met, and the design output matches the reference model (golden model) for all constrained random tests."
+        ],
+        "tags": ["fpga", "verification", "planning", "coverage"]
+      },
+      {
+        "flow_name": "testbench-architecture-construction",
+        "description": "Build a layered testbench with drivers, monitors, scoreboards, and checkers that can support both directed and constrained random testing.",
+        "inputs": [
+          {"name": "verification-plan", "desc": "Features to verify with methods and coverage targets"},
+          {"name": "coverage-model-specification", "desc": "Functional coverage groups and cover points"}
+        ],
+        "outputs": [
+          {"name": "testbench-rtl", "desc": "Complete testbench code with: transaction-level driver, monitor, reference model, scoreboard, checker, and coverage collector"},
+          {"name": "testbench-architecture-doc", "desc": "Block diagram of the testbench showing signal flow from stimulus generation through DUT to checking"}
+        ],
+        "process": [
+          "Implement the transaction layer. Define a transaction class (SystemVerilog class or VHDL record) that represents one unit of stimulus at the interface level: a packet, a register access, a memory transfer. Transactions abstract away pin-level timing, making tests readable and portable.",
+          "Implement the driver. The driver converts transactions to pin-level signals according to the interface protocol timing. It handles clock relationships, handshake protocols, and wait states. The driver must be protocol-correct; it is the golden reference for interface timing.",
+          "Implement the monitor. The monitor observes the DUT's output pins and converts pin-level activity back to transactions. It must correctly detect transaction boundaries (start/end of packet, completion of transfer) and extract all relevant fields. The monitor never drives signals; it is passive.",
+          "Implement the reference model (golden model). This is a behavioral implementation of the DUT's expected function: same inputs produce same outputs, without the RTL's implementation details. For a filter, it is the floating-point filter computation. For a protocol engine, it is the protocol state machine in a high-level language.",
+          "Implement the scoreboard. The scoreboard receives transactions from both the reference model and the DUT monitor. It compares them and reports mismatches. For out-of-order interfaces, the scoreboard must match by transaction ID or address, not arrival order.",
+          "Implement the coverage collector. Instantiate the coverage model from the verification plan. Sample cover points on relevant events (transaction completion, state transitions, error occurrences). The coverage collector runs in the background during all tests and reports accumulated coverage.",
+          "Implement the test sequencer. It generates the sequence of transactions that exercise the DUT. Directed tests provide specific transaction sequences. The constrained random generator creates random transactions within the valid input space (constraints prevent illegal inputs that would cause false failures)."
+        ],
+        "tags": ["fpga", "verification", "testbench", "architecture"]
+      },
+      {
+        "flow_name": "constrained-random-verification",
+        "description": "Configure and run constrained random testing to achieve broad coverage of the design's input space, with intelligent constraints that prevent illegal stimuli while maximizing useful coverage.",
+        "inputs": [
+          {"name": "testbench-rtl", "desc": "Complete testbench with driver, monitor, scoreboard, and coverage"},
+          {"name": "testbench-architecture-doc", "desc": "Testbench structure documentation"}
+        ],
+        "outputs": [
+          {"name": "random-test-results", "desc": "Coverage achieved vs target, list of cover points still missing, and any assertion violations or scoreboard mismatches found"},
+          {"name": "regression-suite", "desc": "Set of random seeds that together achieve the target coverage, plus any directed tests needed for unreachable random cover points"}
+        ],
+        "process": [
+          "Define constraints on random transactions. Constraints restrict the random generator to legal inputs: valid address ranges, legal packet sizes, valid command codes, and protocol-required sequencing (e.g., must configure before sending data). Over-constraining reduces coverage; under-constraining wastes cycles on illegal inputs that cause false failures.",
+          "Run initial random tests with a small number of long-running seeds. Each seed produces a unique random sequence. Run each for enough cycles to exercise the main functionality. Check coverage after each run.",
+          "Analyze coverage holes. Identify cover points that no random seed has hit. Common causes: (a) the random distribution is unlikely to produce the required condition (e.g., simultaneous overflow and error), (b) constraints prevent the condition, (c) the condition requires a specific sequence that random generation will not produce in reasonable time.",
+          "For coverage holes, add targeted constraints or coverage-driven seed selection. A 'coverage closure' constraint biases the random generator toward uncovered conditions. Alternatively, write a directed test for the specific scenario and add it to the regression suite.",
+          "Run regression: a set of random seeds that collectively achieve the coverage target. Record each seed, its coverage contribution, and its pass/fail status. The regression suite is the reproducible evidence of verification completeness.",
+          "Set up nightly regression. Random seeds should be run regularly as the design evolves. New RTL changes may introduce bugs that only specific random sequences expose. Track coverage trends over time: coverage should increase monotonically as new tests are added and never decrease unless a feature is removed."
+        ],
+        "tags": ["fpga", "verification", "random", "coverage"]
+      },
+      {
+        "flow_name": "assertion-and-formal-verification",
+        "description": "Write SystemVerilog assertions for protocol compliance and safety properties, and apply formal verification to prove critical properties without simulation.",
+        "inputs": [
+          {"name": "random-test-results", "desc": "Coverage status and any remaining gaps"},
+          {"name": "regression-suite", "desc": "Complete regression test set"}
+        ],
+        "outputs": [
+          {"name": "assertion-library", "desc": "Collection of SVA assertions covering protocol compliance, safety properties, and interface timing, annotated with the requirement each assertion verifies"},
+          {"name": "formal-verification-results", "desc": "Properties proven, properties that could not be proved (with counterexamples or bounded proofs), and formal coverage analysis showing what fraction of the state space was explored"}
+        ],
+        "process": [
+          "Write interface protocol assertions. For every handshake interface (valid/ready, request/grant, read/write): assert the protocol rules. Example: 'once valid is asserted, it must remain asserted until ready is asserted (no retraction).' These catch protocol violations that a scoreboard might miss if the reference model has the same bug.",
+          "Write safety assertions. These are properties that must always hold: 'the FIFO write pointer and read pointer are never more than depth apart,' 'the output voltage command is always within the safe range,' 'the state machine never enters an undefined state.' Safety assertions are never conditions; they fire as immediate errors.",
+          "Write liveness assertions. These are properties that must eventually hold: 'after a request, a response occurs within N cycles,' 'after a reset, the system reaches the idle state within M cycles.' Liveness assertions catch deadlocks and stuck conditions that safety assertions do not.",
+          "Apply formal verification to critical assertions. Formal tools exhaustively explore all reachable states and prove that the assertion holds for all possible input sequences, or find a counterexample. Start with bounded proofs (prove the property holds for K cycles) and increase K until the tool either proves unbounded or exceeds capacity.",
+          "For properties the formal tool cannot prove unbounded (state space too large): accept the bounded proof with documentation of the bound depth and the rationale for why it is sufficient (e.g., 'the maximum pipeline depth is 8 cycles, so a 20-cycle bound covers all reachable states').",
+          "Generate formal coverage: the formal tool reports which portions of the design's state space were explored during proof. Low formal coverage indicates the tool's constraints are too restrictive or the design has unreachable code. Use formal coverage alongside simulation coverage for a complete picture."
+        ],
+        "tags": ["fpga", "verification", "assertions", "formal"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fpga-power-optimization",
+    "description": "Analyze and reduce FPGA power consumption through clock gating, resource selection, I/O standard optimization, and thermal verification.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "power", "thermal", "optimization"],
+    "steps": [
+      {
+        "flow_name": "fpga-power-estimation",
+        "description": "Estimate total FPGA power consumption by component: static (leakage), dynamic (switching), I/O, and transceiver power, using vendor tools and design activity data.",
+        "inputs": [
+          {"name": "post-implementation-design", "desc": "Fully placed and routed FPGA design with timing closed"},
+          {"name": "operating-conditions", "desc": "Ambient temperature, airflow, power supply voltages, and expected signal activity rates for all major buses and clocks"}
+        ],
+        "outputs": [
+          {"name": "power-breakdown", "desc": "Total power and per-component breakdown: clock network, logic (LUT + register switching), BRAM, DSP, I/O, transceiver, and static leakage, each in milliwatts"},
+          {"name": "power-budget-assessment", "desc": "Comparison of estimated power against the thermal solution's dissipation capacity and the power supply's delivery capacity, with margin or deficit"}
+        ],
+        "process": [
+          "Run the vendor's power analysis tool (Vivado Power Analysis or Quartus PowerPlay). Use post-implementation data for accurate resource counts and routing capacitance. The tool needs toggle rates for all signals; provide these from simulation (VCD file) or estimated activity factors.",
+          "For simulation-based power: run a representative workload through post-implementation simulation, capture signal activity in a VCD (value change dump) file, and import it into the power tool. This gives the most accurate estimate because it uses actual switching activity from real operation.",
+          "For estimation-based power (no VCD): set activity rates manually. Clock networks: 100% toggle rate (every edge toggles). Data paths: typically 12.5% to 25% toggle rate for random data. Control logic: typically 5% to 10%. Set these based on the application's expected behavior.",
+          "Decompose the power report: (a) Static power: leakage current that depends on temperature and process. It is constant regardless of design activity. (b) Dynamic power: P = alpha * C * V^2 * f, where alpha is toggle rate, C is capacitance (from routing), V is supply voltage, f is clock frequency. (c) I/O power: from output driver current and termination. (d) Transceiver power: per-lane power from the high-speed serializer/deserializer.",
+          "Compare total power against the thermal budget. The thermal solution (heat sink, airflow) has a maximum dissipation: P_max = (Tj_max - T_ambient) / theta_JA. If estimated power exceeds P_max, the junction temperature will exceed the maximum rating and the FPGA may malfunction.",
+          "Identify the dominant power consumers. Typically: clock network (30-50% of dynamic), I/O (10-30%), and BRAM (10-20%). Optimization effort should target the largest contributors first."
+        ],
+        "tags": ["fpga", "power", "estimation", "thermal"]
+      },
+      {
+        "flow_name": "fpga-clock-and-logic-power-reduction",
+        "description": "Reduce dynamic power by gating clocks to idle blocks, reducing toggle rates through encoding, and selecting lower-power implementation options.",
+        "inputs": [
+          {"name": "power-breakdown", "desc": "Per-component power consumption analysis"},
+          {"name": "power-budget-assessment", "desc": "Power budget vs thermal capacity comparison"}
+        ],
+        "outputs": [
+          {"name": "power-optimization-changes", "desc": "Specific RTL and constraint changes applied: clock enables, encoding changes, resource substitutions, and their power impact"},
+          {"name": "post-optimization-power", "desc": "Updated power estimate after optimizations, with verification that functionality is preserved"}
+        ],
+        "process": [
+          "Implement clock enable gating. FPGAs do not have standard clock gates like ASICs; instead, use the CE (clock enable) input on register primitives. When a block is idle, deassert its clock enable. The registers hold their state but consume no dynamic power (no switching). Identify blocks with known idle periods: unused processing channels, inactive protocol engines, completed transaction buffers.",
+          "Reduce clock frequency where possible. If a block can operate at half the system clock, drive it from a divided clock. Power scales linearly with frequency: halving the clock halves the dynamic power of that block. Use a clock enable (toggle every other cycle) rather than a divided clock if the phase relationship matters.",
+          "Reduce toggle rates through Gray coding on buses that drive high-capacitance routes. Binary counting toggles many bits simultaneously (all bits toggle at 111->000). Gray coding toggles exactly one bit per increment. For address buses to BRAM or external memory, Gray coding reduces the bus switching activity by approximately 50%.",
+          "Select lower-power memory primitives. Distributed RAM (LUT-based) consumes less power than BRAM for shallow memories because BRAM has a fixed clock-driven power even when not accessed. For read-mostly memories, use ROM inference (which maps to LUTs) instead of BRAM.",
+          "Reduce DSP block dynamic power by disabling unused pipeline stages and using smaller operand widths. A DSP48 consuming an 18x18 multiply uses less switching power than a 27x18 multiply because fewer internal nodes toggle.",
+          "After each change, re-run power analysis to verify the reduction. Also re-run functional simulation to verify the clock enable logic does not cause data corruption (a classic bug: deasserting CE while a write is in progress)."
+        ],
+        "tags": ["fpga", "power", "clock-gating", "optimization"]
+      },
+      {
+        "flow_name": "fpga-io-power-optimization",
+        "description": "Reduce I/O power consumption by selecting appropriate I/O standards, termination schemes, and drive strengths for each interface.",
+        "inputs": [
+          {"name": "power-optimization-changes", "desc": "Clock and logic power reductions applied"},
+          {"name": "post-optimization-power", "desc": "Updated power estimate after clock/logic changes"}
+        ],
+        "outputs": [
+          {"name": "io-power-changes", "desc": "I/O standard, drive strength, and termination changes for each pin group with power savings"},
+          {"name": "io-signal-integrity-verification", "desc": "IBIS simulation or measurement results confirming the modified I/O settings maintain signal integrity (eye opening, noise margin)"}
+        ],
+        "process": [
+          "Audit I/O standards. LVCMOS consumes power only during transitions (CMOS push-pull). SSTL and HSTL use termination resistors that draw DC current continuously. If an interface operates at a low enough speed, switch from SSTL/HSTL to LVCMOS to eliminate termination current.",
+          "Reduce drive strength. Higher drive strength means more output current, which increases I/O power but improves signal quality. For short, well-matched traces, minimum drive strength suffices. Reduce drive strength to the minimum that maintains adequate signal integrity (verified by IBIS simulation or hardware measurement).",
+          "Evaluate on-die termination (ODT) vs external termination. On-die termination (available in most modern FPGAs) eliminates the external resistor but draws current from the I/O supply. For interfaces where signal integrity requires termination, ODT saves board components but increases FPGA I/O power. Calculate the power trade-off for each interface.",
+          "For unused pins: configure as inputs with weak pull-down or pull-up. Do not leave pins floating (they may oscillate and consume power from input buffer switching) or configured as outputs (they drive the board trace capacitance).",
+          "For multi-bit parallel interfaces (DDR memory, parallel buses): consider reducing the bus width and increasing the clock rate if the throughput allows. A 16-bit bus at 200 MHz has the same throughput as a 32-bit bus at 100 MHz but uses half the I/O pins and approximately half the I/O power (fewer drivers, less trace capacitance).",
+          "Verify signal integrity after I/O changes. Run IBIS simulation for each modified interface: check the received eye diagram, noise margin, and timing margin. A power optimization that causes signal integrity failure is worse than the original power consumption."
+        ],
+        "tags": ["fpga", "power", "io", "signal-integrity"]
+      },
+      {
+        "flow_name": "fpga-thermal-verification",
+        "description": "Verify that the optimized design operates within thermal limits under worst-case conditions: maximum ambient temperature, maximum activity, and minimum airflow.",
+        "inputs": [
+          {"name": "io-power-changes", "desc": "Final I/O configuration changes"},
+          {"name": "io-signal-integrity-verification", "desc": "Signal integrity confirmation"}
+        ],
+        "outputs": [
+          {"name": "thermal-analysis-report", "desc": "Junction temperature estimate under worst-case conditions, thermal margin, and heat sink/airflow requirements"},
+          {"name": "power-signoff", "desc": "Confirmation that the design meets power and thermal budgets, or documentation of required operating restrictions (reduced ambient, forced airflow)"}
+        ],
+        "process": [
+          "Calculate worst-case junction temperature: Tj = Ta + (P_total * theta_JA), where Ta is maximum ambient, P_total is the power at maximum activity and voltage, and theta_JA is the junction-to-ambient thermal resistance of the FPGA package with the installed thermal solution.",
+          "Obtain theta_JA from the FPGA vendor's thermal characterization data for the specific package and thermal solution (bare die, heat sink with no airflow, heat sink with forced airflow). Do not use the generic theta_JA from the datasheet; it assumes specific conditions that may not match the application.",
+          "If Tj exceeds the maximum junction temperature rating: (a) improve the thermal solution (larger heat sink, increased airflow, thermal interface material), (b) reduce power further (more aggressive clock gating, lower supply voltage if supported), or (c) restrict the operating ambient temperature range.",
+          "Verify that the power supply can deliver the total current at the required voltage rails. FPGAs have multiple supply rails (VCCINT, VCCAUX, VCCO). Each rail has a current draw from the power analysis. The voltage regulator for each rail must provide this current with margin for transients.",
+          "Measure actual power consumption on hardware. Compare against the estimate. If the actual power exceeds the estimate by more than 20%, investigate: the toggle rate assumptions may be wrong, or the design may have unexpected switching activity (e.g., bus contention, oscillating logic).",
+          "Document the thermal analysis in the signoff report: estimated power, thermal solution, junction temperature at worst case, margin to the maximum rating, and any operating restrictions. This document is required for product qualification."
+        ],
+        "tags": ["fpga", "power", "thermal", "signoff"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fpga-debug-methodology",
+    "description": "Debug an FPGA design in hardware using integrated logic analyzers, virtual I/O, protocol analyzers, and systematic root-cause analysis techniques.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "debug", "ila", "signaltap"],
+    "steps": [
+      {
+        "flow_name": "debug-instrumentation-planning",
+        "description": "Plan which signals to instrument for debug, balancing visibility against resource usage and timing impact, before synthesizing the debug build.",
+        "inputs": [
+          {"name": "design-under-debug", "desc": "FPGA design exhibiting the bug or requiring validation, with a description of the observed failure symptom"},
+          {"name": "failure-symptom", "desc": "What is happening vs what is expected: incorrect output data, protocol violation, hang condition, intermittent error, or performance degradation"}
+        ],
+        "outputs": [
+          {"name": "debug-probe-plan", "desc": "List of signals to instrument with ILA/SignalTap, VIO controls, and any debug-specific RTL modifications (debug counters, error flags), with resource budget"},
+          {"name": "trigger-strategy", "desc": "Trigger conditions designed to capture the failure: what event to trigger on, pre/post trigger depth, and any sequential trigger stages"}
+        ],
+        "process": [
+          "Start from the failure symptom and work backward to identify candidate signals. If the output is wrong, instrument the output data path and the last processing stage. If the system hangs, instrument the state machine and handshake signals. If errors are intermittent, instrument error counters and the signals feeding the error detection logic.",
+          "Select signals at architectural boundaries: module interfaces, bus interfaces, state machine state registers, FIFO fill levels, and control signals (enables, resets, interrupt requests). These provide maximum diagnostic value per probe.",
+          "Budget the debug resources. An ILA core uses BRAM for sample storage and LUTs for trigger logic. Each probed signal consumes one bit of BRAM width per sample. Example: probing 128 signals at 4096 samples deep requires 128 * 4096 = 512Kbit = 14 BRAMs (18Kb each). Verify the design has this headroom after implementation.",
+          "Design the trigger. A simple trigger fires when a single condition is met (e.g., error_flag == 1). A sequential trigger fires when a sequence of conditions occurs in order (e.g., state == WAIT, then timeout_counter == MAX, then state != ERROR). Sequential triggers are essential for capturing the cause of a failure, not just the symptom.",
+          "Set the trigger position: more pre-trigger samples show what led to the event; more post-trigger samples show the consequence. For a bug where the cause precedes the symptom by an unknown amount, start with 75% pre-trigger / 25% post-trigger.",
+          "Consider adding RTL debug infrastructure: a free-running error counter that increments on every error (visible via VIO without triggering ILA), a timestamp counter for correlating events across multiple ILAs, and debug-only status registers accessible via a JTAG-to-AXI bridge."
+        ],
+        "tags": ["fpga", "debug", "instrumentation", "planning"]
+      },
+      {
+        "flow_name": "debug-capture-and-analysis",
+        "description": "Capture signal data from the running FPGA, analyze the waveforms to identify the root cause, and correlate hardware observations with RTL simulation.",
+        "inputs": [
+          {"name": "debug-probe-plan", "desc": "Instrumented signals and resource budget"},
+          {"name": "trigger-strategy", "desc": "Trigger conditions and sample depth configuration"}
+        ],
+        "outputs": [
+          {"name": "capture-data", "desc": "ILA/SignalTap waveform captures showing the failure event with sufficient context to identify the cause"},
+          {"name": "root-cause-hypothesis", "desc": "Identified or hypothesized root cause based on the captured data, with the evidence supporting the diagnosis"}
+        ],
+        "process": [
+          "Build the design with debug instrumentation. Enable incremental compilation if supported (Vivado: incremental implementation; Quartus: incremental compilation) to minimize the build time and reduce the chance that adding debug probes perturbs the timing enough to mask the bug.",
+          "Program the FPGA and arm the trigger. Run the system under the conditions that reproduce the failure. If the trigger fires, download the captured data. If the trigger does not fire, verify the trigger condition is correct and the failure is actually occurring (check error counters via VIO).",
+          "Analyze the waveform. Look for: (a) the first signal that deviates from expected behavior (this is the temporal root cause), (b) the state of control signals at the time of deviation, (c) handshake protocol violations (valid without ready, data changing while valid is asserted), (d) metastable-looking signals (signals that are in an intermediate state for one or more cycles, indicating a CDC issue).",
+          "If the root cause is not visible in the current probe set: identify which signals would resolve the ambiguity, add them to the probe plan, rebuild, and capture again. This iterative cycle is the core of hardware debug.",
+          "Correlate with simulation. Take the input conditions observed in the ILA capture and apply them in RTL simulation. If simulation reproduces the bug, the root cause is in the RTL and can be analyzed with full visibility. If simulation does not reproduce the bug, the root cause is likely a timing issue, a CDC issue, or a physical implementation artifact (these are not visible in behavioral RTL simulation).",
+          "For timing-related bugs: check the timing report for paths involving the failing signals. A path with marginal positive slack may fail intermittently due to temperature or voltage variation. For CDC bugs: check if the failing signals cross clock domains and whether the synchronization structure is correct."
+        ],
+        "tags": ["fpga", "debug", "capture", "analysis"]
+      },
+      {
+        "flow_name": "debug-fix-and-regression",
+        "description": "Implement and verify the fix for the identified root cause, then run regression to confirm the fix does not introduce new failures.",
+        "inputs": [
+          {"name": "capture-data", "desc": "ILA waveform evidence of the failure"},
+          {"name": "root-cause-hypothesis", "desc": "Identified root cause with supporting evidence"}
+        ],
+        "outputs": [
+          {"name": "fix-implementation", "desc": "RTL change that addresses the root cause, with explanation of why the fix is correct and what failure mode it eliminates"},
+          {"name": "regression-results", "desc": "Results of regression testing showing the original failure is resolved and no new failures are introduced"}
+        ],
+        "process": [
+          "Implement the fix at the RTL level. If the root cause is a logic error, correct the logic. If it is a timing issue, add pipeline registers or restructure the path. If it is a CDC issue, add the appropriate synchronizer. If it is a race condition, add the necessary handshake or arbitration.",
+          "Reproduce the failure in simulation with the pre-fix RTL to confirm the test vector catches the bug. Then apply the fix and verify simulation now passes. If you cannot reproduce in simulation, write a test that exercises the specific condition observed in the ILA capture.",
+          "Run the full regression suite. The fix must not break any existing tests. If regression failures appear, they indicate the fix has a side effect that must be understood and addressed.",
+          "Rebuild with debug instrumentation and verify on hardware. Reproduce the original failure conditions and confirm the trigger no longer fires (the failure is gone). Run extended stress testing to verify the fix holds under all operating conditions.",
+          "After hardware verification, remove or disable the debug instrumentation (or leave it in if the resource overhead is acceptable and future debug may be needed). Rebuild for production without ILA cores to recover the BRAM and reduce power consumption.",
+          "Update the regression test suite with a test that specifically exercises the fixed condition. This prevents the bug from being reintroduced by future changes."
+        ],
+        "tags": ["fpga", "debug", "fix", "regression"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fpga-architecture-selection",
+    "description": "Select the correct FPGA device for a design by systematically estimating resource requirements, evaluating vendor offerings, and performing cost-performance trade-off analysis.",
+    "domain": "hardware",
+    "tags": ["fpga", "digital-design", "architecture", "selection", "planning"],
+    "steps": [
+      {
+        "flow_name": "fpga-resource-estimation",
+        "description": "Estimate the FPGA resource requirements from the design specification: LUTs, registers, BRAM, DSP blocks, I/O pins, and high-speed transceivers.",
+        "inputs": [
+          {"name": "system-architecture", "desc": "Block diagram of the full system showing all processing blocks, memory interfaces, communication interfaces, and control logic"},
+          {"name": "performance-requirements", "desc": "Clock frequency targets, throughput requirements, latency budgets, and I/O speed grades for each interface"}
+        ],
+        "outputs": [
+          {"name": "resource-estimate", "desc": "Estimated LUT, register, BRAM (18Kb and 36Kb), DSP block, I/O pin, and transceiver count for each functional block and the total"},
+          {"name": "resource-confidence", "desc": "Confidence level for each estimate (high: based on prior implementation, medium: scaled from similar design, low: rough estimate from specification) and recommended margin"}
+        ],
+        "process": [
+          "Estimate logic resources (LUTs and registers) for each block. For well-understood blocks (UART, SPI, I2C controllers): use published resource figures from IP datasheets. For custom logic: estimate from the RTL's complexity. A simple state machine is ~50-200 LUTs. A packet processor is ~2,000-10,000 LUTs depending on features.",
+          "Estimate memory (BRAM). Each BRAM is 18Kb or 36Kb. Memory needs: FIFOs (width x depth), lookup tables, frame buffers, coefficient storage. For each memory, calculate bits = width x depth and divide by 18Kb or 36Kb. Add 20% margin for inefficient packing (a 17-bit-wide memory wastes 1 bit per BRAM but uses one full BRAM column).",
+          "Estimate DSP blocks. Each DSP48 provides one 27x18 multiply-accumulate. Count multiplications: FIR filter taps, matrix operations, correlation functions. If time-multiplexing is used, divide by the multiplexing factor. Add DSP blocks for any arithmetic that benefits from the DSP's pre-adder or pattern detector.",
+          "Count I/O pins. List every external interface: memory data/address/control, communication ports, sensor inputs, actuator outputs, debug/test, power management, LEDs/switches. Include both signal pins and associated power/ground pins in the I/O bank budget.",
+          "Count high-speed transceivers. Each serial link (PCIe lane, Ethernet port, fiber channel, custom SERDES) requires one transceiver pair. Multi-lane interfaces require that many transceiver pairs be in the same transceiver quad or bank for channel bonding.",
+          "Apply margins. For a first implementation: 50% margin on logic (LUT/register), 30% on BRAM, 20% on DSP. For a design migrated from a known implementation: 20% on logic, 10% on BRAM and DSP. Margin accounts for synthesis efficiency, debug instrumentation, and feature additions."
+        ],
+        "tags": ["fpga", "architecture", "resource-estimation"]
+      },
+      {
+        "flow_name": "fpga-vendor-and-family-evaluation",
+        "description": "Evaluate FPGA vendor families against the resource estimates, performance requirements, and project constraints to create a shortlist of candidate devices.",
+        "inputs": [
+          {"name": "resource-estimate", "desc": "Resource requirements with margins"},
+          {"name": "resource-confidence", "desc": "Confidence levels and recommended margins"}
+        ],
+        "outputs": [
+          {"name": "device-shortlist", "desc": "3-5 candidate FPGA devices from 1-2 vendors, each with its resource headroom, speed grade, package, and unit price at the expected volume"},
+          {"name": "vendor-comparison-matrix", "desc": "Side-by-side comparison of candidates across: resources, speed grade, I/O count, transceiver count, power, package size, price, tool chain maturity, IP availability, and long-term availability"}
+        ],
+        "process": [
+          "Filter by hard requirements. Eliminate devices that do not have enough of any single resource: insufficient transceiver count, wrong transceiver speed, missing I/O standard support, or insufficient DSP blocks. These are non-negotiable.",
+          "Select the speed grade. The speed grade determines the maximum achievable clock frequency. If the design requires 400 MHz operation and the device's fastest speed grade achieves 450 MHz on representative logic, there is 12% margin. If the slowest speed grade achieves 350 MHz, it is insufficient. Prefer the slowest speed grade that meets timing with margin, because faster grades cost more and consume more power.",
+          "Evaluate the package. Pin count must accommodate all I/O plus power/ground. Physical footprint must fit the PCB. Thermal pad or ball configuration must be compatible with the assembly process. Some packages have fewer transceiver pairs than the die supports; verify the package exposes enough for the design.",
+          "Compare vendors. AMD/Xilinx vs Intel/Altera: evaluate tool chain quality (Vivado vs Quartus), available IP (Ethernet MAC, PCIe, DDR controller), ecosystem (documentation, community, third-party tools), and your team's existing expertise. Switching vendors has a learning curve cost.",
+          "For cost-sensitive applications: consider Lattice (lower power, lower cost, fewer resources) or Microchip/Microsemi (flash-based, instant-on, radiation-tolerant options). These target different segments than AMD and Intel.",
+          "Check long-term availability. FPGA devices can have 15+ year lifecycles, but specific packages may be discontinued earlier. For products with long production runs, verify the device and package are not in the 'not recommended for new designs' status. Request a product lifecycle commitment from the vendor."
+        ],
+        "tags": ["fpga", "architecture", "vendor", "selection"]
+      },
+      {
+        "flow_name": "fpga-prototype-validation",
+        "description": "Validate the FPGA selection by implementing a representative subset of the design on the target device and verifying resource utilization, timing, and power.",
+        "inputs": [
+          {"name": "device-shortlist", "desc": "Candidate FPGA devices with comparison data"},
+          {"name": "vendor-comparison-matrix", "desc": "Feature and cost comparison across candidates"}
+        ],
+        "outputs": [
+          {"name": "prototype-results", "desc": "Actual resource utilization, achieved clock frequency, and measured power for the representative design on the target device"},
+          {"name": "device-selection-decision", "desc": "Final FPGA device selection with rationale, including risk assessment for resource margin and any operating restrictions"}
+        ],
+        "process": [
+          "Select the most critical functional block for prototyping: the one with the highest resource uncertainty or the tightest timing constraint. Implement it on the candidate device using the vendor's tools. This validates the resource estimate and the tool's synthesis quality for the design's coding style.",
+          "Run implementation (synthesis, place, route) and check: (a) actual LUT, register, BRAM, DSP utilization vs estimate, (b) achieved clock frequency vs target, (c) routing congestion (a design that fits in resources but causes routing congestion will fail timing). If utilization exceeds 80% on any resource type, the full design is at risk.",
+          "Run power analysis on the prototype implementation. Extrapolate to the full design by scaling proportionally. Verify the extrapolated power fits within the thermal budget.",
+          "If the prototype reveals the candidate device is insufficient (timing fails, resources exceeded), re-evaluate: move to a larger device in the same family, increase the speed grade, or redesign the most resource-intensive block.",
+          "Make the final selection. Document: device part number, package, speed grade, temperature grade, resource utilization (estimated with margins), timing margin, power estimate, unit price, and the risk assessment (what happens if the design grows beyond the estimate).",
+          "Order development boards and engineering samples. Begin the PCB design with the selected FPGA package. Lock the device selection as a design baseline; changing the FPGA after PCB design starts is extremely expensive."
+        ],
+        "tags": ["fpga", "architecture", "prototype", "validation"]
+      }
+    ]
+  }
+]

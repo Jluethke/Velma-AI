@@ -1,0 +1,1038 @@
+[
+  {
+    "chain_name": "rtos-architecture-design",
+    "description": "Design a real-time operating system task architecture from system requirements through schedulability analysis. Covers priority assignment (rate monotonic and deadline monotonic), utilization bound testing, response time analysis, inter-task communication design, stack sizing, and interrupt latency budgeting.",
+    "domain": "hardware",
+    "tags": ["embedded", "rtos", "real-time", "scheduling", "firmware"],
+    "steps": [
+      {
+        "flow_name": "rtos-task-decomposition",
+        "description": "Decompose system requirements into RTOS tasks by identifying periodic, aperiodic, and sporadic workloads, then assigning each a rate and worst-case execution time.",
+        "inputs": [
+          {"name": "system-requirements", "desc": "Functional and timing requirements for the embedded system"},
+          {"name": "hardware-platform", "desc": "Target MCU/MPU with clock speed, interrupt controller type, and available peripherals"}
+        ],
+        "outputs": [
+          {"name": "task-list", "desc": "Each task with name, type (periodic/aperiodic/sporadic), period or minimum inter-arrival time in ms, and measured or estimated WCET"},
+          {"name": "isr-list", "desc": "Each interrupt source with worst-case execution time and triggering frequency"}
+        ],
+        "process": [
+          "List every stimulus the system must respond to: sensor reads, communication frames, user inputs, timer expirations, and actuator updates.",
+          "Classify each stimulus as periodic (fixed interval), sporadic (minimum inter-arrival time known), or aperiodic (no guaranteed minimum interval). Aperiodic stimuli need a server task (polling or deferrable server).",
+          "For each periodic stimulus, record the period T in ms. For sporadic, record the minimum inter-arrival time. These become the task periods.",
+          "Measure or estimate worst-case execution time (WCET) for each task on the target hardware. Use instrumented code with GPIO toggling and an oscilloscope for measurement. For estimates, count instructions in the longest path and divide by clock cycles per instruction.",
+          "Group related stimuli into a single task only when they share the same period and can tolerate the combined WCET. Otherwise keep them separate.",
+          "List hardware interrupts separately. Each ISR should do minimal work: read the hardware register, clear the flag, post to a queue or set an event flag, then return. The deferred processing goes in a task."
+        ],
+        "tags": ["embedded", "rtos", "task-design"]
+      },
+      {
+        "flow_name": "rtos-priority-assignment",
+        "description": "Assign task priorities using rate monotonic analysis or deadline monotonic scheduling, then verify with utilization bound and exact response time tests.",
+        "inputs": [
+          {"name": "task-list", "desc": "Tasks with periods and WCETs"},
+          {"name": "isr-list", "desc": "Interrupts with WCETs and frequencies"}
+        ],
+        "outputs": [
+          {"name": "priority-table", "desc": "Each task with assigned priority level, period, WCET, and utilization"},
+          {"name": "schedulability-result", "desc": "Pass/fail with utilization sum, utilization bound, and per-task response times vs deadlines"}
+        ],
+        "process": [
+          "Calculate utilization for each task: U_i = C_i / T_i where C_i is WCET and T_i is period. Sum all utilizations to get total U.",
+          "For rate monotonic scheduling (RMS), assign higher priority to shorter-period tasks. For deadline monotonic (DMS), assign higher priority to shorter-deadline tasks. RMS is optimal for implicit deadlines (D = T). DMS is optimal when deadlines differ from periods.",
+          "Check the Liu and Layland utilization bound: U_bound = n * (2^(1/n) - 1) for n tasks. If total U is less than or equal to U_bound, the task set is schedulable under RMS. This is a sufficient but not necessary condition.",
+          "For task sets that exceed the utilization bound but have U less than 1.0, perform exact response time analysis. For each task i: R_i = C_i + sum over higher priority j of ceiling(R_i / T_j) * C_j. Iterate until R_i converges. If R_i is less than or equal to D_i for all tasks, the system is schedulable.",
+          "Account for ISR overhead in the response time analysis by treating interrupt processing time as the highest-priority 'task' that preempts everything.",
+          "If schedulability fails, options in order of preference: reduce WCET through code optimization, increase the processor clock, move to a faster MCU, or relax the deadline requirements with the system architect."
+        ],
+        "tags": ["embedded", "rtos", "scheduling", "rate-monotonic"]
+      },
+      {
+        "flow_name": "rtos-ipc-design",
+        "description": "Design inter-task communication using queues, semaphores, mutexes with priority inheritance, and event flags, choosing the right mechanism for each data flow.",
+        "inputs": [
+          {"name": "priority-table", "desc": "Tasks with assigned priorities"},
+          {"name": "task-list", "desc": "Tasks with their data dependencies and shared resources"}
+        ],
+        "outputs": [
+          {"name": "ipc-architecture", "desc": "Each IPC object (queue, mutex, semaphore, event group) with connected tasks, data type, and size"},
+          {"name": "blocking-analysis", "desc": "Maximum blocking time each task can experience from lower-priority tasks holding shared resources"}
+        ],
+        "process": [
+          "Map every data flow between tasks. Producer-consumer flows use message queues. Shared resource access uses mutexes. Synchronization points use binary semaphores or event flags.",
+          "Size each message queue: depth = burst rate * processing latency / message period. Add margin for jitter. The queue depth determines how much memory the RTOS allocates and how long the system can tolerate a processing delay without data loss.",
+          "For every shared resource (hardware peripheral, global data structure, flash memory), assign a mutex. Always use mutexes with priority inheritance or priority ceiling protocol to prevent unbounded priority inversion.",
+          "Calculate worst-case blocking time B_i for each task: the longest critical section of any lower-priority task that shares a resource with task i. This blocking term adds to the response time equation: R_i = C_i + B_i + sum of preemption from higher-priority tasks.",
+          "Use event flag groups when a task must wait for multiple conditions (e.g., sensor data ready AND calibration complete). This avoids nested semaphore waits that can deadlock.",
+          "Design a deadlock prevention strategy: impose a global lock ordering. If task A acquires mutex 1 then mutex 2, every task must acquire them in the same order. Document the lock ordering in the design."
+        ],
+        "tags": ["embedded", "rtos", "ipc", "synchronization"]
+      },
+      {
+        "flow_name": "rtos-stack-sizing",
+        "description": "Determine stack size for each RTOS task and the ISR stack using call graph analysis, local variable accounting, and runtime painting verification.",
+        "inputs": [
+          {"name": "ipc-architecture", "desc": "IPC objects and their memory requirements"},
+          {"name": "priority-table", "desc": "Tasks with priorities for preemption analysis"}
+        ],
+        "outputs": [
+          {"name": "stack-allocation-table", "desc": "Each task's stack size in bytes with breakdown: call depth, locals, RTOS overhead, safety margin"},
+          {"name": "memory-budget", "desc": "Total RAM usage: task stacks, ISR stack, RTOS kernel objects, message queue buffers, and heap (if used)"}
+        ],
+        "process": [
+          "For each task, build the call graph from the task entry function. Tools like GCC's -fstack-usage flag produce per-function stack usage. Sum the stack usage along the deepest call path.",
+          "Add the RTOS context save overhead: for ARM Cortex-M, this is 32 bytes for the hardware-stacked registers plus whatever the RTOS pushes (typically 32 to 64 more bytes for software context).",
+          "Add ISR preemption overhead. When an ISR preempts a task, the hardware stacks 8 registers (32 bytes on Cortex-M). Nested interrupts stack again. The ISR stack (separate on Cortex-M with RTOS support via MSP/PSP split) handles this.",
+          "Size the ISR stack: sum the worst-case nesting depth times the per-interrupt frame size. Most systems allow 2 to 4 levels of nesting.",
+          "Add a safety margin of 25% to each calculated stack. This covers compiler optimizations that change call depth, floating point context (additional 72 bytes on Cortex-M4F), and library functions with stack-heavy implementations.",
+          "Verify at runtime using stack painting: fill each stack with a known pattern (0xDEADBEEF) at startup, then periodically check how much of the pattern remains. The high-water mark should stay at least 15% below the allocated size. If not, increase the stack."
+        ],
+        "tags": ["embedded", "rtos", "memory", "stack"]
+      },
+      {
+        "flow_name": "rtos-timing-verification",
+        "description": "Verify the RTOS design meets all timing requirements through instrumented measurement, logic analyzer capture, and systematic deadline compliance testing.",
+        "inputs": [
+          {"name": "stack-allocation-table", "desc": "Finalized stack allocations"},
+          {"name": "schedulability-result", "desc": "Theoretical analysis results to compare against measured values"}
+        ],
+        "outputs": [
+          {"name": "timing-report", "desc": "Measured vs theoretical response times, worst-case latencies, jitter measurements, and pass/fail per requirement"},
+          {"name": "rtos-configuration", "desc": "Final RTOS config: tick rate, priority levels used, kernel objects, memory pool sizes, and configuration macros"}
+        ],
+        "process": [
+          "Instrument each task: toggle a GPIO pin high at task entry, low at task exit. Capture with a logic analyzer over a long run (hours). Measure maximum execution time, period jitter, and response time from stimulus to completion.",
+          "Compare measured WCET against the values used in schedulability analysis. If measured WCET exceeds the estimate, rerun the response time analysis with corrected values.",
+          "Select the RTOS tick rate. Common choices: 1 kHz (1 ms resolution) for most systems, 10 kHz for sub-ms timing needs. Higher tick rates increase ISR overhead. The tick ISR itself must be the shortest ISR in the system.",
+          "Test corner cases: simultaneous arrival of all periodic tasks (critical instant), maximum burst of sporadic events, all queues at capacity. These stress tests reveal failures that normal operation hides.",
+          "Measure interrupt latency: time from interrupt assertion to first ISR instruction. On Cortex-M with zero-latency interrupts, this is 12 clock cycles minimum. RTOS critical sections add to this. Verify the measured value meets the hardware timing requirements.",
+          "Document the final configuration: RTOS version, tick rate, number of priority levels, each kernel object (tasks, queues, mutexes, semaphores, event groups, timers) with its parameters. This becomes the RTOS design record for the project."
+        ],
+        "tags": ["embedded", "rtos", "verification", "timing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "interrupt-architecture-design",
+    "description": "Design an interrupt architecture for an embedded system: priority scheme, latency budgets, ISR design patterns, DMA integration, and shared resource protection from interrupt context.",
+    "domain": "hardware",
+    "tags": ["embedded", "interrupts", "firmware", "real-time", "NVIC"],
+    "steps": [
+      {
+        "flow_name": "interrupt-source-inventory",
+        "description": "Inventory all interrupt sources in the system, classify them by urgency, and establish latency budgets for each.",
+        "inputs": [
+          {"name": "peripheral-list", "desc": "All peripherals in the system with their interrupt capabilities"},
+          {"name": "timing-requirements", "desc": "Maximum allowable latency from event to response for each interrupt source"}
+        ],
+        "outputs": [
+          {"name": "interrupt-inventory", "desc": "Each interrupt source with: peripheral, trigger type (edge/level), frequency, required latency, and estimated ISR execution time"},
+          {"name": "latency-budget", "desc": "For each interrupt: total budget breakdown into hardware latency, ISR entry overhead, processing time, and margin"}
+        ],
+        "process": [
+          "List every interrupt source from the MCU reference manual: peripheral interrupts (UART RX, SPI complete, ADC end-of-conversion, timer overflow, GPIO edge), DMA transfer complete, fault interrupts (hard fault, bus fault, usage fault, memory management fault).",
+          "For each source, record the trigger type. Edge-triggered interrupts can be missed if the flag is not cleared before the next edge. Level-triggered interrupts keep asserting until the cause is serviced. Choose edge for pulses, level for status conditions.",
+          "Establish the latency budget for each interrupt. The total latency is: hardware stacking time + ISR entry (vector fetch, pipeline flush) + any higher-priority ISR preemption + ISR processing time. On Cortex-M, hardware stacking takes 12 cycles minimum.",
+          "Estimate ISR execution time by counting the operations needed: read status register, clear flag, transfer data (or start DMA), signal the task. Multiply instruction count by cycles-per-instruction for the target core.",
+          "Identify interrupts that can share a vector (e.g., multiple GPIO pins on the same port). Shared vectors add dispatching overhead: read the flag register to determine which pin triggered, then branch."
+        ],
+        "tags": ["embedded", "interrupts", "latency"]
+      },
+      {
+        "flow_name": "interrupt-priority-scheme",
+        "description": "Assign interrupt priority levels using the ARM NVIC model (or equivalent), configure priority grouping, and verify that nesting behavior meets latency requirements.",
+        "inputs": [
+          {"name": "interrupt-inventory", "desc": "All interrupt sources with latency requirements"},
+          {"name": "latency-budget", "desc": "Latency budgets per interrupt"}
+        ],
+        "outputs": [
+          {"name": "priority-assignment", "desc": "Each interrupt with assigned preemption priority and sub-priority, plus the NVIC priority grouping configuration"},
+          {"name": "nesting-analysis", "desc": "Worst-case nesting depth and the resulting stack usage on the main stack pointer (MSP)"}
+        ],
+        "process": [
+          "Configure NVIC priority grouping. ARM Cortex-M splits the priority field into preemption priority (group) and sub-priority. More preemption bits allow more nesting levels but fewer sub-priorities. Common choice: 4 bits preemption, 0 bits sub-priority (NVIC_PriorityGroup_4) for maximum nesting control.",
+          "Assign preemption priorities: lowest number = highest urgency. Safety-critical interrupts (fault handlers, watchdog) get the highest priority. Time-critical peripheral interrupts (motor control PWM, communication frame sync) get the next tier. Bulk data transfer complete interrupts get lower priority.",
+          "Reserve priority level 0 for fault handlers that must never be blocked. The RTOS SysTick and PendSV typically get the lowest priority levels so they never delay peripheral ISRs.",
+          "Calculate worst-case nesting depth: count the maximum number of priority levels where an interrupt at each level could preempt the previous. Each nesting level adds one context frame to the MSP stack (32 bytes on Cortex-M baseline, more with FPU context).",
+          "Verify that no interrupt with a tight latency budget can be preempted by a longer-running higher-priority ISR. If so, swap priorities or split the long ISR into a short top-half and a deferred bottom-half."
+        ],
+        "tags": ["embedded", "interrupts", "NVIC", "priority"]
+      },
+      {
+        "flow_name": "isr-design-patterns",
+        "description": "Implement ISR handlers following minimal-work design rules: hardware register access, flag clearing, data transfer, and deferred processing via RTOS notifications.",
+        "inputs": [
+          {"name": "priority-assignment", "desc": "Interrupt priorities and nesting configuration"},
+          {"name": "interrupt-inventory", "desc": "Each interrupt with its required actions"}
+        ],
+        "outputs": [
+          {"name": "isr-implementations", "desc": "ISR code patterns for each interrupt type: register access sequence, flag clearing order, data movement, and RTOS notification method"},
+          {"name": "shared-resource-protocol", "desc": "Rules for accessing shared data from ISR context: which mechanisms are safe (atomic operations, lock-free queues) and which are not (mutexes, malloc)"}
+        ],
+        "process": [
+          "Follow the minimal-ISR rule: read the status register to identify the cause, clear the interrupt flag immediately (before processing for edge-triggered, after for level-triggered), move data to a buffer or queue, signal a task, return. Processing happens in the task, not the ISR.",
+          "For UART RX: read the data register (this clears the flag on most MCUs), write to a ring buffer, increment the write pointer using an atomic operation, signal the processing task via a semaphore or task notification. The ring buffer must be sized for worst-case burst at the baud rate.",
+          "For ADC end-of-conversion: read the data register, store to a DMA-like sample buffer, increment the sample counter. If the buffer is full, signal the processing task and swap to a second buffer (ping-pong pattern).",
+          "For timer overflow (periodic processing): use the ISR only to post a semaphore or set an event flag. The actual periodic work runs in a task at the appropriate priority. This keeps the ISR deterministic.",
+          "Never call functions that block or allocate memory from ISR context. Banned operations inside ISRs: mutex lock, memory allocation (malloc/new), printf/logging, queue send with a non-zero timeout. Use the 'FromISR' variants of RTOS API calls that never block.",
+          "For shared data between an ISR and a task: use atomic operations for single-word reads/writes, lock-free ring buffers for streaming data, or disable the specific interrupt briefly (not global interrupt disable) for multi-word structures."
+        ],
+        "tags": ["embedded", "interrupts", "isr", "design-patterns"]
+      },
+      {
+        "flow_name": "dma-interrupt-integration",
+        "description": "Integrate DMA with the interrupt architecture to offload data transfer from the CPU, reduce ISR frequency, and improve determinism.",
+        "inputs": [
+          {"name": "isr-implementations", "desc": "Current ISR designs identifying data transfer bottlenecks"},
+          {"name": "shared-resource-protocol", "desc": "Rules for safe data access"}
+        ],
+        "outputs": [
+          {"name": "dma-configuration", "desc": "DMA channel assignments, transfer sizes, circular vs normal mode, and half/full transfer interrupt usage"},
+          {"name": "revised-interrupt-load", "desc": "Updated interrupt frequency and CPU utilization after DMA offloading"}
+        ],
+        "process": [
+          "Identify interrupt sources where the ISR primarily moves data: UART RX/TX byte-by-byte, SPI frame transfers, ADC multi-channel scans, memory-to-memory copies. These are candidates for DMA.",
+          "Assign DMA channels. On STM32, DMA request mapping is fixed per channel/stream. Check the reference manual for which peripheral maps to which DMA channel. Conflicts require arbitration or using a different DMA controller.",
+          "Configure DMA transfer mode: peripheral-to-memory for RX, memory-to-peripheral for TX. Set data width to match the peripheral register size. Enable circular mode for continuous ADC scanning. Use normal mode for finite-length transfers (SPI block reads).",
+          "Use half-transfer and transfer-complete interrupts for double-buffering (ping-pong). The CPU processes the first half while DMA fills the second half, and vice versa. This eliminates the latency of waiting for the full buffer.",
+          "Calculate the new interrupt rate: with DMA handling a 115200 baud UART, interrupts drop from 11,520/sec (one per byte) to roughly 23/sec (one per 512-byte DMA buffer). This frees significant CPU time.",
+          "Handle DMA error interrupts: transfer error, FIFO overrun. These indicate system problems (bus contention, misconfigured addresses). Log the error, reset the DMA channel, and resume or escalate."
+        ],
+        "tags": ["embedded", "dma", "interrupts", "optimization"]
+      },
+      {
+        "flow_name": "interrupt-storm-protection",
+        "description": "Design protection against interrupt storms that can starve task execution: rate limiting, disabling and re-enabling strategies, and watchdog-based recovery.",
+        "inputs": [
+          {"name": "dma-configuration", "desc": "DMA setup reducing normal interrupt load"},
+          {"name": "revised-interrupt-load", "desc": "Expected interrupt rates under normal and worst-case conditions"}
+        ],
+        "outputs": [
+          {"name": "storm-protection-design", "desc": "Rate limiting thresholds, disable/re-enable timers, escalation actions, and watchdog integration for each interrupt source"},
+          {"name": "interrupt-architecture-document", "desc": "Complete interrupt design: priority map, ISR implementations, DMA integration, storm protection, and verification checklist"}
+        ],
+        "process": [
+          "Define the storm threshold for each interrupt: the rate above which the system cannot maintain task scheduling. For a 1 kHz tick rate, if any ISR consumes more than 50% of each tick period, tasks will miss deadlines.",
+          "Implement ISR rate monitoring: maintain a counter per interrupt source, reset every tick. If the count exceeds the threshold, disable the interrupt and start a re-enable timer. Log the event for diagnostics.",
+          "For level-triggered interrupts, a stuck peripheral can cause a storm immediately. The ISR must check if the interrupt source is still asserted after clearing. If so, disable the interrupt and flag a hardware error.",
+          "Configure the watchdog timer with a timeout shorter than the longest acceptable task starvation period. If an interrupt storm prevents the watchdog-feeding task from running, the watchdog fires and resets the system.",
+          "Document the complete interrupt architecture: a table of all interrupts with priority, ISR pattern, DMA usage, storm threshold, and the verification method (logic analyzer capture showing worst-case latency and nesting). This document is the reference for code reviews and future modifications."
+        ],
+        "tags": ["embedded", "interrupts", "protection", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "bootloader-design-methodology",
+    "description": "Design a firmware bootloader: boot sequence architecture, secure boot chain with root of trust, firmware update mechanism with A/B partitioning, boot time optimization, and recovery mode.",
+    "domain": "hardware",
+    "tags": ["embedded", "bootloader", "firmware-update", "secure-boot", "flash"],
+    "steps": [
+      {
+        "flow_name": "boot-sequence-architecture",
+        "description": "Design the multi-stage boot sequence from power-on reset through application entry, defining responsibilities at each stage.",
+        "inputs": [
+          {"name": "mcu-platform", "desc": "MCU family, flash size, RAM size, boot ROM capabilities, and clock configuration requirements"},
+          {"name": "security-requirements", "desc": "Whether secure boot is required, firmware encryption needs, and anti-rollback requirements"}
+        ],
+        "outputs": [
+          {"name": "boot-stage-design", "desc": "Each boot stage with: entry conditions, responsibilities, memory location, size budget, and handoff mechanism"},
+          {"name": "flash-partition-map", "desc": "Flash memory layout: bootloader region, application A slot, application B slot (if A/B), configuration/NVM region, factory image region"}
+        ],
+        "process": [
+          "Define the boot stages. Stage 0: ROM bootloader (built into silicon, not modifiable). Stage 1: first-stage bootloader in protected flash (performs hardware init, validates stage 2). Stage 2: second-stage bootloader (full update logic, validates application). Stage 3: application.",
+          "The ROM bootloader (stage 0) is fixed by the silicon vendor. Understand its capabilities: which interfaces it can boot from (UART, USB, SPI), whether it checks signatures, and how it selects between boot sources (boot pins, option bytes).",
+          "Design the flash partition map. Place the bootloader at the base of flash (address 0x08000000 on STM32). Size it conservatively: 32 KB to 64 KB for most systems. The application starts at the next flash sector boundary after the bootloader. If using A/B update, split remaining flash into two equal application slots plus a configuration sector.",
+          "Define the vector table relocation mechanism. The bootloader must set VTOR (Vector Table Offset Register) to point to the application's vector table before jumping. The application's linker script must place its vector table at the slot base address.",
+          "Design the bootloader-to-application handoff: set the MSP to the value at the application's vector table base address, then branch to the reset handler address stored at vector table base + 4. Verify the MSP value is within valid RAM range before jumping (a simple integrity check)."
+        ],
+        "tags": ["embedded", "bootloader", "boot-sequence"]
+      },
+      {
+        "flow_name": "secure-boot-chain-design",
+        "description": "Implement a secure boot chain with hardware root of trust, cryptographic signature verification, and anti-rollback protection.",
+        "inputs": [
+          {"name": "boot-stage-design", "desc": "Boot stages and their responsibilities"},
+          {"name": "security-requirements", "desc": "Required security level, key management constraints"}
+        ],
+        "outputs": [
+          {"name": "secure-boot-architecture", "desc": "Signature algorithm, key storage, verification flow at each stage, failure handling, and anti-rollback counter mechanism"},
+          {"name": "key-management-plan", "desc": "Root key generation, signing key hierarchy, key storage (OTP fuses or secure element), and key revocation procedure"}
+        ],
+        "process": [
+          "Select the signature algorithm. ECDSA with P-256 is the standard choice: 64-byte signature, verification in under 100 ms on a Cortex-M4 at 168 MHz. RSA-2048 is an alternative but signatures are 256 bytes and verification is slower without hardware acceleration.",
+          "Store the root public key in one-time-programmable (OTP) fuses or a secure element. This is the hardware root of trust. The ROM bootloader or first-stage bootloader uses this key to verify the next stage. Once burned, the key cannot be changed, so key generation must follow a ceremony with offline storage of the private key.",
+          "Implement the chain of trust: ROM verifies stage 1 using the OTP root key. Stage 1 verifies stage 2 using a key embedded in stage 1 (or the same root key). Stage 2 verifies the application. Each stage only executes the next if verification passes.",
+          "Add a firmware image header before each signed blob: magic number, version number, image size, hardware compatibility ID, signature. The verifier reads the header, hashes the image (SHA-256), then checks the signature against the hash.",
+          "Implement anti-rollback: store a monotonic counter in OTP fuses or a protected NVM region. Each firmware image header contains a minimum-version field. The bootloader refuses to boot any image with a version lower than the stored counter. After successful boot, update the counter to the running version."
+        ],
+        "tags": ["embedded", "secure-boot", "cryptography", "trust"]
+      },
+      {
+        "flow_name": "firmware-update-mechanism",
+        "description": "Design the firmware update mechanism: A/B partitioning for atomic updates, differential updates for bandwidth-constrained links, and update state machine.",
+        "inputs": [
+          {"name": "flash-partition-map", "desc": "Flash layout with bootloader, app slots, and config regions"},
+          {"name": "secure-boot-architecture", "desc": "Signature verification flow that the update must integrate with"}
+        ],
+        "outputs": [
+          {"name": "update-state-machine", "desc": "States: idle, downloading, verifying, committing, rolling-back. Transitions and persistent flags for each state."},
+          {"name": "update-protocol", "desc": "Transport protocol (UART/USB/BLE/cellular), chunk size, error handling, resume capability, and total update time estimate"}
+        ],
+        "process": [
+          "Choose the update strategy. A/B partitioning: the running application writes the new image to the inactive slot, the bootloader validates and swaps on next boot. This is atomic (power loss at any point is safe) but requires 2x the flash for application code.",
+          "If flash is too small for A/B, use in-place update with a recovery image: the bootloader copies the new image over the running application, with a factory recovery image in a protected region. This is not atomic, but the recovery image handles interrupted updates.",
+          "Design the update state machine with persistent flags stored in a dedicated flash sector (or the last page of each slot). States: IDLE (boot normally), DOWNLOAD_IN_PROGRESS (resume if interrupted), VERIFY_PENDING (new image received, needs validation), BOOT_NEW (bootloader should try the new slot), CONFIRMED (new image booted and confirmed by application), ROLLBACK (new image failed, revert to previous).",
+          "For bandwidth-constrained links (BLE, LoRa), implement delta updates: generate a binary diff (bsdiff or similar) between old and new firmware. The device applies the patch to produce the new image. This reduces transfer size by 60% to 90% for typical firmware changes but requires RAM for the patching algorithm.",
+          "Handle power loss at every transition. The golden rule: never erase the current working image until the new image is fully written and verified. With A/B, this is automatic. With in-place update, copy the current image to backup before erasing.",
+          "The application must confirm the new firmware within a timeout (e.g., 3 successful boot cycles or an explicit confirm command). If confirmation does not arrive, the bootloader rolls back to the previous version on the next reset."
+        ],
+        "tags": ["embedded", "firmware-update", "ota", "flash"]
+      },
+      {
+        "flow_name": "boot-time-optimization",
+        "description": "Reduce boot time from power-on to application ready through clock configuration optimization, lazy initialization, and parallel init sequencing.",
+        "inputs": [
+          {"name": "update-state-machine", "desc": "Update mechanism design that affects boot path decisions"},
+          {"name": "boot-stage-design", "desc": "Current boot stages and their execution times"}
+        ],
+        "outputs": [
+          {"name": "boot-time-breakdown", "desc": "Time in ms for each boot phase: oscillator startup, PLL lock, flash init, signature verification, peripheral init, application init"},
+          {"name": "optimization-actions", "desc": "Specific changes to reduce boot time with measured before/after for each"}
+        ],
+        "process": [
+          "Measure the current boot time with a GPIO pin toggled at each stage boundary. Use an oscilloscope to capture the full boot sequence. Common breakdown: oscillator startup (1 to 10 ms), PLL lock (0.5 to 2 ms), bootloader execution (5 to 50 ms), signature verification (10 to 200 ms), application init (varies).",
+          "Optimize oscillator startup: if using an external crystal, the startup time depends on load capacitance and crystal parameters. Reduce load caps to the minimum recommended by the crystal manufacturer. Or start on the internal RC oscillator and switch to the crystal after PLL lock.",
+          "For secure boot, pre-compute partial hashes. If the firmware image has not changed since last boot (stored hash matches), skip the full verification and use a fast integrity check (CRC32 of key sections) instead. Full verification runs only after an update.",
+          "Use lazy initialization: only init peripherals that are needed immediately. Defer initialization of communication interfaces, sensors, and displays until the first access. This moves time from the boot path to the first use of each peripheral.",
+          "Parallelize initialization where hardware allows: start ADC calibration while configuring communication peripherals. Start DMA-based sensor reads while the display is initializing. Track dependencies to avoid initializing a peripheral before its clock and GPIO are ready.",
+          "Measure the optimized boot time and record the improvements. The target depends on the application: consumer devices need sub-1-second boot, industrial controllers can tolerate 2 to 5 seconds, automotive ECUs have strict sub-100-ms requirements for some functions."
+        ],
+        "tags": ["embedded", "bootloader", "optimization", "boot-time"]
+      },
+      {
+        "flow_name": "bootloader-recovery-mode",
+        "description": "Design the recovery mode: entry conditions, fail-safe communication interface, factory reset capability, and brick prevention.",
+        "inputs": [
+          {"name": "boot-time-breakdown", "desc": "Boot timing analysis showing where failures can occur"},
+          {"name": "optimization-actions", "desc": "Optimized boot path that recovery must be independent of"}
+        ],
+        "outputs": [
+          {"name": "recovery-design", "desc": "Recovery entry conditions (button hold, magic byte, boot failure counter), recovery communication interface, and factory reset procedure"},
+          {"name": "bootloader-design-document", "desc": "Complete bootloader specification: boot stages, secure boot, update mechanism, boot time budget, recovery mode, and test plan"}
+        ],
+        "process": [
+          "Define recovery entry conditions. Primary: hardware button held during reset (check GPIO state in bootloader before jumping to app). Secondary: boot failure counter (increment on each boot attempt, clear on successful app confirmation; enter recovery after 3 consecutive failures). Tertiary: magic value written to a specific RAM address that survives reset (warm reset recovery trigger).",
+          "The recovery communication interface must be independent of the application firmware. Use the ROM bootloader's built-in UART/USB bootloader if available, or implement a minimal protocol in the first-stage bootloader. This interface must work even if the application and second-stage bootloader are both corrupted.",
+          "Implement factory reset: erase the application slots and configuration, then load the factory image from a write-protected flash region. The factory image must be old enough to be stable but new enough to include the update mechanism for field upgrades.",
+          "Prevent bricking by design. The first-stage bootloader must be in write-protected flash (use option bytes or flash protection bits). It must be small enough to be thoroughly tested and rarely updated. If it must be updated, the ROM bootloader serves as the last-resort recovery.",
+          "Document the complete bootloader design: flash map, boot sequence with timing, secure boot chain, update state machine, recovery procedures, and a test matrix covering every state transition including power loss at each step."
+        ],
+        "tags": ["embedded", "bootloader", "recovery", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "embedded-memory-architecture",
+    "description": "Design the memory architecture for an embedded system: memory map, linker script configuration, stack and heap sizing from call graph analysis, MPU configuration, DMA buffer placement, and deterministic memory allocation.",
+    "domain": "hardware",
+    "tags": ["embedded", "memory", "linker", "mpu", "dma", "firmware"],
+    "steps": [
+      {
+        "flow_name": "memory-map-design",
+        "description": "Design the system memory map by assigning flash and RAM regions to bootloader, application, data, and peripheral access, based on MCU memory architecture.",
+        "inputs": [
+          {"name": "mcu-memory-spec", "desc": "MCU memory regions (flash base/size, SRAM banks, CCM RAM if present, backup SRAM, peripheral base), and any memory-mapped external memories"},
+          {"name": "application-requirements", "desc": "Code size estimate, static data size, dynamic memory needs, DMA requirements, and any special memory needs (tightly-coupled, non-cacheable)"}
+        ],
+        "outputs": [
+          {"name": "memory-map", "desc": "Each memory region with: base address, size, contents (code, rodata, data, bss, heap, stacks, DMA buffers, config/NVM), and access attributes (read/write/execute, cacheable, shareable)"},
+          {"name": "region-allocation-table", "desc": "Detailed allocation within each region: section names, sizes, alignment requirements, and growth direction"}
+        ],
+        "process": [
+          "Start from the MCU memory map in the reference manual. ARM Cortex-M defines: 0x00000000 to 0x1FFFFFFF for code (flash maps here), 0x20000000 to 0x3FFFFFFF for SRAM, 0x40000000 to 0x5FFFFFFF for peripherals, 0xE0000000 for system control (NVIC, SysTick, debug).",
+          "Partition flash: bootloader at base, application code after bootloader end (sector-aligned), read-only data (const, strings, lookup tables) adjacent to code, configuration/calibration data in the last flash sector(s) for independent erase.",
+          "Partition SRAM: .data and .bss at SRAM base, stacks growing downward from a defined boundary, heap growing upward from .bss end (if heap is used), DMA buffers at specific addresses required by DMA controller alignment. On STM32 with multiple SRAM banks, place DMA buffers in SRAM1/SRAM2 accessible by the DMA controller.",
+          "If the MCU has CCM (core-coupled memory), use it for stack and frequently accessed variables because it has zero-wait-state access. CCM is not DMA-accessible on most STM32, so DMA buffers must go in main SRAM.",
+          "For systems with data cache (Cortex-M7), mark DMA buffer regions as non-cacheable to prevent coherence issues. Alternatively, use cache maintenance operations (clean/invalidate) around DMA transfers, but the non-cacheable approach is simpler and less error-prone."
+        ],
+        "tags": ["embedded", "memory", "memory-map", "hardware"]
+      },
+      {
+        "flow_name": "linker-script-design",
+        "description": "Write the linker script (GNU LD or equivalent) that implements the memory map, placing each section in the correct region with proper alignment and initialization.",
+        "inputs": [
+          {"name": "memory-map", "desc": "Memory regions with contents and attributes"},
+          {"name": "region-allocation-table", "desc": "Section assignments and alignment requirements"}
+        ],
+        "outputs": [
+          {"name": "linker-script", "desc": "Complete linker script with MEMORY definitions, SECTIONS placements, symbol definitions for startup code (.data copy, .bss zero, stack pointer), and alignment directives"},
+          {"name": "startup-requirements", "desc": "What the startup code must do based on the linker script: copy .data from flash to RAM, zero .bss, set MSP, call constructors, branch to main"}
+        ],
+        "process": [
+          "Define the MEMORY block: each physical memory region with origin and length. Name them clearly: FLASH, SRAM, CCM, BACKUP_SRAM. The origin and length must match the MCU datasheet exactly.",
+          "Define the SECTIONS block. Place .isr_vector first in FLASH (the vector table must be at the flash base for the default VTOR). Follow with .text (code), .rodata (constants), .ARM.extab and .ARM.exidx (exception handling tables if C++ is used).",
+          "The .data section is loaded in FLASH but runs from RAM. Use the AT> directive: '.data : { *(.data*) } > SRAM AT> FLASH'. Define _sidata (load address in flash), _sdata (start in RAM), _edata (end in RAM) symbols for the startup code to copy.",
+          "The .bss section is zero-initialized and lives only in RAM. Define _sbss and _ebss symbols. The startup code zeroes this region before calling main.",
+          "Place the stack at the top of SRAM (or CCM) with a defined size symbol. The first word of the vector table is the initial MSP value, which the linker script provides: _estack = ORIGIN(SRAM) + LENGTH(SRAM). Alternatively, reserve a fixed-size stack section.",
+          "Add ASSERT statements to catch overflows at link time: ASSERT((_edata - _sdata) + (_ebss - _sbss) + _Min_Heap_Size + _Min_Stack_Size <= LENGTH(SRAM), 'RAM overflow'). This prevents silent memory corruption from a build that compiles but does not fit."
+        ],
+        "tags": ["embedded", "linker", "memory", "toolchain"]
+      },
+      {
+        "flow_name": "stack-heap-sizing-analysis",
+        "description": "Determine stack and heap sizes using static call graph analysis, compiler-generated stack usage data, and runtime verification.",
+        "inputs": [
+          {"name": "linker-script", "desc": "Current linker script with stack and heap size symbols"},
+          {"name": "startup-requirements", "desc": "Startup code requirements affecting initial stack usage"}
+        ],
+        "outputs": [
+          {"name": "stack-size-calculation", "desc": "Per-task stack requirement with breakdown: deepest call path, local variable sum, interrupt preemption overhead, FPU context, and safety margin"},
+          {"name": "heap-elimination-plan", "desc": "Strategy to eliminate or minimize heap usage through static allocation, memory pools, and stack-allocated buffers"}
+        ],
+        "process": [
+          "Compile with -fstack-usage (GCC) to generate .su files showing stack usage per function. Parse these to find the function with the deepest total stack path: sum from main() (or task entry) through the deepest call chain.",
+          "Account for call-stack overhead: each function call pushes the return address (4 bytes on ARM) plus any callee-saved registers the function uses (up to 32 bytes for all callee-saved regs). The -fstack-usage output includes this.",
+          "Add interrupt preemption overhead: on Cortex-M, an interrupt pushes 8 registers (32 bytes) automatically. With FPU in use and lazy stacking enabled, an additional 72 bytes are reserved (but only used if the ISR uses floating point). If RTOS is used, the ISR stack is separate (MSP), so this adds to the ISR stack, not the task stack.",
+          "For heap: the safest approach in embedded systems is to eliminate it. Replace malloc with static buffers sized at compile time, memory pools for fixed-size allocations, and stack-allocated arrays for temporary buffers. If heap is unavoidable, define the minimum heap size as the peak concurrent allocation measured during testing.",
+          "Verify at runtime: fill the stack region with a canary pattern (0xDEADBEEF) at startup. Periodically check the canary from the bottom up. The first non-canary byte is the high-water mark. The margin between high-water mark and stack bottom should be at least 15% of the total stack.",
+          "Record the final sizes in the linker script as _Min_Stack_Size and _Min_Heap_Size. These symbols are used by the ASSERT to catch RAM overflow at link time."
+        ],
+        "tags": ["embedded", "memory", "stack", "analysis"]
+      },
+      {
+        "flow_name": "mpu-configuration-design",
+        "description": "Configure the Memory Protection Unit to enforce access permissions, prevent stack overflow corruption, and isolate DMA buffers from application code.",
+        "inputs": [
+          {"name": "stack-size-calculation", "desc": "Stack sizes and locations for MPU guard regions"},
+          {"name": "memory-map", "desc": "Memory regions with required access attributes"}
+        ],
+        "outputs": [
+          {"name": "mpu-region-table", "desc": "Each MPU region with: base address, size, access permissions (privileged/unprivileged, read/write/execute), memory attributes (cacheable, bufferable, shareable), and sub-region disable mask"},
+          {"name": "fault-handler-design", "desc": "Memory management fault handler that reports the faulting address, access type, and which MPU rule was violated"}
+        ],
+        "process": [
+          "ARM Cortex-M MPU has 8 or 16 regions (check the core revision). Each region must be a power-of-2 size, naturally aligned. Plan regions from most to least restrictive, using region priority (higher-numbered regions override lower).",
+          "Region 0: full flash as read-only, execute-allowed. This is the default background for code. Region 1: RAM as read-write, no-execute. This prevents code execution from RAM (a basic exploit mitigation).",
+          "Place a guard region (no access) at the bottom of each task stack. Size it to one MPU minimum region size (32 bytes on ARMv7-M, 256 bytes practical minimum due to alignment). A stack overflow triggers a MemManage fault instead of silently corrupting adjacent memory.",
+          "Mark DMA buffer regions as non-cacheable and shareable. On Cortex-M7 with cache, this is critical: TEX=001, C=0, B=1 (device shareable) or TEX=000, C=0, B=0 (strongly ordered). Without this, cached writes may not reach the DMA controller.",
+          "If running with unprivileged tasks (RTOS with MPU integration), configure per-task MPU regions to limit each task's access to only its own stack and designated shared regions. The RTOS context switch reconfigures the MPU for each task.",
+          "Implement the MemManage fault handler to capture MMFAR (faulting address), MMFSR (fault status), and the stacked PC (the instruction that caused the fault). Log these values and trigger a controlled error response."
+        ],
+        "tags": ["embedded", "mpu", "memory-protection", "security"]
+      },
+      {
+        "flow_name": "deterministic-memory-allocator",
+        "description": "Design and implement a deterministic memory allocation scheme using memory pools and block allocators, eliminating heap fragmentation and non-deterministic allocation times.",
+        "inputs": [
+          {"name": "mpu-region-table", "desc": "MPU configuration constraining where allocations can live"},
+          {"name": "heap-elimination-plan", "desc": "Strategy for replacing heap with fixed allocators"}
+        ],
+        "outputs": [
+          {"name": "allocator-design", "desc": "Memory pool definitions (block size, count, location), allocation API, deallocation API, and overflow handling"},
+          {"name": "memory-architecture-document", "desc": "Complete memory design: map, linker script, stack/heap analysis, MPU config, allocators, and verification methodology"}
+        ],
+        "process": [
+          "Profile the application's dynamic memory usage. Log every allocation and deallocation with size and caller. Group allocations into size classes. Typical embedded patterns: many small allocations (16 to 64 bytes for protocol buffers) and a few large ones (512 to 4096 bytes for data buffers).",
+          "Create a memory pool for each size class. A pool is a static array of fixed-size blocks with a free list (singly-linked list through the blocks themselves, zero overhead when a block is free). Allocation is O(1): pop from free list. Deallocation is O(1): push to free list.",
+          "Size each pool based on worst-case concurrent usage measured during profiling, plus 20% margin. Compile-time ASSERT that the total pool sizes fit in the allocated RAM region.",
+          "For allocations that do not fit any pool, use a static scratch buffer with a bump allocator (allocate by advancing a pointer, free by resetting the pointer). This works for request-scoped allocations where everything is freed at once.",
+          "Make all allocation failures visible and handled. No allocator should return NULL silently. Options: assert (catch in testing), error code (caller handles), or pre-verified design (prove at design time that the pool cannot be exhausted because usage is bounded).",
+          "Document the complete memory architecture: physical memory map, linker script with ASSERT guards, per-task stack sizes with analysis, MPU region table, memory pool specifications, and the verification approach (static analysis of allocation paths, runtime canary checks, profiling under stress test)."
+        ],
+        "tags": ["embedded", "memory", "allocator", "deterministic"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-management-embedded",
+    "description": "Design power management for an embedded system: sleep mode selection, wake source configuration, DVFS, peripheral clock gating, current profiling, and battery life estimation from duty cycle analysis.",
+    "domain": "hardware",
+    "tags": ["embedded", "power", "low-power", "battery", "sleep-modes"],
+    "steps": [
+      {
+        "flow_name": "power-budget-analysis",
+        "description": "Establish the power budget by profiling current consumption in each operating mode and calculating the required battery life against available energy.",
+        "inputs": [
+          {"name": "system-spec", "desc": "MCU, peripherals, sensors, communication modules, and their operating voltages and current consumption from datasheets"},
+          {"name": "battery-spec", "desc": "Battery chemistry, nominal voltage, capacity in mAh, self-discharge rate, and operating temperature range"}
+        ],
+        "outputs": [
+          {"name": "power-profile", "desc": "Current consumption in each mode: active-full, active-reduced, sleep, deep-sleep, and standby, measured at the system level including regulator efficiency losses"},
+          {"name": "power-budget-gap", "desc": "Required battery life vs calculated battery life. If a gap exists, the target current reduction needed to close it."}
+        ],
+        "process": [
+          "Measure baseline current: board powered from a bench supply through a current sense resistor (10 to 100 mOhm depending on current range) or a dedicated power profiler (Nordic PPK2 or similar). Measure at the battery input, not after the regulator, to capture regulator quiescent current and efficiency losses.",
+          "Profile each operating mode separately: CPU running at full clock with all peripherals active, CPU running with unused peripherals disabled, sleep mode (CPU halted, peripherals running), deep sleep (CPU and most peripherals halted, only wake sources active), standby/shutdown (only RTC and wake pin active).",
+          "Calculate battery life: Life_hours = Battery_mAh / Average_current_mA. For duty-cycled operation: Average_mA = (active_mA * active_time + sleep_mA * sleep_time) / total_cycle_time. Include battery self-discharge (typically 2% to 5% per month for lithium).",
+          "Account for regulator efficiency. A switching regulator at 85% efficiency delivering 3.3V from a 3.7V LiPo means the battery-side current is 3.3/3.7 * load_current / 0.85. An LDO is simpler: battery current equals load current, but the voltage drop is wasted as heat.",
+          "Identify the power budget gap: if required lifetime exceeds calculated lifetime, compute the average current reduction needed. This sets the target for the optimization steps."
+        ],
+        "tags": ["embedded", "power", "battery", "analysis"]
+      },
+      {
+        "flow_name": "sleep-mode-architecture",
+        "description": "Select and configure the optimal sleep mode for each system state, mapping wake sources to system events and designing the sleep/wake state machine.",
+        "inputs": [
+          {"name": "power-profile", "desc": "Current in each mode"},
+          {"name": "power-budget-gap", "desc": "Required current reduction"}
+        ],
+        "outputs": [
+          {"name": "sleep-mode-selection", "desc": "For each system state: which MCU sleep mode, which peripherals remain active, which clocks run, and expected current draw"},
+          {"name": "wake-source-map", "desc": "Each wake source (RTC alarm, GPIO pin, UART activity, comparator, I2C address match) with its latency from trigger to application code running"}
+        ],
+        "process": [
+          "Map the MCU's sleep modes to current consumption from the datasheet. Typical ARM Cortex-M hierarchy: Sleep (WFI, CPU stopped, peripherals run: 1 to 10 mA), Stop (most clocks off, SRAM retained, wake from EXTI: 1 to 100 uA), Standby (only backup domain, wake from RTC/WKUP pin: 1 to 5 uA), Shutdown (everything off: under 100 nA).",
+          "For each system state (monitoring, communicating, processing, idle), select the deepest sleep mode that preserves the required peripheral operation and meets the wake latency requirement. Deeper modes save more power but take longer to wake: Sleep wakes in cycles, Stop in 2 to 10 us, Standby requires full boot.",
+          "Configure wake sources. RTC alarm for periodic wake (sensor sampling). GPIO EXTI for external events (button press, sensor interrupt). UART activity detection for incoming commands (USART wake from Stop on start bit). I2C address match for bus wakeup in multi-device systems.",
+          "Design the sleep/wake state machine. Track the current state and what events can occur. Before entering sleep: ensure all pending operations are complete (DMA transfers done, UART TX buffer flushed, flash writes committed). After wake: identify the wake source (check wake flags), reinitialize only what was lost in the sleep mode (clock tree for Stop, full init for Standby).",
+          "Handle the idle task in an RTOS: the idle task should enter the deepest allowed sleep mode. The RTOS tick must wake the system before the next scheduled task. Tickless idle mode (available in FreeRTOS, Zephyr) suppresses the tick during long idle periods, allowing the system to stay in deep sleep."
+        ],
+        "tags": ["embedded", "power", "sleep", "wake"]
+      },
+      {
+        "flow_name": "peripheral-clock-gating",
+        "description": "Minimize active-mode power by disabling clocks to unused peripherals, reducing clock frequencies where full speed is not needed, and power-gating entire domains.",
+        "inputs": [
+          {"name": "sleep-mode-selection", "desc": "Sleep modes and which peripherals must remain active"},
+          {"name": "wake-source-map", "desc": "Wake sources requiring specific clocks or peripherals"}
+        ],
+        "outputs": [
+          {"name": "clock-gating-table", "desc": "Each peripheral clock with: enabled/disabled per system state, clock source, frequency, and the current savings from disabling"},
+          {"name": "dvfs-configuration", "desc": "Voltage and frequency scaling levels: clock frequency, core voltage, flash wait states, and current consumption for each level"}
+        ],
+        "process": [
+          "Audit every peripheral clock enable bit. On STM32, the RCC_AHBxENR and RCC_APBxENR registers control peripheral clocks. Most are disabled by reset but driver initialization enables them. Disable after use: turn off the ADC clock after conversion complete, turn off SPI clock after the transfer.",
+          "For peripherals used intermittently, enable the clock just before the operation and disable immediately after. The clock enable propagation delay is typically 1 to 2 bus clock cycles. Do not forget to disable the clock in error paths.",
+          "Implement dynamic voltage and frequency scaling (DVFS). Define 2 to 4 operating points: full speed for computation, medium speed for communication, low speed for housekeeping. Each operating point specifies: CPU clock, bus clocks (AHB/APB), core voltage (if adjustable via internal regulator), and flash wait states.",
+          "When scaling down frequency, adjust flash wait states first (increase them), then reduce the clock. When scaling up, increase the clock first, then reduce wait states. Getting this order wrong causes the CPU to read garbage from flash.",
+          "Measure the current at each operating point with the actual workload, not just idle. A 48 MHz Cortex-M at 30% utilization may draw less average current than a 16 MHz Cortex-M at 90% utilization because the faster CPU finishes and sleeps sooner (race to sleep)."
+        ],
+        "tags": ["embedded", "power", "clock-gating", "dvfs"]
+      },
+      {
+        "flow_name": "current-consumption-profiling",
+        "description": "Profile the system's current consumption over time with sub-millisecond resolution to identify power spikes, inefficient duty cycles, and optimization opportunities.",
+        "inputs": [
+          {"name": "clock-gating-table", "desc": "Peripheral clock states per system mode"},
+          {"name": "dvfs-configuration", "desc": "Frequency/voltage operating points"}
+        ],
+        "outputs": [
+          {"name": "current-waveform", "desc": "Time-resolved current profile at sub-ms resolution showing each operational phase with annotated events (wake, transmit, sleep entry)"},
+          {"name": "optimization-targets", "desc": "Ranked list of power reduction opportunities with estimated mAh savings per day for each"}
+        ],
+        "process": [
+          "Set up a power profiler that captures current with at least 1 us resolution and a dynamic range from 100 nA to 100 mA. The Nordic Power Profiler Kit 2 or Joulescope JS220 are suitable. Connect in series between the battery/supply and the board's power input.",
+          "Run a representative duty cycle: the system should go through all operational states including communication, sensing, processing, and sleeping. Capture a long enough trace to include several complete cycles.",
+          "Annotate the current waveform with GPIO debug signals: toggle a pin at each state transition so the power trace correlates with firmware events. This shows exactly which code section causes each current spike or plateau.",
+          "Identify power waste: time spent in active mode after the work is complete (waiting for an event instead of sleeping), peripherals left enabled during sleep (a common bug), radio transmit at higher power than needed, or excessive wake-up frequency.",
+          "Rank the optimization opportunities by impact: mAh_saved_per_day = (current_reduction_mA * duration_per_cycle_ms * cycles_per_day) / 3600000. Focus on the largest contributors first. A 1 mA reduction during a 10 ms active phase that runs 1000 times per day saves only 0.003 mAh. A 10 uA reduction during a 59-second sleep that repeats 1440 times per day saves 0.14 mAh."
+        ],
+        "tags": ["embedded", "power", "profiling", "measurement"]
+      },
+      {
+        "flow_name": "battery-life-estimation",
+        "description": "Compute the final battery life estimate from measured current profiles, incorporating temperature effects, aging, and manufacturing variation.",
+        "inputs": [
+          {"name": "current-waveform", "desc": "Time-resolved current measurements"},
+          {"name": "optimization-targets", "desc": "Planned optimizations with expected savings"}
+        ],
+        "outputs": [
+          {"name": "battery-life-estimate", "desc": "Expected battery life in days under nominal, best-case, and worst-case conditions, with the assumptions behind each"},
+          {"name": "power-management-document", "desc": "Complete power design: modes, wake sources, clock gating, DVFS, measured profiles, battery life calculation, and design margins"}
+        ],
+        "process": [
+          "Calculate average current from the measured profile: integrate the current over one complete duty cycle and divide by the cycle duration. For complex profiles with variable cycle times, use the per-day energy consumption in mWh.",
+          "Apply temperature derating: battery capacity decreases at cold temperatures. A typical LiPo delivers 80% of rated capacity at 0 degrees C and 60% at -20 degrees C. Use the battery manufacturer's temperature-capacity curve for the expected operating range.",
+          "Apply aging derating: lithium cells lose capacity over charge cycles. After 500 cycles, expect 80% of initial capacity. If the product's required lifetime includes many charge cycles, use the end-of-life capacity, not the fresh-battery capacity.",
+          "Apply manufacturing variation: add 10% to the average current to account for component tolerance (regulator quiescent current, leakage through GPIO pins, crystal oscillator current). Use worst-case datasheet values, not typical.",
+          "Compute three estimates: best-case (nominal current, rated capacity, room temperature), nominal (measured average current + 10% margin, rated capacity derated for mid-life aging), worst-case (max current, min capacity at coldest operating temperature, end-of-life). The worst-case must meet the product requirement. Document all assumptions."
+        ],
+        "tags": ["embedded", "power", "battery", "estimation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "communication-protocol-implementation",
+    "description": "Implement embedded communication protocols from hardware configuration through driver design: SPI, I2C, UART, CAN, USB, and Ethernet MAC/PHY interfaces with proper timing, error handling, and DMA integration.",
+    "domain": "hardware",
+    "tags": ["embedded", "protocols", "spi", "i2c", "uart", "can", "usb", "ethernet"],
+    "steps": [
+      {
+        "flow_name": "spi-implementation-method",
+        "description": "Implement SPI master and slave with proper clock polarity/phase configuration, chip select management, DMA for bulk transfers, and multi-slave bus topology.",
+        "inputs": [
+          {"name": "spi-device-specs", "desc": "Datasheets for all SPI devices on the bus: supported modes (CPOL/CPHA), maximum clock frequency, timing diagrams, and frame format"},
+          {"name": "throughput-requirements", "desc": "Required data transfer rates and maximum latency for each SPI device"}
+        ],
+        "outputs": [
+          {"name": "spi-configuration", "desc": "SPI peripheral config: mode (0/1/2/3), clock divider, frame size, MSB/LSB first, NSS management, and DMA channel assignments"},
+          {"name": "spi-driver-api", "desc": "Driver interface: init, transfer (full-duplex), send (half-duplex TX), receive (half-duplex RX), transfer-DMA, chip-select control, and error handling"}
+        ],
+        "process": [
+          "Determine SPI mode from the slave device datasheet. Mode 0 (CPOL=0, CPHA=0): clock idle low, sample on rising edge. Mode 3 (CPOL=1, CPHA=1): clock idle high, sample on falling edge. Modes 0 and 3 are most common. Match the master configuration to what each slave requires.",
+          "Set the clock divider to produce a frequency at or below the slave's maximum SPI clock. The MCU SPI peripheral divides the bus clock by powers of 2 (2, 4, 8, ... 256). Choose the highest frequency that stays within spec. Account for signal integrity: long traces or high capacitance may require a slower clock even if the slave supports faster.",
+          "Manage chip select (CS) in software (GPIO) for flexibility: assert CS (drive low) before the transfer, deassert (drive high) after. Some devices require CS to stay asserted between command and data bytes. Hardware NSS management does not support this pattern on most MCUs.",
+          "For transfers larger than a few bytes, use DMA: configure TX DMA to feed the SPI TX register and RX DMA to drain the SPI RX register simultaneously. For TX-only (display writes), configure RX DMA to a dummy location or disable it. The DMA complete interrupt signals the end of transfer.",
+          "For multi-slave buses, ensure each slave's CS is deasserted when not selected. If slaves have different SPI modes, reconfigure the SPI peripheral before each slave transaction. The reconfiguration must happen while the SPI is disabled to avoid glitches."
+        ],
+        "tags": ["embedded", "spi", "protocol", "driver"]
+      },
+      {
+        "flow_name": "i2c-implementation-method",
+        "description": "Implement I2C with proper bus configuration, clock stretching handling, multi-master arbitration, and error recovery for stuck buses.",
+        "inputs": [
+          {"name": "i2c-device-list", "desc": "All I2C devices with addresses, speed grade (standard 100 kHz, fast 400 kHz, fast-plus 1 MHz), and any quirks from datasheets"},
+          {"name": "bus-topology", "desc": "Wire length, pull-up resistor values, number of devices, and total bus capacitance"}
+        ],
+        "outputs": [
+          {"name": "i2c-configuration", "desc": "I2C timing parameters (SCL frequency, rise time, fall time, setup/hold times), pull-up resistor selection, and analog/digital filter settings"},
+          {"name": "i2c-driver-api", "desc": "Driver interface: init, write-register, read-register, write-block, read-block, bus-recovery, and address-scan"}
+        ],
+        "process": [
+          "Select pull-up resistor values. The minimum value is set by the I2C output sink current (IOL = 3 mA for standard mode) and VDD: R_min = VDD / IOL. The maximum is set by the rise time requirement and bus capacitance: R_max = t_rise / (0.8473 * C_bus). For 400 kHz with 200 pF bus capacitance and 3.3V, typical values are 2.2 kOhm to 4.7 kOhm.",
+          "Configure the I2C timing registers. Modern MCUs (STM32 I2C v2) have a timing register calculated from the input clock, desired SCL frequency, and signal timing. Use the vendor's I2C timing calculation tool or the reference manual formula. Verify with an oscilloscope that SCL frequency, setup time, and hold time meet I2C spec.",
+          "Handle clock stretching: the slave holds SCL low to pause the master. The I2C peripheral handles this in hardware, but set a timeout to detect a stuck slave. If SCL is held low beyond the timeout, trigger bus recovery.",
+          "Implement bus recovery: if SDA is stuck low (slave holding it during an interrupted transfer), toggle SCL up to 9 times as a master to clock out the stuck slave, then issue a STOP condition. This is defined in the I2C specification and recovers most stuck-bus conditions.",
+          "For multi-master systems, implement arbitration-lost handling: when the peripheral detects arbitration loss (another master won), abort the current transfer and retry after a random back-off. The I2C hardware handles the bit-level arbitration; the driver handles the retry logic."
+        ],
+        "tags": ["embedded", "i2c", "protocol", "driver"]
+      },
+      {
+        "flow_name": "can-bus-implementation-method",
+        "description": "Implement CAN bus communication with proper bit timing calculation from oscillator tolerance and bus length, message filtering, and bus-off recovery.",
+        "inputs": [
+          {"name": "can-network-spec", "desc": "Bus speed (125k/250k/500k/1M), bus length, number of nodes, transceiver type, and termination"},
+          {"name": "message-definitions", "desc": "CAN message IDs, DLCs, signal definitions, and cycle times for each message"}
+        ],
+        "outputs": [
+          {"name": "can-bit-timing", "desc": "Bit timing parameters: prescaler, time segment 1, time segment 2, SJW, sample point percentage, and oscillator tolerance analysis"},
+          {"name": "can-driver-api", "desc": "Driver interface: init, send-message, receive-callback, filter-config, bus-status, error-counters, and bus-off recovery"}
+        ],
+        "process": [
+          "Calculate bit timing parameters. The CAN bit is divided into: sync segment (1 TQ), propagation segment, phase segment 1, and phase segment 2. Total TQ per bit = prescaler * peripheral_clock / bitrate. The sample point (typically 75% to 87.5% of the bit time) is set by the ratio of (sync + prop + phase1) to total TQ.",
+          "Account for oscillator tolerance. CAN requires all nodes to sample within the correct bit. The maximum oscillator frequency deviation depends on the SJW (synchronization jump width) setting: df_max = min(SJW / (2 * 10 * bit_time_in_TQ), SJW / (20 * bit_time_in_TQ)). For 500 kbps with 16 TQ/bit and SJW=1, this allows 0.3% tolerance. A 20 ppm crystal easily meets this; a ceramic resonator at 0.5% does not.",
+          "Account for propagation delay from bus length: propagation_delay = 2 * (bus_length_m * 5 ns/m + transceiver_delay). The propagation segment must be at least this value in TQ. For a 40-meter bus with 150 ns transceiver delay: (2 * (40*5 + 150)) = 700 ns.",
+          "Configure hardware message filters. Most CAN controllers support ID masking (accept messages where ID AND mask equals filter AND mask) and ID list mode (accept only specific IDs). Use masks for ranges (e.g., accept all messages from a node) and lists for individual high-priority messages. Unfiltered messages waste CPU time in the receive interrupt.",
+          "Implement bus-off recovery. CAN controllers enter bus-off state after 256 error events (transmit error counter reaches 256). Recovery options: automatic recovery after 128 sequences of 11 recessive bits (ISO 11898 specified), or manual recovery triggered by the application after a delay. Always log bus-off events for diagnostics."
+        ],
+        "tags": ["embedded", "can", "protocol", "automotive"]
+      },
+      {
+        "flow_name": "uart-protocol-implementation",
+        "description": "Implement UART communication with proper framing, baud rate configuration, DMA-based reception for continuous data streams, and protocol layer design.",
+        "inputs": [
+          {"name": "uart-requirements", "desc": "Baud rate, data bits, parity, stop bits, flow control (hardware RTS/CTS or software XON/XOFF), and the higher-level protocol carried over UART"},
+          {"name": "data-patterns", "desc": "Expected message sizes, frequency, burst patterns, and required response latency"}
+        ],
+        "outputs": [
+          {"name": "uart-configuration", "desc": "UART peripheral settings, baud rate error analysis, DMA configuration for RX/TX, and idle line detection setup"},
+          {"name": "framing-protocol", "desc": "Message framing design: start delimiter, length field, payload, CRC, and end delimiter with timeout-based frame sync recovery"}
+        ],
+        "process": [
+          "Calculate baud rate generator settings. The baud rate divisor = peripheral_clock / (oversampling * baud_rate). Common oversampling is 16x (standard) or 8x (for higher baud rates on slower clocks). The actual baud rate will differ from the target by the rounding error in the divisor. Keep this error under 2% for reliable communication; under 1% for long frames.",
+          "For continuous reception, use DMA in circular mode writing to a ring buffer. Enable idle line detection interrupt: the UART signals when the line is idle for one frame duration after receiving data. This interrupt fires at the end of each packet, telling the application how much data arrived without polling.",
+          "Alternative for framed protocols: use DMA in normal mode with a timeout. Start DMA for the expected message length. If the full message does not arrive within the timeout, process the partial data and resync. This handles variable-length messages and noise on the line.",
+          "Design the framing protocol for noisy or multi-message environments. A reliable frame: sync byte(s) (e.g., 0xAA 0x55), length field, sequence number, payload, CRC-16. The sync bytes allow the receiver to find frame boundaries after a line error. The CRC catches corrupted frames. The sequence number detects dropped messages.",
+          "Implement frame synchronization recovery: if a received frame fails CRC, scan the receive buffer byte-by-byte for the next sync sequence. Discard everything before it and attempt to parse a new frame from the sync. This recovers from any single burst error without resetting the connection."
+        ],
+        "tags": ["embedded", "uart", "protocol", "serial"]
+      },
+      {
+        "flow_name": "usb-device-implementation",
+        "description": "Implement a USB device with proper descriptor hierarchy, endpoint configuration, enumeration handling, and class-specific protocol for CDC, HID, or custom bulk.",
+        "inputs": [
+          {"name": "usb-class-requirements", "desc": "Required USB class (CDC/ACM for virtual COM port, HID for input devices, mass storage, custom bulk), transfer types needed, and data rates"},
+          {"name": "framing-protocol", "desc": "Application protocol that will run over USB if applicable"}
+        ],
+        "outputs": [
+          {"name": "descriptor-hierarchy", "desc": "Device descriptor, configuration descriptor, interface descriptors, endpoint descriptors, and string descriptors with all fields specified"},
+          {"name": "usb-driver-api", "desc": "Driver interface: init, connect, disconnect, send-data, receive-callback, suspend/resume handling, and class-specific requests"}
+        ],
+        "process": [
+          "Build the descriptor hierarchy from bottom up. Endpoint descriptors define the pipes: direction (IN/OUT), transfer type (control/bulk/interrupt/isochronous), max packet size (64 bytes for full-speed bulk, 512 for high-speed), and polling interval (for interrupt endpoints). Interface descriptors group endpoints into a function. Configuration descriptor wraps interfaces.",
+          "For CDC/ACM (virtual COM port): two interfaces. Interface 0 (CDC control): one interrupt IN endpoint for serial state notifications. Interface 1 (CDC data): one bulk IN and one bulk OUT endpoint for data. Include the CDC functional descriptors (header, call management, ACM, union) between the interface and endpoint descriptors.",
+          "Implement the enumeration state machine. On USB reset: configure endpoint 0 for control transfers (64-byte max packet). Handle standard requests: GET_DESCRIPTOR (return device, config, string descriptors), SET_ADDRESS (move from default to addressed state), SET_CONFIGURATION (move to configured state, enable data endpoints). Handle class-specific requests: SET_LINE_CODING and SET_CONTROL_LINE_STATE for CDC.",
+          "Handle USB suspend and resume for power management. The host signals suspend by stopping SOF packets for 3 ms. The device must reduce current to under 2.5 mA (for bus-powered devices). On resume (bus activity detected), restore full operation. Implement remote wakeup if the application needs to wake the host.",
+          "For data transfer, use double-buffered endpoints: the USB hardware fills one buffer while the application processes the other. This prevents gaps in continuous data transfer. The bulk transfer protocol handles flow control: the host will not send another OUT packet until the device ACKs (NAK if busy), and the device will not send IN data until the host polls."
+        ],
+        "tags": ["embedded", "usb", "protocol", "enumeration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "watchdog-and-safety-design",
+    "description": "Design watchdog and runtime safety mechanisms for embedded systems: watchdog selection and configuration, multi-task monitoring, safety-critical challenge-response, and runtime self-tests for IEC 61508 and ISO 26262 compliance.",
+    "domain": "hardware",
+    "tags": ["embedded", "watchdog", "safety", "iec-61508", "iso-26262", "reliability"],
+    "steps": [
+      {
+        "flow_name": "watchdog-selection-and-sizing",
+        "description": "Select between independent and windowed watchdog, calculate the timeout from worst-case execution paths, and configure the reload strategy.",
+        "inputs": [
+          {"name": "system-timing", "desc": "Worst-case task execution times, interrupt latencies, and the maximum acceptable time from fault to system response"},
+          {"name": "safety-requirements", "desc": "Target safety integrity level (SIL 1-4 or ASIL A-D), required diagnostic coverage, and safe state definition"}
+        ],
+        "outputs": [
+          {"name": "watchdog-config", "desc": "Watchdog type (independent/windowed/external), timeout value, window bounds (for windowed), clock source, and reload point in code"},
+          {"name": "fault-detection-time", "desc": "Maximum time from software fault to watchdog reset, including worst-case feed-just-before-fault scenario"}
+        ],
+        "process": [
+          "Choose watchdog type. Independent watchdog (IWDG on STM32): simple timeout, clocked from a separate low-speed oscillator (independent of system clock failures). Windowed watchdog (WWDG): must be fed within a specific window (not too early, not too late), detects both stuck and timing faults. External watchdog IC: highest integrity, completely independent of the MCU.",
+          "Calculate the timeout. The watchdog timeout must be: longer than the worst-case task cycle (so normal operation never triggers it) but shorter than the maximum time to reach the safe state after a fault. Typical rule: timeout = 2x to 3x the longest normal task cycle. For a 100 ms main loop, a 200 ms to 300 ms timeout.",
+          "For windowed watchdog, set the early boundary to reject feeds that come too quickly (indicating a task is spinning without doing its work) and the late boundary to catch tasks that are stuck. Window = [earliest_normal_feed + margin, timeout - margin].",
+          "The worst-case fault detection time equals the timeout period: a fault could occur immediately after a successful watchdog feed. To reduce this, feed the watchdog more frequently and only from the correct execution path (not from a simple timer interrupt, which would still run even if the application is stuck).",
+          "For SIL 3 or ASIL C/D, an external watchdog IC with Q&A (question-and-answer) capability is required. The MCU must compute a correct response to the watchdog's challenge within the timeout. A stuck MCU cannot produce correct answers. This achieves higher diagnostic coverage than an internal watchdog alone."
+        ],
+        "tags": ["embedded", "watchdog", "safety", "sizing"]
+      },
+      {
+        "flow_name": "multi-task-watchdog-strategy",
+        "description": "Design a watchdog feeding strategy that monitors all RTOS tasks, detecting any single stuck task even when others are healthy.",
+        "inputs": [
+          {"name": "watchdog-config", "desc": "Watchdog type and timeout"},
+          {"name": "system-timing", "desc": "Task list with expected cycle times"}
+        ],
+        "outputs": [
+          {"name": "task-monitoring-design", "desc": "Check-in mechanism for each task, supervisor task logic, and the conditions that constitute a failure for each task"},
+          {"name": "watchdog-feed-flow", "desc": "The exact code path from task check-ins through supervisor validation to watchdog feed, with no path that feeds the watchdog without verifying all tasks"}
+        ],
+        "process": [
+          "Never feed the watchdog from a single point (like a timer ISR) because it will feed even when application tasks are stuck. Instead, implement a supervisor pattern: each task checks in by setting a flag or incrementing a counter, and a supervisor task verifies all tasks have checked in before feeding the watchdog.",
+          "Each task has a check-in deadline: the maximum time between consecutive check-ins. For periodic tasks, the deadline equals the period plus margin. For event-driven tasks, the deadline is the maximum expected idle time (or the task periodically checks in even when idle).",
+          "The supervisor task runs at the fastest task rate or on a timer. It reads each task's check-in counter, compares to the previous value, and resets the watchdog only if ALL tasks have checked in since the last supervisor cycle. If any task misses its deadline, the supervisor stops feeding the watchdog.",
+          "For tasks with variable execution time (e.g., a communication task that blocks on a receive), use a heartbeat within the blocking wait: the RTOS timeout on the blocking call should be shorter than the watchdog deadline, and the task sends a heartbeat (check-in) on each timeout, then retries the blocking call.",
+          "Handle task creation and deletion: when a task is created, register it with the supervisor (add to the monitored list). When a task is intentionally deleted, unregister it. The supervisor must not wait for check-ins from tasks that no longer exist."
+        ],
+        "tags": ["embedded", "watchdog", "rtos", "monitoring"]
+      },
+      {
+        "flow_name": "runtime-self-test-design",
+        "description": "Implement runtime self-tests for CPU, RAM, flash, and clock monitoring as required by IEC 61508 and ISO 26262 for each safety integrity level.",
+        "inputs": [
+          {"name": "task-monitoring-design", "desc": "Task supervision mechanism that self-tests integrate into"},
+          {"name": "safety-requirements", "desc": "Target SIL/ASIL level determining required diagnostic coverage"}
+        ],
+        "outputs": [
+          {"name": "self-test-suite", "desc": "Each test: what it checks, algorithm, execution time, frequency, and diagnostic coverage contribution"},
+          {"name": "safe-state-transition", "desc": "For each detectable fault: the safe state to enter, the transition procedure, and the maximum time from detection to safe state"}
+        ],
+        "process": [
+          "CPU register test: verify that each CPU register can hold all-zeros and all-ones without stuck bits. For ARM Cortex-M, test R0-R12, LR, PSP, MSP, APSR flags. Run at startup and periodically. Use a checkerboard pattern and its complement. Disable interrupts during the test to prevent register corruption by ISRs.",
+          "RAM test: use a march test algorithm (March C- provides good fault coverage with reasonable execution time). Test RAM in sections: copy the section to a backup area, run the march test, restore from backup. Do not test the section containing the test code's stack. Test each section periodically, rotating through all RAM over time.",
+          "Flash integrity test: compute CRC-32 over the flash contents and compare against a reference CRC stored at a known flash address (calculated at build time and embedded by the linker). Test the full image at startup. At runtime, test in sections to spread the CPU load: verify N pages per main-loop cycle, completing a full sweep every M seconds.",
+          "Clock monitoring: use the MCU's clock security system (CSS on STM32) to detect external oscillator failure and automatically switch to the internal RC oscillator. Additionally, cross-check the system clock against an independent time source: compare a timer clocked from the main oscillator against the RTC (clocked from LSE or LSI). A deviation beyond the expected tolerance indicates a clock fault.",
+          "Program flow monitoring: verify that the software executes the expected sequence of steps. Implement with a signature variable: each critical code block XORs a unique value into the signature. At a checkpoint, compare the signature against the expected value for that execution path. A wrong signature indicates that code was skipped, repeated, or corrupted.",
+          "Map each self-test to the fault model in IEC 61508 Table A.1 or ISO 26262 Part 5. Calculate the overall diagnostic coverage: DC = sum(coverage_i * failure_rate_i) / total_failure_rate. SIL 2 requires DC of at least 90%, SIL 3 requires 99%."
+        ],
+        "tags": ["embedded", "safety", "self-test", "diagnostics"]
+      },
+      {
+        "flow_name": "safety-critical-watchdog-qa",
+        "description": "Implement a question-and-answer watchdog protocol using an external watchdog IC for the highest diagnostic coverage in safety-critical systems.",
+        "inputs": [
+          {"name": "self-test-suite", "desc": "Runtime self-tests that must pass before answering the watchdog"},
+          {"name": "watchdog-config", "desc": "External watchdog IC specifications and communication interface"}
+        ],
+        "outputs": [
+          {"name": "qa-watchdog-protocol", "desc": "Communication protocol with the external watchdog: seed exchange, response calculation, timing constraints, and error handling"},
+          {"name": "safety-design-document", "desc": "Complete safety mechanism design: watchdog strategy, self-tests, diagnostic coverage calculation, and safe state definitions with verification plan"}
+        ],
+        "process": [
+          "Select an external watchdog IC with Q&A capability (e.g., TI TPS3431, Infineon TLE9278). These ICs send a random seed to the MCU over SPI or a dedicated pin protocol. The MCU must compute the correct response (typically a CRC or polynomial calculation) and send it back within the timeout.",
+          "Integrate the Q&A exchange into the supervisor task flow: (1) all task check-ins verified, (2) all self-tests passed since last cycle, (3) read the seed from the watchdog IC, (4) compute the response, (5) send the response. If any step fails, do not respond, and the watchdog will reset the system.",
+          "The response calculation must be done by the application CPU, not a peripheral or DMA. This ensures the CPU is actually executing correct code. The calculation is typically a CRC or LFSR-based polynomial that is fast (under 100 us) but cannot be satisfied by a stuck value.",
+          "Handle the safe state transition: when the watchdog resets the system, the bootloader must check a flag or counter to determine if this was a watchdog reset (not a power-on reset). After N consecutive watchdog resets (e.g., 3), enter a permanent safe state (outputs de-energized, error indication active) rather than continuing to reset.",
+          "Document the complete safety design: fault model (what can go wrong), detection mechanism (which test or monitor catches it), reaction (safe state transition), and diagnostic coverage (per IEC 61508 or ISO 26262 methodology). This document is required for safety certification and must be maintained as the design evolves."
+        ],
+        "tags": ["embedded", "watchdog", "safety-critical", "qa"]
+      }
+    ]
+  },
+  {
+    "chain_name": "firmware-debug-methodology",
+    "description": "Systematic firmware debugging using JTAG/SWD, trace capabilities (ETM, ITM, DWT), hard fault analysis, timing measurement with logic analyzers, and post-mortem core dump analysis.",
+    "domain": "hardware",
+    "tags": ["embedded", "debugging", "jtag", "trace", "hard-fault", "firmware"],
+    "steps": [
+      {
+        "flow_name": "debug-probe-setup",
+        "description": "Configure the debug probe (JTAG/SWD), target connection, and debug software for reliable access to the target's memory, registers, and execution state.",
+        "inputs": [
+          {"name": "target-hardware", "desc": "MCU debug interface (JTAG/SWD pins), debug probe model, and IDE or command-line debugger being used"},
+          {"name": "debug-requirements", "desc": "What needs to be debugged: crash analysis, timing issue, data corruption, or functional bug"}
+        ],
+        "outputs": [
+          {"name": "debug-setup", "desc": "Probe connection verified, clock speed configured, flash algorithm loaded, and breakpoint/watchpoint capabilities confirmed"},
+          {"name": "debug-strategy", "desc": "Which debug technique to use based on the symptom: breakpoints for functional bugs, watchpoints for memory corruption, trace for timing, post-mortem for field crashes"}
+        ],
+        "process": [
+          "Verify the physical connection: SWD requires SWDIO, SWCLK, and GND (3 wires minimum). JTAG requires TDI, TDO, TMS, TCK, and GND (5 wires). SWD is preferred for ARM Cortex-M: fewer pins, same functionality for debugging. Connect the probe's VREF to the target's VDD so the probe knows the I/O voltage level.",
+          "Set the debug clock speed. Start at a conservative 1 MHz. Increase to 4 MHz or higher after confirming reliable communication. Long wires, high-capacitance boards, or noisy environments may require slower clocks. SWD at 10 MHz works on short, clean connections.",
+          "Load the correct flash programming algorithm for the MCU. The debugger needs this to program flash and set breakpoints in flash (flash breakpoints require patching the instruction, which means writing to flash). Hardware breakpoints (limited to 4 to 8 on Cortex-M) do not require flash writes.",
+          "Verify debugger features: confirm the number of hardware breakpoints and watchpoints available. Cortex-M3/M4 typically have 6 breakpoints and 4 watchpoints. Watchpoints can trigger on read, write, or read/write to a specific address or address range.",
+          "Choose the debug strategy based on the symptom. Reproducible functional bug: set breakpoints and step through. Intermittent data corruption: set a data watchpoint on the corrupted variable to catch the write. Timing issue: use ITM timestamps or GPIO toggling with a logic analyzer. Field crash: implement post-mortem core dump to flash."
+        ],
+        "tags": ["embedded", "debug", "jtag", "swd", "setup"]
+      },
+      {
+        "flow_name": "trace-and-profiling-method",
+        "description": "Use ARM CoreSight trace capabilities (ITM, DWT, ETM) for instrumented tracing, cycle-accurate profiling, and non-intrusive program flow monitoring.",
+        "inputs": [
+          {"name": "debug-setup", "desc": "Working debug connection with trace port availability (SWO for ITM, or trace pins for ETM)"},
+          {"name": "debug-strategy", "desc": "The specific information needed: execution timing, function call profile, data value trace, or interrupt timeline"}
+        ],
+        "outputs": [
+          {"name": "trace-configuration", "desc": "ITM channels configured, DWT comparators set, SWO baud rate, and trace decoder settings"},
+          {"name": "profiling-results", "desc": "Function execution times, interrupt latencies, CPU utilization breakdown, and cache hit rates (if applicable)"}
+        ],
+        "process": [
+          "Configure ITM (Instrumentation Trace Macrocell) for printf-style debug output without halting the CPU. Write to the ITM stimulus port registers; the data streams out the SWO pin at the configured baud rate. This replaces UART printf debugging with near-zero overhead (1 cycle per word written).",
+          "Use DWT (Data Watchpoint and Trace) cycle counter for precise timing. Enable CYCCNT (cycle counter) at DWT_CTRL. Read DWT_CYCCNT before and after a code section. The difference divided by the clock frequency gives execution time with single-cycle precision. This is faster and more precise than GPIO toggling.",
+          "Configure DWT comparators for data trace: when a specific variable is written, DWT generates a trace packet containing the new value and timestamp. This captures the history of a variable without breakpoints and without stopping execution. Limited to 4 comparators.",
+          "For full program flow trace, configure ETM (Embedded Trace Macrocell) if the target supports it and a trace probe with the bandwidth is available. ETM captures every instruction execution and branches, allowing full reconstruction of the program flow. This requires a trace port (4-bit TPIU) and a high-bandwidth probe.",
+          "Statistical profiling: sample the PC (program counter) periodically using DWT PC sampling. The distribution of PC values shows where the CPU spends its time. This is the embedded equivalent of a sampling profiler. Identify hot functions for optimization.",
+          "Decode the trace data using the IDE's trace viewer or a command-line tool. Map PC values to source code using the ELF file's debug symbols. Present the results as: function-level execution time breakdown, interrupt latency histogram, and timeline view of task switches."
+        ],
+        "tags": ["embedded", "debug", "trace", "profiling", "itm"]
+      },
+      {
+        "flow_name": "hard-fault-analysis-method",
+        "description": "Analyze ARM Cortex-M hard faults by reading stacked registers, fault status registers, and reconstructing the call stack to identify the faulting instruction and root cause.",
+        "inputs": [
+          {"name": "trace-configuration", "desc": "Available trace output for fault logging"},
+          {"name": "debug-setup", "desc": "Debug connection for post-fault inspection"}
+        ],
+        "outputs": [
+          {"name": "fault-analysis-procedure", "desc": "Step-by-step procedure to decode any hard fault: read registers, identify fault type, find faulting address, and determine root cause"},
+          {"name": "fault-handler-implementation", "desc": "Hard fault handler code that captures all diagnostic information and either logs it or halts for debugger inspection"}
+        ],
+        "process": [
+          "Implement a hard fault handler that captures the stacked register frame. On Cortex-M, the hardware pushes R0-R3, R12, LR, PC, and xPSR to the stack on exception entry. The stacked PC is the address of the faulting instruction (or the next instruction for some fault types). Read the MSP or PSP (check bit 2 of LR to determine which stack was active).",
+          "Read the fault status registers: HFSR (HardFault Status Register) tells if the fault was forced (escalated from another fault) or due to a vector table read error. CFSR (Configurable Fault Status Register) is split into MMFSR (memory management), BFSR (bus fault), and UFSR (usage fault) with specific bits for each fault cause.",
+          "Decode common fault causes: UFSR bit UNDEFINSTR = undefined instruction (corrupted code or branching to data). UFSR bit INVSTATE = attempt to execute ARM instructions on a Thumb-only core (function pointer without bit 0 set). BFSR bit PRECISERR + BFAR = bus error at the address in BFAR (reading unmapped memory). MMFSR bit DACCVIOL + MMFAR = MPU access violation at MMFAR.",
+          "Reconstruct the call stack from the fault context. Starting from the stacked LR (return address), walk the stack frame by frame. Each frame's LR points to the caller. Map addresses to function names using the ELF file: addr2line -e firmware.elf <address>. This shows the call chain that led to the fault.",
+          "In the fault handler, either halt for debugger inspection (infinite loop with the diagnostic data in registers/memory for the debugger to read) or log the fault data to a reserved RAM region / flash sector for post-mortem analysis. The choice depends on whether a debugger is attached (check the CoreDebug->DHCSR C_DEBUGEN bit)."
+        ],
+        "tags": ["embedded", "debug", "hard-fault", "cortex-m"]
+      },
+      {
+        "flow_name": "post-mortem-debug-method",
+        "description": "Implement post-mortem debugging for field-deployed devices: core dump to flash, stack unwinding from saved context, and remote diagnostic data retrieval.",
+        "inputs": [
+          {"name": "fault-handler-implementation", "desc": "Fault handler that captures diagnostic data"},
+          {"name": "fault-analysis-procedure", "desc": "Register and stack analysis procedure to apply to captured data"}
+        ],
+        "outputs": [
+          {"name": "core-dump-implementation", "desc": "Code that saves registers, stack, and key memory regions to a dedicated flash sector on fault, with corruption protection and extraction interface"},
+          {"name": "debug-methodology-document", "desc": "Complete debugging guide: probe setup, trace configuration, fault analysis, post-mortem, and a decision tree for which technique to use based on the symptom"}
+        ],
+        "process": [
+          "Reserve a flash sector for the core dump. Size it for: stacked registers (32 bytes), fault status registers (12 bytes), full task stack contents (stack size, typically 1 KB to 4 KB), and selected global variables (application state, firmware version, uptime counter). Add a header with magic number, timestamp, and CRC for integrity.",
+          "In the fault handler: disable interrupts, write the header, write all captured registers, copy the active stack contents from the stack pointer to the stack base, write selected global state variables, compute and write the CRC, then enter the safe state (reset or halt).",
+          "Use the flash programming routines carefully in the fault handler: the flash driver itself may be corrupted if the fault was caused by code corruption. Use a minimal, self-contained flash write function that does not depend on any global state. Place it in a protected flash region.",
+          "Provide an extraction interface: at the next boot, the bootloader or application checks for a valid core dump in the reserved sector. If found, it can be read out via UART, USB, or a diagnostic protocol. Include the ELF file's build ID in the dump so the correct symbol file can be matched for analysis.",
+          "Analyze the extracted dump offline: load the registers and stack into GDB using the 'restore' command or a custom script. Use 'info frame' and 'backtrace' to reconstruct the call stack. Map the faulting PC to source code. Correlate the application state variables with the fault to determine the triggering condition.",
+          "Document the complete debug methodology: a decision tree starting from the symptom (crash, hang, wrong output, timing violation) through the appropriate technique (breakpoints, watchpoints, trace, post-mortem) to the root cause. Include worked examples of each common fault type."
+        ],
+        "tags": ["embedded", "debug", "post-mortem", "core-dump"]
+      }
+    ]
+  },
+  {
+    "chain_name": "hardware-abstraction-layer-design",
+    "description": "Design a hardware abstraction layer for embedded firmware: register access patterns, peripheral driver architecture, DMA abstraction, pin mux management, clock tree configuration, and testing strategy for portability.",
+    "domain": "hardware",
+    "tags": ["embedded", "hal", "driver", "abstraction", "portability", "firmware"],
+    "steps": [
+      {
+        "flow_name": "hal-layer-architecture",
+        "description": "Define the HAL layer structure: register access at the bottom, peripheral drivers in the middle, and board support package at the top, with clear interfaces between each.",
+        "inputs": [
+          {"name": "target-mcus", "desc": "The set of MCUs the HAL must support (current target plus planned ports), with their register models and peripheral differences"},
+          {"name": "portability-requirements", "desc": "Which peripherals must be portable across MCU families, and where platform-specific optimization is acceptable"}
+        ],
+        "outputs": [
+          {"name": "layer-definitions", "desc": "Three layers defined: register access (CMSIS-level), peripheral driver (HAL API), and board support package (BSP), with the responsibility and interface of each"},
+          {"name": "api-design-rules", "desc": "Rules for HAL API design: naming conventions, error handling pattern, callback registration, and what must be in the API vs what is configuration"}
+        ],
+        "process": [
+          "Define three layers. Bottom: register access layer provides typed access to hardware registers. Use CMSIS-style header files with struct overlays for each peripheral (e.g., SPI_TypeDef with CR1, CR2, SR, DR members). This layer is MCU-specific and auto-generated from SVD files where possible.",
+          "Middle: peripheral driver layer provides a portable API. Functions like hal_spi_init(), hal_spi_transfer(), hal_spi_transfer_dma(). The API is the same across MCU families; the implementation behind it changes. This is where 90% of the porting effort lives.",
+          "Top: board support package (BSP) maps physical board resources to HAL objects. It defines which SPI peripheral instance connects to which device, which GPIO pins are used for chip selects, and the default configuration for each peripheral. The application code calls BSP functions (bsp_flash_spi_init()) which call HAL functions with the correct parameters.",
+          "Define the API contract: every HAL function returns a status code (HAL_OK, HAL_ERROR, HAL_BUSY, HAL_TIMEOUT). Callbacks are registered via function pointers, not hard-coded ISR names. Configuration is passed as a struct, not individual parameters, to allow future extension without breaking the API.",
+          "Separate compile-time configuration (which peripherals are enabled, buffer sizes) from runtime configuration (baud rate, mode). Compile-time config goes in a hal_conf.h header. Runtime config goes in the init struct. This allows dead-code elimination of unused peripherals."
+        ],
+        "tags": ["embedded", "hal", "architecture", "abstraction"]
+      },
+      {
+        "flow_name": "peripheral-driver-pattern",
+        "description": "Implement the standard peripheral driver pattern: init/deinit lifecycle, enable/disable control, blocking and non-blocking transfer APIs, and interrupt/DMA callback integration.",
+        "inputs": [
+          {"name": "layer-definitions", "desc": "HAL layer structure and responsibilities"},
+          {"name": "api-design-rules", "desc": "API naming, error handling, and callback conventions"}
+        ],
+        "outputs": [
+          {"name": "driver-template", "desc": "Complete driver template showing the standard pattern for any peripheral: handle struct, init, deinit, blocking ops, interrupt ops, DMA ops, and callback dispatch"},
+          {"name": "state-machine-design", "desc": "Peripheral driver state machine: RESET -> READY -> BUSY_TX/BUSY_RX -> READY, with error states and recovery transitions"}
+        ],
+        "process": [
+          "Define the peripheral handle struct. It contains: pointer to the peripheral registers (SPI_TypeDef*), configuration parameters (stored for reconfiguration), state (RESET/READY/BUSY/ERROR), DMA handles for TX and RX, callback function pointers, and a lock (to prevent concurrent access from task and ISR).",
+          "Implement the lifecycle: hal_spi_init() configures the peripheral registers from the config struct and transitions state from RESET to READY. hal_spi_deinit() disables the peripheral, releases DMA channels, and transitions to RESET. Init is idempotent (safe to call twice).",
+          "Implement three transfer modes. Blocking: hal_spi_transmit() polls the TX-empty flag and waits for completion with a timeout. Interrupt-driven: hal_spi_transmit_it() starts the transfer and returns immediately; the ISR sends each byte and calls the completion callback when done. DMA: hal_spi_transmit_dma() configures DMA and returns; the DMA-complete ISR calls the callback.",
+          "Implement the ISR dispatch: the peripheral's ISR reads the status register, clears flags, and calls the appropriate handler based on the current state (TX complete, RX complete, error). The handler updates the state machine and invokes the registered callback. The ISR function itself is MCU-specific; the handler logic is portable.",
+          "Handle concurrent access: use a simple lock (a state variable, not an RTOS mutex, since the driver must work without an RTOS). hal_spi_transmit() checks if state is READY before starting. If BUSY, return HAL_BUSY immediately. The application decides whether to retry, queue, or report the error."
+        ],
+        "tags": ["embedded", "hal", "driver", "pattern"]
+      },
+      {
+        "flow_name": "pin-mux-and-clock-abstraction",
+        "description": "Abstract pin multiplexing and clock tree configuration so peripheral drivers do not contain pin or clock setup code, enabling board-level configuration without modifying drivers.",
+        "inputs": [
+          {"name": "driver-template", "desc": "Standard driver pattern that needs pin and clock setup hooks"},
+          {"name": "target-mcus", "desc": "MCU families with different pin mux and clock tree architectures"}
+        ],
+        "outputs": [
+          {"name": "pin-mux-system", "desc": "Pin mux abstraction: pin definition struct, alternate function mapping, and the API for configuring a pin for a peripheral function"},
+          {"name": "clock-tree-abstraction", "desc": "Clock tree configuration: system clock setup, peripheral clock enable/disable API, and frequency query API for baud rate calculation"}
+        ],
+        "process": [
+          "Define a pin descriptor: port (GPIOA, GPIOB, ...), pin number (0-15), alternate function number (AF0-AF15 on STM32), pull-up/down, output speed, and drive strength. Store pin descriptors in the BSP, not the driver. The driver calls hal_gpio_init() with the pin descriptor during peripheral init.",
+          "Implement the alternate function mapping. On STM32, each pin has up to 16 alternate functions selected by the AFR registers. The BSP table maps each peripheral signal (SPI1_MOSI, UART2_TX) to a specific pin and AF number. This table is the only place that changes when a board revision moves a signal to a different pin.",
+          "Abstract clock enable: hal_rcc_periph_clock_enable(periph_id) enables the clock for the given peripheral. Internally, it sets the correct bit in the correct RCC enable register. The peripheral driver calls this in its init function, using a peripheral ID that the BSP provides.",
+          "Provide a clock frequency query: hal_rcc_get_pclk1_freq() returns the current APB1 bus clock frequency. Peripheral drivers use this to calculate baud rate divisors. This abstracts the clock tree so drivers do not need to know the PLL configuration or bus prescalers.",
+          "Handle low-power clock gating: hal_rcc_periph_clock_disable() in the deinit function. For sleep modes, provide hal_rcc_periph_clock_sleep_enable/disable() to control which peripheral clocks remain active during sleep. This allows the power management code to gate clocks without modifying each driver."
+        ],
+        "tags": ["embedded", "hal", "pin-mux", "clock", "abstraction"]
+      },
+      {
+        "flow_name": "hal-testing-strategy",
+        "description": "Design a testing strategy for the HAL: unit testing on host with mocked registers, hardware-in-the-loop testing on target, and conformance testing across MCU families.",
+        "inputs": [
+          {"name": "pin-mux-system", "desc": "Pin mux abstraction to be tested"},
+          {"name": "clock-tree-abstraction", "desc": "Clock tree abstraction to be tested"}
+        ],
+        "outputs": [
+          {"name": "test-architecture", "desc": "Three test levels: host unit tests (mocked registers), target integration tests (real hardware), and cross-platform conformance tests"},
+          {"name": "hal-design-document", "desc": "Complete HAL specification: layer architecture, driver pattern, pin/clock abstraction, test strategy, and porting guide for adding a new MCU family"}
+        ],
+        "process": [
+          "Host unit tests: replace the register access layer with a mock. The mock provides an array of uint32_t values representing each register. The driver code writes to these mock registers, and the test verifies the correct bits were set. This runs on the development machine with no hardware, testing the driver logic in isolation.",
+          "Create a register mock framework: a struct that mirrors the peripheral register layout, pre-initialized to reset values from the datasheet. After calling hal_spi_init(), assert that CR1 has the expected CPOL, CPHA, BR, and SPE bits. After calling hal_spi_transmit(), assert that DR was written with the correct data.",
+          "Target integration tests: run on the actual hardware with loopback connections (SPI MOSI connected to MISO, UART TX to RX, CAN with a single node and loopback mode). Verify that data transmitted is correctly received. Measure timing with GPIO toggling to confirm baud rates and latencies are within spec.",
+          "Cross-platform conformance tests: a test suite that runs the same test cases on every supported MCU family. The tests call only HAL API functions (not register-level code). If all conformance tests pass on a new MCU port, the port is considered functional. This is the acceptance criterion for porting.",
+          "Document the complete HAL design: layer responsibilities, the standard driver pattern with a worked example (SPI driver walkthrough), pin mux and clock abstraction APIs, the test strategy with example test cases, and a step-by-step porting guide for adding support for a new MCU family. The porting guide should specify exactly which files need to be created and which interfaces need to be implemented."
+        ],
+        "tags": ["embedded", "hal", "testing", "portability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "embedded-testing-methodology",
+    "description": "Test embedded firmware systematically: unit testing on host with hardware abstraction, hardware-in-the-loop fixture design, fixed-point math boundary testing, timing verification, CI regression with emulators, code coverage, and static analysis for MISRA compliance.",
+    "domain": "hardware",
+    "tags": ["embedded", "testing", "misra", "ci", "coverage", "verification"],
+    "steps": [
+      {
+        "flow_name": "embedded-unit-test-design",
+        "description": "Design unit tests that run on the host machine by abstracting hardware dependencies, using test doubles for peripherals, and testing algorithmic correctness in isolation.",
+        "inputs": [
+          {"name": "firmware-architecture", "desc": "Code structure showing which modules depend on hardware and which are pure logic"},
+          {"name": "test-framework-choice", "desc": "Unit test framework selection: Unity, CppUTest, Google Test, or cmocka, with rationale for the choice"}
+        ],
+        "outputs": [
+          {"name": "test-doubles-design", "desc": "For each hardware-dependent module: the interface to mock, the mock implementation, and what the tests verify through the mock"},
+          {"name": "unit-test-plan", "desc": "Test plan listing each module, its test cases, input ranges, expected outputs, and edge cases to cover"}
+        ],
+        "process": [
+          "Separate firmware into testable layers: pure logic (algorithms, state machines, protocol parsers, data processing) that has no hardware dependency, and hardware interface code (register access, timing) that must be mocked. The pure logic layer should be the majority of the code.",
+          "Create test doubles (mocks/stubs) for hardware interfaces. A mock SPI driver stores the bytes 'transmitted' in an array and provides pre-loaded 'received' bytes. A mock GPIO records which pins were set/cleared. A mock timer returns pre-programmed tick values. The mock exposes inspection functions for test assertions.",
+          "Write tests for each pure-logic module. For a CAN message parser: test with valid messages (verify parsed signals match expected values), malformed messages (verify error handling), boundary values (signal at minimum, maximum, and one-bit-off), and byte-order edge cases.",
+          "For state machines, test every transition: feed inputs that trigger each valid transition and verify the resulting state and outputs. Feed inputs for invalid transitions and verify the state machine stays in the current state and reports the error. Use a state transition coverage metric.",
+          "Compile and run on the host using the native compiler (GCC or Clang for x86/x64). The firmware code includes the HAL headers that resolve to mocks in the test build and to real hardware in the target build. This requires the abstraction layer to be clean: no #include of MCU-specific headers in testable code."
+        ],
+        "tags": ["embedded", "testing", "unit-test", "mocking"]
+      },
+      {
+        "flow_name": "hil-test-fixture-design",
+        "description": "Design hardware-in-the-loop test fixtures that exercise the firmware on real hardware with controlled stimuli and automated result verification.",
+        "inputs": [
+          {"name": "unit-test-plan", "desc": "Unit tests covering logic; HIL tests now need to cover hardware interaction"},
+          {"name": "test-doubles-design", "desc": "Interfaces that were mocked in unit tests and now need real hardware testing"}
+        ],
+        "outputs": [
+          {"name": "hil-fixture-design", "desc": "Test fixture schematic: target board connections, stimulus generation (signal generators, CAN adapters, SPI masters), measurement (logic analyzers, oscilloscopes, current sensors), and test host interface"},
+          {"name": "hil-test-cases", "desc": "Test cases that can only be verified with real hardware: timing, interrupt behavior, power consumption, and communication with real peripherals"}
+        ],
+        "process": [
+          "Define the HIL fixture hardware. Minimum: the device under test (DUT), a test host (PC or Raspberry Pi), a debug probe for flashing and control, and a bus interface for each communication protocol (USB-to-CAN adapter, USB-to-SPI, USB-to-UART). Add signal conditioning as needed (level shifters, attenuators).",
+          "Automate stimulus generation: the test host sends scripted commands over each communication interface. For CAN: send specific message IDs with known payloads and verify the DUT's response messages. For analog inputs: use a DAC connected to the DUT's ADC input to inject known voltages.",
+          "Automate result verification: the test host reads the DUT's outputs (GPIO states via a logic analyzer, CAN response messages, UART output) and compares against expected values. Use GPIO pins on the DUT as test points: the firmware toggles them at key events, and the test host captures the timing.",
+          "Design power measurement into the fixture: a current sense amplifier (INA219 or similar) on the DUT's supply rail, readable by the test host over I2C. This allows automated power consumption tests: verify that sleep mode current is below the spec, active mode current matches the power budget.",
+          "Create a test sequencer that runs the full HIL suite: flash the firmware, wait for boot, execute each test case, collect results, generate a pass/fail report. The sequencer must handle DUT resets (via the debug probe or a relay on the power supply) for tests that require a clean start."
+        ],
+        "tags": ["embedded", "testing", "hil", "fixture", "automation"]
+      },
+      {
+        "flow_name": "fixed-point-boundary-testing",
+        "description": "Test fixed-point math implementations for overflow, underflow, rounding errors, and precision loss at boundary values.",
+        "inputs": [
+          {"name": "hil-test-cases", "desc": "Hardware-level tests; this flow adds algorithmic boundary tests for fixed-point code"},
+          {"name": "firmware-architecture", "desc": "Modules using fixed-point arithmetic with their Q formats and value ranges"}
+        ],
+        "outputs": [
+          {"name": "fixed-point-test-suite", "desc": "Test cases for each fixed-point operation: inputs at boundaries, expected outputs calculated in floating-point, and maximum acceptable error (ULP count)"},
+          {"name": "precision-analysis", "desc": "For each fixed-point calculation chain: accumulated error from input to output, identifying where precision loss occurs and whether it affects the application"}
+        ],
+        "process": [
+          "Identify all fixed-point operations in the firmware. For each, document the Q format (e.g., Q15 = 16-bit signed with 15 fractional bits, range -1.0 to +0.999969). List the operations: add, subtract, multiply (with shift), divide, and any conversions between Q formats.",
+          "For each operation, define boundary test values. Addition: both operands at maximum positive (overflow), both at maximum negative (underflow), one at max positive and one at max negative (should not overflow). Multiplication in Q15: 0x7FFF * 0x7FFF must not overflow the intermediate 32-bit result before the shift.",
+          "Calculate expected outputs using double-precision floating-point as the reference. Convert the fixed-point input to float, perform the operation, convert back to fixed-point. The maximum acceptable error is the quantization step size (1 ULP = 2^-Q where Q is the fractional bits). Most operations should be within 1 ULP; chained operations may accumulate to 2 or 3 ULP.",
+          "Test saturation behavior: if the firmware uses saturating arithmetic (clips to max/min instead of wrapping), verify that overflow produces the maximum representable value, not a wrapped-around value. If using wrapping arithmetic, verify the firmware checks for overflow before the operation.",
+          "Trace precision through calculation chains: a PID controller with Q15 coefficients multiplied by Q15 error, accumulated in Q31, and shifted back to Q15 output. Each step introduces up to 1 ULP error. A 10-step chain can accumulate 10 ULP, which in Q15 is 10/32768 = 0.03%. Verify this is within the application's tolerance."
+        ],
+        "tags": ["embedded", "testing", "fixed-point", "boundary", "precision"]
+      },
+      {
+        "flow_name": "ci-regression-and-coverage",
+        "description": "Set up continuous integration for embedded firmware with emulator-based regression testing, code coverage measurement, and automated quality gates.",
+        "inputs": [
+          {"name": "fixed-point-test-suite", "desc": "Algorithmic tests to include in the CI pipeline"},
+          {"name": "unit-test-plan", "desc": "Host-based unit tests to include in the CI pipeline"}
+        ],
+        "outputs": [
+          {"name": "ci-pipeline-design", "desc": "CI stages: compile, static analysis, unit tests, emulator tests, coverage report, and quality gate criteria for each stage"},
+          {"name": "coverage-targets", "desc": "Code coverage targets: line coverage, branch coverage, and MC/DC coverage (for safety-critical code), with the rationale for each target"}
+        ],
+        "process": [
+          "Set up the CI build: cross-compile the firmware for the target (ARM GCC) and native-compile for host tests (x86 GCC/Clang). The cross-compile verifies the firmware builds without errors or warnings (-Wall -Werror). The native compile builds the test executables.",
+          "Run unit tests on every commit. The CI runner executes the host-based test suite and reports pass/fail. Test execution is fast (seconds) because it runs natively. Fail the pipeline on any test failure.",
+          "For emulator-based testing, use QEMU with the target MCU's machine model (available for many ARM Cortex-M families) or a vendor-provided simulator. Flash the firmware into the emulator, run the test sequence, and capture the output. Emulator tests are slower but test the actual target binary including startup code and peripheral interaction (with emulated peripherals).",
+          "Measure code coverage: compile with --coverage (GCC) to instrument the code. Run the tests. Use gcov to generate coverage data and lcov/genhtml for HTML reports. For embedded targets, use semihosting to extract the gcov data files from the target to the host after test execution.",
+          "Set quality gates: line coverage at least 80% for application code (not bootloader or HAL), branch coverage at least 70%. For safety-critical code (SIL 3+), require MC/DC (Modified Condition/Decision Coverage) at 100% for safety-related modules. MC/DC means every condition in every decision has been shown to independently affect the outcome."
+        ],
+        "tags": ["embedded", "testing", "ci", "coverage", "regression"]
+      },
+      {
+        "flow_name": "static-analysis-misra-compliance",
+        "description": "Configure static analysis tools for MISRA C compliance, define the rule set for the project, handle deviations, and integrate into the CI pipeline.",
+        "inputs": [
+          {"name": "ci-pipeline-design", "desc": "CI pipeline to add static analysis stage"},
+          {"name": "firmware-architecture", "desc": "Code modules with their safety criticality classification"}
+        ],
+        "outputs": [
+          {"name": "misra-configuration", "desc": "MISRA C:2012 rule selection (mandatory, required, advisory), tool configuration (PC-lint, Polyspace, cppcheck, or Parasoft), and suppression/deviation policy"},
+          {"name": "testing-methodology-document", "desc": "Complete testing strategy: unit tests, HIL, fixed-point, CI, coverage, static analysis, and the traceability from requirements through tests to coverage evidence"}
+        ],
+        "process": [
+          "Select the MISRA C:2012 rule set. All 10 mandatory rules must be enforced with zero deviations. The 143 required rules should be enforced with documented deviations where necessary. The 30 advisory rules: enable the ones relevant to the project (pointer arithmetic, implicit conversions, side effects in macros) and document why others are excluded.",
+          "Configure the static analysis tool. For open-source: cppcheck with MISRA addon provides good coverage of required rules. For commercial: PC-lint Plus or Polyspace provide higher coverage and fewer false positives. Configure the tool to use the project's target compiler settings (data type sizes, endianness, alignment) for accurate analysis.",
+          "Handle deviations: when a required rule must be violated (e.g., Rule 11.3 prohibits pointer casts, but register access requires casting integer addresses to pointers), document the deviation: which rule, where in the code, why the deviation is necessary, and what mitigation ensures safety (e.g., the cast is in a controlled macro used only for register access).",
+          "Integrate into CI: run static analysis on every commit. New violations added by the commit fail the pipeline. Existing violations (in the baseline) are tracked but do not fail the build. The baseline shrinks over time as violations are fixed. This prevents regression while allowing gradual improvement.",
+          "Document the complete testing methodology: traceability from each requirement to the test(s) that verify it, the test level (unit/integration/system/HIL), the coverage evidence, and the static analysis clean report. This document is required for safety certification (IEC 61508, ISO 26262) and serves as the verification summary for the project."
+        ],
+        "tags": ["embedded", "testing", "misra", "static-analysis", "safety"]
+      }
+    ]
+  }
+]

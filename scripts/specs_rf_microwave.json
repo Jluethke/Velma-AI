@@ -1,0 +1,1001 @@
+[
+  {
+    "chain_name": "rf-link-budget-analysis",
+    "description": "Calculate a complete RF link budget from transmitter to receiver, accounting for all gains and losses, to determine whether a wireless link closes with sufficient margin for the target availability.",
+    "domain": "hardware",
+    "tags": ["rf", "link-budget", "wireless", "communications", "hardware"],
+    "steps": [
+      {
+        "flow_name": "link-requirements-extraction",
+        "description": "Extract the link requirements from the system specification: data rate, bit error rate target, modulation scheme, operating frequency, distance, and target availability percentage.",
+        "inputs": [
+          {"name": "system-specification", "desc": "The wireless system requirements including data rate, BER, frequency, distance, and availability targets"},
+          {"name": "operating-environment", "desc": "Description of the deployment environment: indoor, outdoor, urban, rural, satellite, or point-to-point"}
+        ],
+        "outputs": [
+          {"name": "link-requirements", "desc": "Structured requirements: frequency (Hz), data rate (bps), BER target, modulation type, coding rate, distance (m), availability (%)"},
+          {"name": "channel-model-selection", "desc": "The propagation model selected for this environment (free space, Hata, COST-231, ITU-R P.530, rain attenuation model)"}
+        ],
+        "process": [
+          "Record the operating frequency, required data rate, and acceptable bit error rate from the specification.",
+          "Determine the modulation scheme and coding rate. Calculate the required Eb/No from the BER target using the modulation's BER curve. For BPSK, BER = Q(sqrt(2*Eb/No)). For QPSK, same Eb/No as BPSK. For 16-QAM, approximately 3 dB worse.",
+          "Convert Eb/No to required SNR: SNR_dB = Eb/No_dB + 10*log10(data_rate/noise_bandwidth).",
+          "Select the propagation model based on environment. Free space for clear line-of-sight satellite or microwave links. Hata or COST-231 for cellular urban/suburban. ITU-R P.530 for terrestrial point-to-point microwave.",
+          "Document the link geometry: antenna heights, terrain type, whether Fresnel zone clearance is achievable."
+        ],
+        "tags": ["rf", "requirements", "hardware"]
+      },
+      {
+        "flow_name": "transmitter-chain-analysis",
+        "description": "Calculate the effective isotropic radiated power (EIRP) from the transmitter power amplifier output through all losses to the antenna.",
+        "inputs": [
+          {"name": "link-requirements", "desc": "Structured link requirements including frequency and data rate"},
+          {"name": "transmitter-hardware", "desc": "Transmitter specifications: PA output power, cable type and length, connector count, filter insertion loss, antenna type and gain"}
+        ],
+        "outputs": [
+          {"name": "eirp-calculation", "desc": "EIRP in dBm with itemized breakdown: PA power, cable loss, connector losses, filter loss, antenna gain"},
+          {"name": "transmitter-loss-budget", "desc": "Total transmitter-side losses in dB with each contributor itemized"}
+        ],
+        "process": [
+          "Record the power amplifier output power in dBm. Convert from watts if needed: P_dBm = 10*log10(P_watts/0.001).",
+          "Calculate cable loss: loss_dB = attenuation_per_meter * length. Use manufacturer data at the operating frequency, not DC or low-frequency ratings. For coaxial cable, attenuation increases with sqrt(frequency) due to skin effect.",
+          "Add connector losses: typically 0.1 to 0.5 dB per mated pair depending on connector type and frequency. N-type at 2 GHz is about 0.15 dB. SMA at 10 GHz is about 0.3 dB.",
+          "Add any filter insertion loss in the transmit path. Bandpass filters typically add 1 to 3 dB depending on selectivity.",
+          "Add the transmit antenna gain in dBi. For a parabolic dish, G = 10*log10(eta * (pi*D/lambda)^2) where eta is aperture efficiency (0.55 to 0.70 typical). For a patch antenna, gain is typically 5 to 8 dBi.",
+          "EIRP = PA_output_dBm - cable_loss - connector_loss - filter_loss + antenna_gain_dBi."
+        ],
+        "tags": ["rf", "transmitter", "hardware"]
+      },
+      {
+        "flow_name": "path-loss-calculation",
+        "description": "Calculate the total path loss between transmitter and receiver antennas using the selected propagation model, including all atmospheric and environmental effects.",
+        "inputs": [
+          {"name": "link-requirements", "desc": "Frequency, distance, and environment parameters"},
+          {"name": "channel-model-selection", "desc": "The propagation model to apply"}
+        ],
+        "outputs": [
+          {"name": "total-path-loss", "desc": "Total path loss in dB with breakdown: free-space loss, atmospheric absorption, rain attenuation, diffraction loss, and any additional margin terms"},
+          {"name": "fade-margin-analysis", "desc": "Required fade margin for the target availability, based on fading statistics for the link geometry and climate"}
+        ],
+        "process": [
+          "Calculate free-space path loss: FSPL_dB = 20*log10(4*pi*d/lambda) = 20*log10(d_km) + 20*log10(f_GHz) + 92.45. This is the baseline loss.",
+          "Add atmospheric gas absorption. Use ITU-R P.676: oxygen absorption peaks at 60 GHz (about 15 dB/km), water vapor peaks at 22 GHz and 183 GHz. Below 10 GHz, atmospheric absorption is negligible for links under 50 km.",
+          "For frequencies above 10 GHz, calculate rain attenuation using ITU-R P.838: specific attenuation gamma_R = k * R^alpha dB/km, where R is rain rate in mm/hr and k, alpha are frequency and polarization dependent coefficients. Use the rain rate exceeded for the complement of the target availability.",
+          "For terrestrial links, check Fresnel zone clearance. The first Fresnel zone radius at midpoint: r1 = sqrt(lambda*d1*d2/(d1+d2)). If clearance is less than 0.6*r1, add diffraction loss using knife-edge or Bullington method.",
+          "For multipath fading on terrestrial links, calculate fade margin using the Vigants-Barnett method or ITU-R P.530. Flat fading probability depends on path length, frequency, climate, and terrain roughness.",
+          "Sum all losses: total_path_loss = FSPL + atmospheric + rain + diffraction + any additional environment-specific losses."
+        ],
+        "tags": ["rf", "propagation", "hardware"]
+      },
+      {
+        "flow_name": "receiver-sensitivity-calculation",
+        "description": "Calculate the receiver sensitivity from the noise floor, noise figure, required SNR, and implementation losses to determine the minimum detectable signal.",
+        "inputs": [
+          {"name": "link-requirements", "desc": "Data rate, modulation, BER target, and noise bandwidth"},
+          {"name": "receiver-hardware", "desc": "Receiver specifications: noise figure, bandwidth, implementation loss estimate, antenna type and gain, cable type and length"}
+        ],
+        "outputs": [
+          {"name": "receiver-sensitivity", "desc": "Minimum detectable signal level in dBm at the required BER, with noise floor and SNR breakdown"},
+          {"name": "receiver-gain-budget", "desc": "Receive-side gain and loss budget: antenna gain, cable loss, LNA noise figure contribution"}
+        ],
+        "process": [
+          "Calculate thermal noise floor: N_dBm = -174 + 10*log10(bandwidth_Hz). The -174 dBm/Hz is kTB at 290 K (room temperature).",
+          "Add the receiver noise figure: this is the cascaded noise figure of the entire receive chain. Use the Friis noise figure equation: F_total = F1 + (F2-1)/G1 + (F3-1)/(G1*G2) + ... The LNA dominates if it has sufficient gain.",
+          "Calculate the required SNR from the modulation and BER target. Add implementation loss (typically 1 to 3 dB) to account for real-world impairments: phase noise, I/Q imbalance, quantization noise in the ADC, channel estimation error.",
+          "Receiver sensitivity = noise_floor + noise_figure + required_SNR + implementation_loss.",
+          "Calculate receive antenna gain and cable losses using the same method as the transmitter chain. The received signal at the demodulator input = signal at antenna - cable loss.",
+          "For the receiver gain budget: record antenna gain, cable loss, LNA gain, and any filter losses between antenna and demodulator."
+        ],
+        "tags": ["rf", "receiver", "hardware"]
+      },
+      {
+        "flow_name": "link-margin-calculation",
+        "description": "Combine the EIRP, path loss, and receiver sensitivity to calculate the link margin and determine if the link closes for the target availability.",
+        "inputs": [
+          {"name": "eirp-calculation", "desc": "EIRP in dBm with breakdown"},
+          {"name": "total-path-loss", "desc": "Total path loss in dB with all atmospheric and environmental terms"},
+          {"name": "receiver-sensitivity", "desc": "Minimum signal level in dBm"},
+          {"name": "fade-margin-analysis", "desc": "Required fade margin for target availability"},
+          {"name": "receiver-gain-budget", "desc": "Receive-side gains and losses"}
+        ],
+        "outputs": [
+          {"name": "link-budget-result", "desc": "Complete link budget table showing every gain and loss term, the received signal level, the noise floor, the SNR, and the link margin in dB"},
+          {"name": "link-closure-assessment", "desc": "Whether the link closes with positive margin, the margin available, and the limiting factor if it does not close"}
+        ],
+        "process": [
+          "Calculate received signal power: P_rx = EIRP - total_path_loss + receive_antenna_gain - receive_cable_loss.",
+          "Calculate link margin: margin = P_rx - receiver_sensitivity. This is the margin above the minimum for the required BER at clear-sky conditions.",
+          "Compare the available margin to the required fade margin. If margin >= fade_margin, the link meets the availability target. If not, the link does not close.",
+          "Build the complete link budget table: every term from PA output through to demodulator input, clearly labeled as gain (+) or loss (-).",
+          "If the link does not close, identify which term is the most cost-effective to improve: increasing antenna size, reducing cable loss, improving noise figure, increasing transmit power, or selecting a lower-order modulation scheme with better sensitivity.",
+          "Document the sensitivity of the margin to key parameters: how many dB does the margin change per 1 dB change in each critical parameter. This identifies the fragile assumptions."
+        ],
+        "tags": ["rf", "link-budget", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "impedance-matching-network-synthesis",
+    "description": "Design an impedance matching network to transform a complex load impedance to a target impedance (typically 50 ohms), selecting the optimal topology for the bandwidth and Q requirements.",
+    "domain": "hardware",
+    "tags": ["rf", "impedance-matching", "smith-chart", "hardware"],
+    "steps": [
+      {
+        "flow_name": "load-impedance-characterization",
+        "description": "Measure or extract the complex load impedance at the operating frequency and characterize its variation across the required bandwidth.",
+        "inputs": [
+          {"name": "load-description", "desc": "Description of the load to be matched: antenna, amplifier input, filter port, or other RF component"},
+          {"name": "frequency-requirements", "desc": "Center frequency, bandwidth, and return loss target across the band"}
+        ],
+        "outputs": [
+          {"name": "load-impedance-data", "desc": "Complex impedance Z = R + jX at the center frequency and at band edges, or S11 data across frequency"},
+          {"name": "smith-chart-position", "desc": "Normalized impedance plotted on the Smith chart: r and x circles, distance from center (reflection coefficient magnitude)"}
+        ],
+        "process": [
+          "Measure the load impedance using a calibrated VNA. If measurement is not available, extract from the component datasheet or simulation S-parameters.",
+          "Record S11 (or Z) at the center frequency and at regular intervals across the required bandwidth. The impedance variation across the band determines the matching difficulty.",
+          "Normalize the impedance to the system impedance (typically 50 ohms): z = Z/Z0. Plot on the Smith chart.",
+          "Calculate the reflection coefficient: Gamma = (Z - Z0)/(Z + Z0). The magnitude |Gamma| indicates how far from matched the load is. |Gamma| = 0 is perfect match, |Gamma| = 1 is total reflection.",
+          "Convert to return loss: RL = -20*log10(|Gamma|). The target return loss (typically 10 to 20 dB) defines the acceptable matching circle on the Smith chart.",
+          "Note the Q of the load impedance: Q = |X|/R. High-Q loads (Q > 5) require more matching sections or accept narrower bandwidth."
+        ],
+        "tags": ["rf", "impedance", "measurement", "hardware"]
+      },
+      {
+        "flow_name": "matching-topology-selection",
+        "description": "Select the matching network topology based on the impedance transformation ratio, bandwidth requirement, and allowable complexity.",
+        "inputs": [
+          {"name": "load-impedance-data", "desc": "Complex impedance across the band"},
+          {"name": "smith-chart-position", "desc": "Normalized position on Smith chart"},
+          {"name": "frequency-requirements", "desc": "Center frequency, bandwidth, return loss target"}
+        ],
+        "outputs": [
+          {"name": "selected-topology", "desc": "The matching network topology: L-network, pi, T, quarter-wave transformer, multi-section, or other, with justification"},
+          {"name": "q-budget", "desc": "The loaded Q of the matching network and resulting bandwidth, compared to the requirement"}
+        ],
+        "process": [
+          "Calculate the impedance transformation ratio: ratio = max(R_load, R_source) / min(R_load, R_source). For ratios under 10:1, an L-network is usually sufficient. Above 10:1, consider pi or T networks.",
+          "For an L-network: two reactive elements. The loaded Q is fixed by the transformation ratio: Q = sqrt(ratio - 1). The bandwidth is approximately BW = f0/Q. If this bandwidth meets the requirement, use the L-network. It is the simplest.",
+          "There are 8 possible L-network configurations (series-shunt combinations of L and C). The correct one depends on which region of the Smith chart the load falls in. Use the constant-Q circles to identify the path.",
+          "For wider bandwidth than the L-network provides, use a pi-network (three elements) or T-network (three elements). These give independent control of Q. Lower Q means wider bandwidth but also lower selectivity.",
+          "For very broadband matching (octave or more), use multi-section quarter-wave transformers. Chebyshev taper gives equi-ripple response in the band. The number of sections sets the bandwidth-ripple trade-off.",
+          "For transmission line implementations above a few GHz, use distributed elements: open and short stubs, coupled lines, or stepped impedance transformers. Below 1 GHz, lumped elements are usually more practical.",
+          "Record the selected topology and the expected bandwidth. If the topology cannot meet the bandwidth with acceptable ripple, the specification may require revision."
+        ],
+        "tags": ["rf", "matching", "topology", "hardware"]
+      },
+      {
+        "flow_name": "matching-element-calculation",
+        "description": "Calculate the element values for the selected matching network topology using analytical synthesis or Smith chart graphical methods.",
+        "inputs": [
+          {"name": "load-impedance-data", "desc": "Complex load impedance at center frequency"},
+          {"name": "selected-topology", "desc": "The matching topology chosen"},
+          {"name": "frequency-requirements", "desc": "Center frequency and system impedance"}
+        ],
+        "outputs": [
+          {"name": "element-values", "desc": "Calculated L and C values (or transmission line lengths and impedances) for each element in the network"},
+          {"name": "network-schematic", "desc": "The matching network schematic showing element placement, values, and the signal path from source to load"}
+        ],
+        "process": [
+          "For an L-network with series L and shunt C (load impedance in the high-impedance region): Q = sqrt(R_high/R_low - 1). X_series = Q * R_low. B_shunt = Q / R_high. Then L = X_series / (2*pi*f), C = B_shunt / (2*pi*f).",
+          "For an L-network, also absorb the load reactance. If the load has reactance jX_load, the series element must resonate it out. This modifies the required series element value.",
+          "For a pi-network: choose the desired Q (which sets bandwidth). Calculate the virtual resistance R_v = R_high / (1 + Q^2) if R_v < R_low, increase Q. Then synthesize two back-to-back L-networks through R_v.",
+          "For quarter-wave transformers: Z_transformer = sqrt(Z_source * Z_load) for a single section. For multi-section Chebyshev: use the Collin synthesis tables for the impedance of each section given the passband ripple and number of sections.",
+          "Verify each element value is physically realizable. Inductors below 0.5 nH or above 100 nH at RF may be impractical. Capacitors below 0.1 pF are dominated by parasitics. Flag any unrealizable values.",
+          "Convert ideal element values to nearest standard values if using off-the-shelf components, and note the sensitivity of the match to component tolerance."
+        ],
+        "tags": ["rf", "matching", "synthesis", "hardware"]
+      },
+      {
+        "flow_name": "matching-parasitic-absorption",
+        "description": "Account for real component parasitics by absorbing them into the matching network design rather than treating them as errors.",
+        "inputs": [
+          {"name": "element-values", "desc": "Ideal calculated element values"},
+          {"name": "network-schematic", "desc": "Network schematic"}
+        ],
+        "outputs": [
+          {"name": "adjusted-element-values", "desc": "Element values corrected for parasitics: inductor self-resonance, capacitor ESL, PCB pad capacitance, via inductance"},
+          {"name": "parasitic-model", "desc": "The parasitic model for each component and PCB feature used in the correction"}
+        ],
+        "process": [
+          "For each inductor: model as ideal L in series with resistance (DCR + AC loss) and in parallel with parasitic capacitance (sets self-resonant frequency, SRF). The inductor is only usable below about 0.7 * SRF. Above SRF, it behaves as a capacitor.",
+          "For each capacitor: model as ideal C in series with ESR and ESL (equivalent series inductance). The capacitor has a series resonance at f_res = 1/(2*pi*sqrt(ESL*C)). Above this frequency, it behaves as an inductor.",
+          "Account for PCB parasitics: each pad adds approximately 0.2 to 0.5 pF depending on pad size and substrate. Each via adds approximately 0.5 to 1.5 nH depending on via length and diameter.",
+          "Absorb PCB pad capacitance into the nearest shunt capacitor: reduce the required capacitor value by the pad capacitance. Absorb via inductance into the nearest series inductor.",
+          "For transmission line matching elements: account for the step discontinuity at impedance transitions, open-end fringing capacitance, and T-junction parasitic effects. Use discontinuity models from Gupta or EM simulation.",
+          "Recalculate the network response with all parasitics included. If the match has shifted, adjust element values iteratively until the response at the operating frequency meets the return loss target."
+        ],
+        "tags": ["rf", "parasitics", "hardware"]
+      },
+      {
+        "flow_name": "matching-network-verification",
+        "description": "Verify the matching network performance through simulation and measurement, iterating if necessary to meet the return loss specification across the required bandwidth.",
+        "inputs": [
+          {"name": "adjusted-element-values", "desc": "Parasitic-corrected element values"},
+          {"name": "parasitic-model", "desc": "Component and PCB parasitic models"},
+          {"name": "frequency-requirements", "desc": "Bandwidth and return loss targets"}
+        ],
+        "outputs": [
+          {"name": "matching-verification-result", "desc": "Measured or simulated S11 across the band, confirming return loss meets spec, with comparison to the designed response"},
+          {"name": "matching-sensitivity-analysis", "desc": "Sensitivity of the match to component tolerances and temperature, with worst-case return loss estimate"}
+        ],
+        "process": [
+          "Simulate the complete matching network in a circuit simulator with component models that include parasitics. Compare simulated S11 to the return loss target across the band.",
+          "If the simulated match does not meet spec, adjust element values. Use optimization if available, but understand what the optimizer is changing and why.",
+          "Fabricate the matching network on the target PCB. Measure S11 with a calibrated VNA. Compare to simulation.",
+          "If measured and simulated results disagree, the model is wrong. Common causes: inaccurate PCB dielectric constant, unmodeled coupling between components, incorrect component parasitic model. Fix the model before changing component values.",
+          "Perform a tolerance analysis: sweep each component value across its tolerance range (typically 5% for capacitors, 10% for inductors) and plot the worst-case return loss. If worst case fails the spec, tighten tolerances or redesign with more margin.",
+          "Document the final matching network: schematic, element values with part numbers, layout guidelines (keep inductors away from ground plane edges, orient to minimize coupling between elements), and the measured S-parameters."
+        ],
+        "tags": ["rf", "verification", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rf-filter-design-methodology",
+    "description": "Design an RF filter from specification through prototype synthesis to physical realization, accounting for component parasitics and manufacturing variations.",
+    "domain": "hardware",
+    "tags": ["rf", "filter", "synthesis", "hardware"],
+    "steps": [
+      {
+        "flow_name": "filter-specification-extraction",
+        "description": "Convert the system filtering requirement into a filter specification: passband, stopband, ripple, rejection, and group delay constraints.",
+        "inputs": [
+          {"name": "system-filtering-need", "desc": "The system requirement driving the filter: interferer rejection, harmonic suppression, channel selection, or image rejection"},
+          {"name": "frequency-plan", "desc": "System frequency plan showing the desired signal band and the frequencies to reject"}
+        ],
+        "outputs": [
+          {"name": "filter-specification", "desc": "Passband edges, stopband edges, passband ripple (dB), stopband rejection (dB), insertion loss budget, group delay requirement if any"},
+          {"name": "filter-selectivity-ratio", "desc": "The ratio of stopband edge to passband edge (for lowpass prototype), which determines the required filter order"}
+        ],
+        "process": [
+          "Identify the passband: the frequency range where the signal must pass with minimal loss. Define the passband edges at the points where insertion loss must be less than the ripple specification.",
+          "Identify the stopband: the frequency range where signals must be attenuated. Define the stopband edges at the points where rejection must exceed the rejection specification.",
+          "Determine the passband ripple tolerance. For a Butterworth response, ripple is 3 dB at the band edge by definition. For Chebyshev, specify the in-band ripple (0.01 dB to 1 dB typical). Tighter ripple requires more elements for the same selectivity.",
+          "Determine the stopband rejection required. This comes from the interferer power level minus the desired signal power level plus the required signal-to-interferer ratio at the demodulator.",
+          "If the application has group delay sensitivity (such as digital modulation with wide bandwidth), specify the maximum group delay variation across the passband. Elliptic filters have the worst group delay near the band edges.",
+          "Calculate the selectivity ratio: (stopband edge)/(passband edge) for a lowpass prototype. Closer to 1.0 means sharper transition, requiring higher filter order."
+        ],
+        "tags": ["rf", "filter", "specification", "hardware"]
+      },
+      {
+        "flow_name": "filter-prototype-synthesis",
+        "description": "Determine the filter order and synthesize the lowpass prototype element values for the chosen response type (Butterworth, Chebyshev, or elliptic).",
+        "inputs": [
+          {"name": "filter-specification", "desc": "Passband ripple, stopband rejection, frequency edges"},
+          {"name": "filter-selectivity-ratio", "desc": "Ratio determining required order"}
+        ],
+        "outputs": [
+          {"name": "prototype-element-values", "desc": "Normalized lowpass prototype g-values (g0 through gN+1) for the selected response type and order"},
+          {"name": "filter-response-type", "desc": "Butterworth, Chebyshev, or elliptic, with the order N and the justification for the choice"}
+        ],
+        "process": [
+          "For Butterworth: N >= log(10^(A_stop/10) - 1) / (2 * log(Omega_stop/Omega_pass)) where A_stop is rejection in dB. Round up to the next integer. Prototype values: gk = 2*sin((2k-1)*pi/(2N)) for k = 1 to N.",
+          "For Chebyshev type I: N >= acosh(sqrt((10^(A_stop/10)-1)/(10^(A_pass/10)-1))) / acosh(Omega_stop/Omega_pass). This gives a lower order than Butterworth for the same selectivity at the cost of passband ripple. Prototype values from the Chebyshev recursion formulas.",
+          "For elliptic (Cauer): gives the minimum order for a given selectivity by allowing ripple in both passband and stopband. Use Zolotarev or Darlington synthesis. Prototype values from tables or computational synthesis (Geffe's algorithm).",
+          "Choose the response type: Butterworth if flat passband is critical and extra elements are acceptable. Chebyshev if some ripple is tolerable and order must be minimized. Elliptic if minimum order and sharpest transition are needed and both ripple and group delay variation are acceptable.",
+          "Record the prototype element values g0, g1, ..., gN, gN+1 for the selected type and order. These are normalized to 1 rad/s and 1 ohm."
+        ],
+        "tags": ["rf", "filter", "synthesis", "hardware"]
+      },
+      {
+        "flow_name": "filter-frequency-impedance-scaling",
+        "description": "Transform the normalized lowpass prototype to the actual filter type (lowpass, highpass, bandpass, or bandstop) at the required frequency and impedance.",
+        "inputs": [
+          {"name": "prototype-element-values", "desc": "Normalized g-values"},
+          {"name": "filter-specification", "desc": "Actual frequency edges and system impedance"}
+        ],
+        "outputs": [
+          {"name": "scaled-element-values", "desc": "Actual L and C values for each element after frequency and impedance scaling"},
+          {"name": "filter-schematic", "desc": "Circuit schematic showing the filter topology with element values, source and load impedances"}
+        ],
+        "process": [
+          "For impedance scaling: multiply all inductors by Z0, divide all capacitors by Z0, where Z0 is the system impedance (typically 50 ohms).",
+          "For frequency scaling to lowpass: divide all L and C values by omega_c = 2*pi*f_cutoff.",
+          "For lowpass to highpass transformation: replace each series inductor gk with a series capacitor 1/(omega_c * gk * Z0), and each shunt capacitor gk with a shunt inductor Z0/(omega_c * gk).",
+          "For lowpass to bandpass transformation: replace each series inductor with a series LC resonator and each shunt capacitor with a parallel LC resonator. The element values depend on the fractional bandwidth: delta = (f2 - f1)/f0 where f0 = sqrt(f1*f2). Series L becomes L_s = gk*Z0/(omega_0*delta), C_s = delta/(omega_0*gk*Z0). Shunt C becomes C_p = gk/(omega_0*Z0*delta), L_p = Z0*delta/(omega_0*gk).",
+          "For bandstop: the dual of bandpass. Replace each series inductor with a parallel LC and each shunt capacitor with a series LC.",
+          "Verify that all element values are physically realizable. Bandpass filters at narrow bandwidth produce very large inductors and very small capacitors that may be impractical."
+        ],
+        "tags": ["rf", "filter", "scaling", "hardware"]
+      },
+      {
+        "flow_name": "filter-physical-realization",
+        "description": "Map the lumped element values to a physical implementation: discrete lumped components, microstrip coupled lines, cavity, or ceramic resonator, based on frequency and performance requirements.",
+        "inputs": [
+          {"name": "scaled-element-values", "desc": "Actual L and C values"},
+          {"name": "filter-schematic", "desc": "Filter circuit topology"},
+          {"name": "filter-specification", "desc": "Frequency, insertion loss budget, power handling, size constraints"}
+        ],
+        "outputs": [
+          {"name": "physical-filter-design", "desc": "The physical filter implementation: component selections for lumped, or dimensions for distributed, with layout or mechanical drawing"},
+          {"name": "expected-performance", "desc": "Predicted insertion loss, return loss, rejection, and group delay from simulation of the physical design"}
+        ],
+        "process": [
+          "For frequencies below about 1 GHz: use lumped L and C components. Select high-Q inductors (wirewound or multilayer chip) and low-ESR capacitors (C0G/NP0 dielectric for stability). Component Q determines the realized insertion loss: IL increases as Q decreases.",
+          "For frequencies from 1 to 30 GHz: distributed (transmission line) implementations are usually superior. Coupled microstrip lines for bandpass filters. Stepped impedance for lowpass. Calculate physical dimensions from the electrical lengths and substrate properties.",
+          "For coupled-line bandpass filters: calculate the even-mode and odd-mode impedances for each coupled section from the prototype values and fractional bandwidth. Then calculate the physical gap and line widths from the substrate parameters using closed-form equations or EM simulation.",
+          "For cavity or waveguide filters (high power, very low loss): design each resonator for the required unloaded Q, then couple them through irises or probes sized by the coupling coefficients derived from the prototype values: Mk,k+1 = delta/sqrt(gk * gk+1).",
+          "Simulate the physical design in an EM simulator (for distributed) or circuit simulator with parasitic models (for lumped). Compare the simulated response to the specification. Adjust dimensions or values to compensate for parasitics.",
+          "Estimate the insertion loss from the component or resonator Q: for a bandpass filter, IL approximately = 4.343 * sum(gk) / (delta * Qu) dB, where Qu is the unloaded Q and delta is fractional bandwidth."
+        ],
+        "tags": ["rf", "filter", "realization", "hardware"]
+      },
+      {
+        "flow_name": "filter-tuning-verification",
+        "description": "Tune and verify the fabricated filter to meet the specification, diagnosing and correcting discrepancies between measured and designed performance.",
+        "inputs": [
+          {"name": "physical-filter-design", "desc": "The fabricated filter"},
+          {"name": "expected-performance", "desc": "Predicted response from simulation"},
+          {"name": "filter-specification", "desc": "Original specification to verify against"}
+        ],
+        "outputs": [
+          {"name": "filter-measurement-result", "desc": "Measured S21 (insertion loss) and S11 (return loss) across frequency, compared to specification and simulation"},
+          {"name": "filter-tuning-record", "desc": "Any adjustments made during tuning, the root cause of each discrepancy, and the final as-built element values or dimensions"}
+        ],
+        "process": [
+          "Measure S21 and S11 on a calibrated VNA across a frequency range wider than the filter passband (at least 3x the bandwidth on each side) to capture stopband behavior.",
+          "Compare measured to simulated response. Common discrepancies: shifted center frequency (dielectric constant different from assumed), wider bandwidth (coupling stronger than designed), higher insertion loss (lower Q than expected), asymmetric response (parasitic coupling between non-adjacent resonators).",
+          "For lumped filters: tune by replacing components with adjusted values. Change one element at a time, starting from the input and working toward the output. Each element primarily affects one feature of the response.",
+          "For distributed filters: tune by adjusting physical dimensions. For coupled-line filters, the gap controls coupling (bandwidth) and the resonator length controls frequency. Trim with conductive paint or by removing metal.",
+          "For cavity filters: tune by adjusting the tuning screws. Each screw changes one resonator frequency or one coupling. Follow the manufacturer's alignment procedure: first tune all resonators to the center frequency (monitor return loss), then adjust couplings for bandwidth.",
+          "Record the final measured performance against every specification parameter. Document any deviations and whether they are acceptable. Archive the tuning record for production repeatability."
+        ],
+        "tags": ["rf", "filter", "tuning", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "antenna-design-methodology",
+    "description": "Design an antenna from requirements through simulation to measurement, covering antenna type selection, dimensioning, feed design, and pattern verification.",
+    "domain": "hardware",
+    "tags": ["rf", "antenna", "electromagnetic", "hardware"],
+    "steps": [
+      {
+        "flow_name": "antenna-requirements-analysis",
+        "description": "Extract antenna requirements from the system specification and determine which antenna types are candidates for the application.",
+        "inputs": [
+          {"name": "system-antenna-need", "desc": "System-level antenna requirements: frequency, gain, beamwidth, polarization, bandwidth, size constraints, environment"},
+          {"name": "platform-constraints", "desc": "Physical constraints: available volume, ground plane size, radome, mounting method, weight limit"}
+        ],
+        "outputs": [
+          {"name": "antenna-specification", "desc": "Frequency range, gain (dBi), beamwidth (degrees), polarization (linear/circular), impedance bandwidth (%), efficiency target, sidelobe level"},
+          {"name": "candidate-antenna-types", "desc": "List of antenna types that can meet the specification with trade-offs noted for each"}
+        ],
+        "process": [
+          "Define the operating frequency range. Calculate the wavelength: lambda = c/f. This sets the fundamental scale for all antenna dimensions.",
+          "Define the required gain and beamwidth. These are related: for a single-beam antenna, beamwidth approximately = 70*lambda/D degrees (for a uniformly illuminated aperture of dimension D). Higher gain means narrower beam.",
+          "Define the polarization: linear (horizontal or vertical), circular (RHCP or LHCP), or dual-polarization. Circular polarization requires either a circularly polarized element or two orthogonal linear elements with 90-degree phase difference.",
+          "Assess antenna type candidates. Dipole/monopole: simple, omnidirectional, 2 to 5 dBi. Patch: low profile, 5 to 8 dBi, narrow bandwidth (2 to 5% typical). Horn: moderate gain (10 to 25 dBi), wideband, large. Parabolic dish: high gain (25+ dBi), narrow beam. Array: any gain, electronic beam steering possible, highest cost and complexity.",
+          "Eliminate candidates that cannot fit the platform constraints. A patch antenna requires a ground plane of at least lambda/2 on each side. A parabolic dish requires lambda*10 diameter for 30 dBi gain.",
+          "Select the most promising type based on the combined constraints. If multiple candidates remain, note the trade-off: patch is smaller but narrower bandwidth; horn is wider band but larger."
+        ],
+        "tags": ["rf", "antenna", "requirements", "hardware"]
+      },
+      {
+        "flow_name": "antenna-element-dimensioning",
+        "description": "Calculate the initial physical dimensions of the selected antenna type from analytical models, then refine in simulation.",
+        "inputs": [
+          {"name": "antenna-specification", "desc": "Frequency, gain, bandwidth, polarization requirements"},
+          {"name": "candidate-antenna-types", "desc": "Selected antenna type with trade-off justification"}
+        ],
+        "outputs": [
+          {"name": "antenna-dimensions", "desc": "Physical dimensions: element length/width, substrate thickness and dielectric constant (for patch), aperture size (for horn/dish), element spacing (for array)"},
+          {"name": "feed-design", "desc": "Feed mechanism: probe feed position, aperture-coupled slot dimensions, microstrip feed line width, or coaxial feed point location"}
+        ],
+        "process": [
+          "For a rectangular microstrip patch: length L = c/(2*f*sqrt(epsilon_eff)) - 2*delta_L, where epsilon_eff is the effective dielectric constant accounting for fringing and delta_L is the fringing extension. Width W = c/(2*f) * sqrt(2/(epsilon_r + 1)) for good radiation efficiency.",
+          "For a patch, select the substrate: thicker substrate (0.02 to 0.05 lambda) gives wider bandwidth but more surface wave loss. Lower dielectric constant gives wider bandwidth but larger size. FR-4 works below 2 GHz; use Rogers or similar PTFE substrates above 2 GHz for lower loss.",
+          "For probe feed: the feed point is offset from center along the length. The input impedance varies from 0 (center) to approximately 150 to 300 ohms (edge) sinusoidally. Place the probe where Rin = 50 ohms. The offset approximately = L * acos(sqrt(50/R_edge)) / pi.",
+          "For a horn antenna: the aperture dimensions set the gain. For a pyramidal horn, G = (4*pi*A_e)/(lambda^2) where A_e = epsilon_ap * A_physical and epsilon_ap is aperture efficiency (0.5 to 0.6 typical). The flare length must satisfy the phase error criterion: maximum phase error across the aperture should be less than pi/4 for good efficiency.",
+          "For an array: element spacing d = lambda/2 for maximum scan range without grating lobes. For a fixed beam, d can be larger. The array factor determines the beam shape: uniform illumination gives the narrowest beam but highest sidelobes (-13.2 dB). Tapered illumination (Taylor, Chebyshev) reduces sidelobes at the cost of wider beam.",
+          "Document all initial dimensions with the formulas and assumptions used. These are starting points for simulation refinement."
+        ],
+        "tags": ["rf", "antenna", "design", "hardware"]
+      },
+      {
+        "flow_name": "antenna-simulation-optimization",
+        "description": "Simulate the antenna in a full-wave electromagnetic solver, optimize dimensions to meet specifications, and verify performance across the operating band.",
+        "inputs": [
+          {"name": "antenna-dimensions", "desc": "Initial physical dimensions from analytical design"},
+          {"name": "feed-design", "desc": "Feed mechanism and dimensions"},
+          {"name": "antenna-specification", "desc": "Target performance parameters"}
+        ],
+        "outputs": [
+          {"name": "simulated-antenna-performance", "desc": "S11, gain, radiation pattern (E-plane and H-plane), efficiency, and bandwidth from EM simulation"},
+          {"name": "optimized-dimensions", "desc": "Final optimized dimensions after simulation refinement, with sensitivity to each parameter"}
+        ],
+        "process": [
+          "Build the 3D model in the EM simulator (HFSS, CST, FEKO, or similar). Include the ground plane, substrate, feed structure, and any nearby metallic structures that affect the pattern.",
+          "Set up the simulation: define the excitation port (waveport for waveguide feed, lumped port for probe feed), the boundary conditions (radiation boundary at least lambda/4 from the antenna), and the solution frequency (adaptive mesh refinement at the center frequency).",
+          "Run the initial simulation. Compare S11 to the impedance bandwidth requirement. If the resonant frequency is off, adjust the element dimensions (length primarily controls frequency, width primarily controls impedance). If the bandwidth is insufficient, consider thicker substrate, stacked patches, or parasitic elements.",
+          "Verify the radiation pattern: check gain, beamwidth, sidelobe levels, cross-polarization, and back radiation. The E-plane pattern is primarily controlled by the element, the H-plane by the ground plane size.",
+          "Run a parametric sweep on the most sensitive dimensions to understand tolerance sensitivity. If the design is too sensitive to a parameter, redesign to reduce that sensitivity.",
+          "For arrays: simulate a single element first, verify its pattern, then simulate the full array (or use infinite array approximation with periodic boundaries for large arrays). Check for scan blindness at the intended scan angles."
+        ],
+        "tags": ["rf", "antenna", "simulation", "hardware"]
+      },
+      {
+        "flow_name": "antenna-fabrication-measurement",
+        "description": "Fabricate the antenna prototype and measure its performance in an appropriate test facility, comparing to simulation to validate the design.",
+        "inputs": [
+          {"name": "optimized-dimensions", "desc": "Final dimensions for fabrication"},
+          {"name": "simulated-antenna-performance", "desc": "Expected performance to compare against"}
+        ],
+        "outputs": [
+          {"name": "measured-antenna-performance", "desc": "Measured S11, gain, radiation pattern, polarization purity, and efficiency, compared to simulation and specification"},
+          {"name": "antenna-design-record", "desc": "Complete design record: specification, analytical design, simulation results, fabrication details, measurement results, and any design revisions"}
+        ],
+        "process": [
+          "Fabricate the antenna according to the optimized dimensions. For PCB antennas, use the same substrate material and stackup specified in the simulation. For machined antennas, specify tolerances on critical dimensions.",
+          "Measure S11 on a calibrated VNA. The measurement includes the connector and any feed transition, which were not always included in simulation. If S11 disagrees with simulation, first suspect the connector transition before changing the antenna.",
+          "Measure the radiation pattern. For far-field measurements, the minimum distance is 2*D^2/lambda where D is the largest dimension of the antenna. Use an anechoic chamber to suppress reflections, or an outdoor range with a clear Fresnel zone.",
+          "For near-field measurements (large antennas or high frequencies): scan the near field on a planar, cylindrical, or spherical surface. Transform to far field using Fourier-based algorithms. Near-field ranges are more compact but require more sophisticated equipment and post-processing.",
+          "Measure gain by comparison: measure the antenna under test against a reference antenna with known gain (standard gain horn). Gain = gain_ref + 20*log10(received_power_AUT / received_power_ref).",
+          "Measure efficiency: either by the Wheeler cap method (place a conducting cap over the antenna, compare impedance with and without to separate radiation resistance from loss resistance), or by the directivity/gain method (efficiency = gain / directivity, where directivity is computed from the measured 3D pattern).",
+          "Compare all measured results to simulation. Document discrepancies and their causes. Common causes: substrate dielectric constant variation (especially FR-4), manufacturing tolerances, connector effects, test fixture interactions. Update the simulation model to match measurement for future designs."
+        ],
+        "tags": ["rf", "antenna", "measurement", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "noise-figure-analysis",
+    "description": "Analyze and optimize the noise performance of an RF receiver chain using the Friis equation and noise figure budgeting to achieve the required sensitivity.",
+    "domain": "hardware",
+    "tags": ["rf", "noise", "receiver", "hardware"],
+    "steps": [
+      {
+        "flow_name": "noise-floor-calculation",
+        "description": "Calculate the thermal noise floor for the receiver bandwidth and convert the system sensitivity requirement into a noise figure budget.",
+        "inputs": [
+          {"name": "receiver-requirements", "desc": "Required sensitivity (dBm), signal bandwidth (Hz), modulation type, and required SNR"},
+          {"name": "operating-conditions", "desc": "Ambient temperature, antenna noise temperature contribution (sky noise for satellite, ground noise for terrestrial)"}
+        ],
+        "outputs": [
+          {"name": "noise-floor-analysis", "desc": "Thermal noise floor in dBm, required SNR, and the maximum allowable system noise figure to achieve the sensitivity target"},
+          {"name": "noise-temperature-budget", "desc": "System noise temperature breakdown: antenna noise temperature, feed loss contribution, and receiver noise temperature"}
+        ],
+        "process": [
+          "Calculate thermal noise power: N = kTB where k = 1.38e-23 J/K, T = system noise temperature in Kelvin, B = bandwidth in Hz. In dBm: N_dBm = -174 + 10*log10(B_Hz) at T = 290 K (room temperature, 17 C).",
+          "The required receiver sensitivity = noise floor + required SNR. Therefore, the maximum system noise figure = sensitivity_target - (-174 + 10*log10(B)) - required_SNR.",
+          "For systems with a non-room-temperature antenna (satellite earth stations, radio telescopes): use system noise temperature. T_sys = T_antenna + T_feed_loss + T_receiver. T_antenna is the noise temperature seen by the antenna (2.7 K cosmic background for a space-pointing antenna, up to 290 K for an antenna seeing the ground).",
+          "Convert between noise figure and noise temperature: F = 1 + T_e/T_0 where T_0 = 290 K. NF_dB = 10*log10(F). A 1 dB noise figure corresponds to T_e = 75 K. A 0.5 dB NF is 35 K.",
+          "Account for the feed loss between antenna and LNA. A lossy feed at temperature T contributes noise: T_feed = (L - 1) * T_physical, where L is the loss factor (not in dB). This directly adds to system noise temperature before the LNA."
+        ],
+        "tags": ["rf", "noise", "hardware"]
+      },
+      {
+        "flow_name": "cascaded-noise-figure-calculation",
+        "description": "Calculate the cascaded noise figure of the receiver chain using the Friis equation, identifying which stages dominate the system noise performance.",
+        "inputs": [
+          {"name": "noise-floor-analysis", "desc": "System noise figure budget"},
+          {"name": "receiver-chain-components", "desc": "Ordered list of receiver stages with gain (dB) and noise figure (dB) for each: LNA, cable, filter, mixer, IF amplifier, etc."}
+        ],
+        "outputs": [
+          {"name": "cascaded-noise-figure", "desc": "System noise figure calculated from the Friis equation, with the contribution of each stage shown separately"},
+          {"name": "stage-contribution-analysis", "desc": "Percentage noise contribution from each stage, identifying which stages dominate and which are negligible"}
+        ],
+        "process": [
+          "Convert all gains and noise figures from dB to linear: G_linear = 10^(G_dB/10), F_linear = 10^(NF_dB/10).",
+          "Apply the Friis equation: F_total = F1 + (F2-1)/G1 + (F3-1)/(G1*G2) + (F4-1)/(G1*G2*G3) + ... Each term represents the noise contribution of that stage referred to the input.",
+          "Calculate the percentage contribution of each stage: contribution_k = (Fk-1)/(G1*G2*...*Gk-1) / (F_total - 1) * 100%.",
+          "The first stage (LNA) dominates if it has reasonable gain (> 10 dB). In a well-designed receiver, the LNA contributes 70 to 90% of the system noise. Stages after 20+ dB of gain contribute less than 1%.",
+          "A lossy component (cable, filter) before the LNA is devastating. A 3 dB loss before the LNA adds 3 dB to the system noise figure regardless of the LNA quality. This is why the LNA should be as close to the antenna as possible.",
+          "Convert the result back to dB: NF_system_dB = 10*log10(F_total). Compare to the noise figure budget. If the system NF exceeds the budget, identify which stage to improve (usually the LNA NF or the pre-LNA losses)."
+        ],
+        "tags": ["rf", "noise", "cascaded", "hardware"]
+      },
+      {
+        "flow_name": "lna-selection-optimization",
+        "description": "Select and optimize the low noise amplifier to minimize system noise figure while meeting linearity and stability requirements.",
+        "inputs": [
+          {"name": "cascaded-noise-figure", "desc": "System NF and stage contributions"},
+          {"name": "noise-floor-analysis", "desc": "NF budget target"},
+          {"name": "receiver-requirements", "desc": "Frequency, bandwidth, linearity (IP3), and stability requirements"}
+        ],
+        "outputs": [
+          {"name": "lna-selection", "desc": "Selected LNA device or design with noise figure, gain, IP3, and stability parameters"},
+          {"name": "noise-linearity-tradeoff", "desc": "Analysis of the noise figure vs. linearity trade-off for the selected LNA, showing the optimal bias point"}
+        ],
+        "process": [
+          "Survey available LNA devices or transistors for the operating frequency. Key parameters: noise figure, associated gain, IP3 (or P1dB), DC power, and stability (K-factor > 1 for unconditional stability).",
+          "The optimal noise match is NOT the same as the conjugate match for maximum gain. Every transistor has an optimum source impedance for minimum noise (Gamma_opt on the Smith chart). The noise figure increases as the source impedance deviates from Gamma_opt, tracing constant noise circles on the Smith chart.",
+          "If minimum noise figure is the priority, match the source to Gamma_opt and accept the gain penalty. If gain is also needed, find the compromise source impedance that stays inside the acceptable noise circle while providing adequate gain.",
+          "Check stability: calculate the K-factor and delta (or mu-factor) at the operating frequency and out of band. K > 1 and |delta| < 1 means unconditionally stable. If conditionally stable, add stabilizing elements (resistive loading) but check their noise contribution.",
+          "Optimize the LNA bias point. Lower drain current typically gives lower noise figure but also lower IP3. Find the bias point that meets both the NF and linearity (IP3) requirements. If both cannot be met simultaneously, consider a two-stage approach: low-noise first stage, high-linearity second stage.",
+          "Verify that the LNA gain is sufficient to suppress the noise contribution of subsequent stages. Typically 15 to 20 dB of LNA gain makes downstream stages negligible."
+        ],
+        "tags": ["rf", "lna", "noise", "hardware"]
+      },
+      {
+        "flow_name": "noise-figure-measurement-verification",
+        "description": "Measure the noise figure of the receiver chain or individual components using the Y-factor method or cold-source method, and verify against the design target.",
+        "inputs": [
+          {"name": "lna-selection", "desc": "Selected LNA with expected NF"},
+          {"name": "cascaded-noise-figure", "desc": "Expected system NF"},
+          {"name": "receiver-chain-components", "desc": "Complete receiver chain for measurement"}
+        ],
+        "outputs": [
+          {"name": "measured-noise-figure", "desc": "Measured NF of the LNA and the complete receiver chain, with measurement uncertainty analysis"},
+          {"name": "noise-performance-verification", "desc": "Comparison of measured NF to the design budget, identifying any stages that are worse than expected"}
+        ],
+        "process": [
+          "Y-factor method: connect a calibrated noise source (with known ENR, excess noise ratio) to the device input. Measure the output power with the noise source on (hot) and off (cold). Y = P_hot/P_cold. Then NF = ENR / (Y - 1) in linear, or NF_dB = ENR_dB - 10*log10(Y - 1).",
+          "Correct for the noise source's ENR accuracy: ENR varies with frequency and temperature. Use the calibration data provided with the noise source, not the nominal value printed on the label.",
+          "For the cold-source method (more accurate for low NF): use a calibrated impedance at room temperature as the cold source and a known impedance at an elevated temperature (or a noise diode) as the hot source. This avoids the ENR uncertainty of the noise source.",
+          "Measure the LNA NF first in isolation. Then measure the complete chain. If the chain NF is worse than predicted from the Friis equation using the measured stage NFs, there is an unexpected loss or impedance mismatch between stages.",
+          "Assess measurement uncertainty: noise source ENR uncertainty (typically 0.1 to 0.2 dB), mismatch uncertainty between noise source and DUT, noise figure analyzer internal noise contribution. Total measurement uncertainty is typically 0.2 to 0.5 dB for NF below 3 dB.",
+          "If measured NF exceeds the budget, diagnose by measuring each stage individually. Common causes of excess NF: lossy connectors or transitions before the LNA, oscillation at out-of-band frequencies, bias circuit noise injection, substrate coupling on the PCB."
+        ],
+        "tags": ["rf", "noise", "measurement", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "pll-synthesizer-design",
+    "description": "Design a phase-locked loop frequency synthesizer from reference oscillator selection through loop filter design to phase noise verification, for a target frequency plan and spectral purity requirement.",
+    "domain": "hardware",
+    "tags": ["rf", "pll", "synthesizer", "frequency", "hardware"],
+    "steps": [
+      {
+        "flow_name": "synthesizer-architecture-selection",
+        "description": "Select the PLL architecture (integer-N, fractional-N, or direct digital synthesis) based on the frequency plan, step size, and phase noise requirements.",
+        "inputs": [
+          {"name": "frequency-plan", "desc": "Required output frequencies, step size (channel spacing), tuning range, and switching speed"},
+          {"name": "phase-noise-specification", "desc": "Phase noise mask: maximum phase noise at each offset frequency (e.g., -80 dBc/Hz at 1 kHz, -110 dBc/Hz at 100 kHz)"}
+        ],
+        "outputs": [
+          {"name": "pll-architecture", "desc": "Selected architecture (integer-N, fractional-N, multi-loop) with reference frequency, division ratios, and justification"},
+          {"name": "loop-bandwidth-target", "desc": "Target loop bandwidth based on the phase noise crossover between reference and VCO noise"}
+        ],
+        "process": [
+          "Determine the required frequency step size. For integer-N: step size equals the reference frequency (f_ref = f_step). For narrow channel spacing, this forces a low f_ref and high N, which degrades phase noise by 20*log10(N).",
+          "For fractional-N: the reference frequency can be much higher than the step size (f_ref >> f_step), reducing N and improving phase noise. The trade-off is fractional spurs at offsets related to the fractional component. Sigma-delta modulators (2nd or 3rd order) push spur energy to higher offsets where the loop filter attenuates it.",
+          "Estimate the in-band phase noise: L_in-band = L_ref + 20*log10(N) + L_PD + 10*log10(f_ref), where L_ref is the reference oscillator phase noise, L_PD is the phase detector/charge pump noise contribution (from the PLL IC datasheet, normalized to 1 Hz), and N is the division ratio.",
+          "Estimate the VCO phase noise requirement. At offsets beyond the loop bandwidth, the PLL output follows the VCO phase noise directly. The VCO phase noise at the offset of interest must meet the specification.",
+          "The optimal loop bandwidth is near the crossover point where in-band noise (dominated by reference and divider noise, shaped by the closed-loop transfer function) equals VCO noise (suppressed by the loop inside the bandwidth). Wider bandwidth suppresses VCO noise more but passes more reference noise.",
+          "If the phase noise specification cannot be met with a single-loop architecture, consider a multi-loop design or an offset PLL to reduce the division ratio."
+        ],
+        "tags": ["rf", "pll", "architecture", "hardware"]
+      },
+      {
+        "flow_name": "loop-filter-design",
+        "description": "Design the PLL loop filter to achieve the target bandwidth, phase margin, and spur rejection while maintaining loop stability.",
+        "inputs": [
+          {"name": "pll-architecture", "desc": "Architecture, reference frequency, division ratio, and PLL IC parameters (charge pump current, VCO gain)"},
+          {"name": "loop-bandwidth-target", "desc": "Target bandwidth and constraints on settling time and spur rejection"}
+        ],
+        "outputs": [
+          {"name": "loop-filter-values", "desc": "Component values for the loop filter (R and C values for each element), with the filter topology (type II 3rd-order, 4th-order, etc.)"},
+          {"name": "loop-analysis", "desc": "Open-loop gain and phase plots, bandwidth, phase margin, and time-domain step response (settling time)"}
+        ],
+        "process": [
+          "Gather the PLL IC parameters: charge pump current (Icp), phase detector gain (Kpd = Icp/(2*pi)), and VCO gain (Kvco in Hz/V, from the VCO datasheet or tuning curve).",
+          "For a type II, 3rd-order loop (most common): the loop filter has two capacitors (C1, C2) and one resistor (R1) in a specific topology (C1 in series with R1, both in shunt, with C2 in shunt). The 3rd pole from C2 provides additional reference spur filtering.",
+          "Calculate the loop natural frequency and damping from the target bandwidth and phase margin. For 45 degrees phase margin, the zero is placed at about BW/4 and the pole at about BW*4. For 60 degrees phase margin, place the zero at BW/5 and pole at BW*5.",
+          "R1 = (phase_margin factor) / (Icp * Kvco * C1). T1 = R1 * C1 (zero time constant). T2 = R1 * C2 (pole time constant, where C2 is typically C1/10 to C1/20).",
+          "Verify the open-loop gain crosses 0 dB at the target bandwidth with the target phase margin. Plot the open-loop transfer function: H(s) = Kpd * Z(s) * Kvco / (s * N) where Z(s) is the filter transfer function.",
+          "Check the reference spur rejection: the loop filter attenuation at the reference frequency offset (f_ref) determines how much the charge pump pulses appear at the VCO output. For a 3rd-order filter, attenuation at f_ref is approximately 20*log10(BW/f_ref) * 3. If insufficient, add a 4th pole."
+        ],
+        "tags": ["rf", "pll", "loop-filter", "hardware"]
+      },
+      {
+        "flow_name": "vco-selection-evaluation",
+        "description": "Select and evaluate the VCO for phase noise, tuning range, output power, and pushing/pulling performance across the operating conditions.",
+        "inputs": [
+          {"name": "pll-architecture", "desc": "Required frequency range and division ratios"},
+          {"name": "phase-noise-specification", "desc": "Phase noise requirements at far offsets where VCO dominates"}
+        ],
+        "outputs": [
+          {"name": "vco-selection", "desc": "Selected VCO with phase noise, tuning range, tuning sensitivity (Kvco in MHz/V), output power, and pushing/pulling specifications"},
+          {"name": "vco-evaluation-result", "desc": "VCO phase noise measured or predicted across the tuning range, with Kvco variation and its effect on loop dynamics"}
+        ],
+        "process": [
+          "The VCO phase noise specification comes from the system requirement at offsets beyond the loop bandwidth, where the VCO noise is not suppressed by the loop. At 1 MHz offset, the PLL output phase noise equals the VCO phase noise directly.",
+          "VCO phase noise follows Leeson's model: L(fm) = (F*kT)/(2*Ps) * (1 + (f0/(2*Ql*fm))^2) * (1 + fc/fm), where F is the device noise factor, Ps is the signal power, Ql is the loaded Q of the resonator, fm is the offset frequency, f0 is the carrier, and fc is the flicker corner.",
+          "Higher resonator Q gives lower phase noise. LC VCOs with printed inductors achieve Q of 10 to 30. Dielectric resonator oscillators (DROs) achieve Q of 1000+. Cavity oscillators achieve Q of 10000+. Select based on the phase noise requirement and size/cost constraints.",
+          "Check the VCO tuning range covers the required output frequency range with margin. The tuning sensitivity Kvco (MHz/V) varies across the tuning range; higher Kvco means more sensitivity to supply noise but wider tuning. Kvco variation changes the loop bandwidth across the band, so verify stability at both extremes.",
+          "Evaluate VCO pushing (frequency change per supply voltage change) and pulling (frequency change with load impedance variation). Pushing is mitigated by clean power supply design. Pulling is mitigated by an isolator or buffer amplifier at the VCO output.",
+          "If using an integrated PLL/VCO IC: the VCO is internal and its Kvco is set by the IC. Verify the IC's VCO phase noise meets the requirement. Some ICs allow selecting VCO bands to reduce Kvco and improve phase noise."
+        ],
+        "tags": ["rf", "vco", "oscillator", "hardware"]
+      },
+      {
+        "flow_name": "pll-phase-noise-verification",
+        "description": "Measure the phase noise of the assembled PLL synthesizer and verify it meets the specification, diagnosing and correcting any issues.",
+        "inputs": [
+          {"name": "loop-filter-values", "desc": "Designed loop filter component values"},
+          {"name": "vco-selection", "desc": "Selected VCO"},
+          {"name": "pll-architecture", "desc": "Complete PLL architecture and component selections"},
+          {"name": "phase-noise-specification", "desc": "Phase noise mask to verify against"}
+        ],
+        "outputs": [
+          {"name": "measured-phase-noise", "desc": "Measured SSB phase noise in dBc/Hz at standard offsets (100 Hz, 1 kHz, 10 kHz, 100 kHz, 1 MHz), compared to specification mask"},
+          {"name": "spur-analysis", "desc": "Measured spurious signals: reference spurs (at f_ref offset), fractional spurs (for fractional-N), and any other discrete spurs, with levels in dBc"}
+        ],
+        "process": [
+          "Measure phase noise using a signal source analyzer or spectrum analyzer with phase noise measurement capability. For close-in offsets (< 10 kHz), a cross-correlation method (two independent measurement paths averaged) reduces the instrument noise floor.",
+          "Plot the measured phase noise against the specification mask. The plot should show three distinct regions: in-band flat region (dominated by reference/charge pump noise multiplied by N^2), the transition through the loop bandwidth, and the out-of-band slope (VCO noise, falling at -20 dB/decade for white FM or -30 dB/decade for flicker FM).",
+          "If in-band phase noise is too high: check the reference oscillator phase noise (it may be worse than specified), verify the charge pump current setting, check for noise on the charge pump power supply, and verify the division ratio is as expected.",
+          "If the loop bandwidth is wrong (transition frequency is not where designed): measure Kvco at the operating frequency (it may differ from the datasheet value at this tuning voltage). Recalculate the loop with the actual Kvco.",
+          "Measure reference spurs at +/- f_ref offset from the carrier. Reference spurs come from charge pump current mismatch, leakage, and power supply coupling. If spurs exceed specification: increase loop filter attenuation at f_ref (add a pole), improve charge pump power supply filtering, or reduce charge pump current mismatch (some ICs have calibration registers).",
+          "For fractional-N: measure fractional spurs. Their offset frequencies depend on the fractional word and sigma-delta modulator pattern. If fractional spurs are excessive: increase the sigma-delta modulator order, increase the reference frequency (which reduces the fractional spur amplitude relative to the carrier), or apply spur avoidance by avoiding certain fractional values near integer boundaries."
+        ],
+        "tags": ["rf", "pll", "phase-noise", "measurement", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rf-power-amplifier-design",
+    "description": "Design an RF power amplifier from load-pull characterization through bias design to linearization, optimizing the trade-off between output power, efficiency, and linearity.",
+    "domain": "hardware",
+    "tags": ["rf", "power-amplifier", "efficiency", "hardware"],
+    "steps": [
+      {
+        "flow_name": "pa-class-selection",
+        "description": "Select the PA operating class based on the required linearity, efficiency, bandwidth, and output power, considering the signal characteristics (peak-to-average ratio).",
+        "inputs": [
+          {"name": "pa-requirements", "desc": "Output power, frequency, bandwidth, efficiency target, linearity requirement (EVM, ACPR, or spectral mask), and signal type (CW, pulsed, modulated with PAPR)"},
+          {"name": "technology-options", "desc": "Available transistor technologies: GaAs PHEMT, GaN HEMT, LDMOS, SiGe HBT, and their power/frequency capabilities"}
+        ],
+        "outputs": [
+          {"name": "pa-class-selection", "desc": "Selected PA class (A, AB, B, C, D, E, F, or Doherty/ET architecture) with justification from the requirements"},
+          {"name": "transistor-selection", "desc": "Selected transistor technology and specific device with rated power, gain, efficiency at the operating frequency, and thermal resistance"}
+        ],
+        "process": [
+          "Class A: transistor conducts for the full cycle. Maximum theoretical efficiency 50% (25% with reactive load). Best linearity. Use when linearity is paramount and efficiency is secondary. Typical for small-signal driver stages.",
+          "Class AB: conduction angle between 180 and 360 degrees. Efficiency 50 to 70% depending on bias. Good linearity with back-off. Most common class for linear PAs in communication systems. Bias the transistor at 10 to 20% of Idss for a good linearity/efficiency compromise.",
+          "Class B: conduction angle exactly 180 degrees. Maximum theoretical efficiency 78.5%. Produces crossover distortion at low signal levels. Rarely used alone; push-pull class B eliminates even harmonics.",
+          "Class C: conduction angle less than 180 degrees. Efficiency up to 85%. Non-linear, suitable only for constant-envelope signals (FM, GMSK) or as a peaking amplifier in Doherty.",
+          "Class E: switch-mode. The transistor operates as a switch. Efficiency theoretically 100% but requires careful harmonic termination. Works well for narrow-band applications at frequencies where the transistor can approximate an ideal switch. Practical efficiency 80 to 90%.",
+          "Class F: the transistor output is terminated in specific harmonic impedances (short at even harmonics, open at odd harmonics, or the inverse for class F-1) to shape the voltage and current waveforms for high efficiency. Requires precise harmonic matching.",
+          "Doherty: uses a main amplifier (class AB) and a peaking amplifier (class C) combined through a quarter-wave impedance inverter. Provides high efficiency at both peak power and at 6 to 10 dB back-off, which is critical for signals with high PAPR like OFDM.",
+          "Select the transistor: GaN HEMT for high power density and wide bandwidth (DC to 40+ GHz). LDMOS for high power at lower frequencies (< 4 GHz, base stations). GaAs PHEMT for moderate power at higher frequencies (5 to 40 GHz). Choose a device rated for 2 to 3x the required linear output power."
+        ],
+        "tags": ["rf", "pa", "class", "hardware"]
+      },
+      {
+        "flow_name": "pa-load-pull-characterization",
+        "description": "Perform load-pull analysis to determine the optimal output impedance for the target output power and efficiency, and the optimal source impedance for gain and noise.",
+        "inputs": [
+          {"name": "transistor-selection", "desc": "Selected transistor with datasheet parameters"},
+          {"name": "pa-requirements", "desc": "Target output power, efficiency, and frequency"}
+        ],
+        "outputs": [
+          {"name": "load-pull-contours", "desc": "Constant-power and constant-efficiency contours on the Smith chart at the fundamental and harmonic frequencies"},
+          {"name": "optimal-impedances", "desc": "Optimal load impedance for power (Z_power) and for efficiency (Z_eff) at the fundamental, and required harmonic terminations"}
+        ],
+        "process": [
+          "Load-pull is performed by systematically varying the load impedance presented to the transistor while measuring output power, efficiency, and gain. This can be done with a mechanical or electronic tuner, or in simulation using a nonlinear transistor model.",
+          "Present a range of impedances covering the relevant area of the Smith chart. At each impedance point, measure Pout, PAE (power-added efficiency = (Pout - Pin)/Pdc), gain, and drain current.",
+          "Plot constant-power contours: lines of equal Pout on the Smith chart. The peak power point is the optimal load for power. Plot constant-PAE contours similarly. The peak PAE point is the optimal load for efficiency.",
+          "These two optima are usually at different impedances. The power optimum is near the conjugate match of the large-signal output impedance. The PAE optimum is at a higher impedance (closer to the edge of the Smith chart), where the voltage swing is larger but the current is lower.",
+          "For class F or harmonic-tuned PAs: also perform harmonic load-pull at 2f0 and 3f0. The harmonic terminations shape the waveform and can significantly improve efficiency. Typical class F terminations: short at 2f0, open at 3f0.",
+          "Record the optimal impedances at the package reference plane (drain or collector pin). These must be transformed to the PCB reference plane by de-embedding the package parasitics (bondwire inductance, shunt package capacitance)."
+        ],
+        "tags": ["rf", "pa", "load-pull", "hardware"]
+      },
+      {
+        "flow_name": "pa-matching-and-bias-design",
+        "description": "Design the input and output matching networks to present the optimal impedances, and the bias network for thermal stability and video bandwidth.",
+        "inputs": [
+          {"name": "optimal-impedances", "desc": "Source and load impedances for the transistor"},
+          {"name": "load-pull-contours", "desc": "Sensitivity of performance to impedance variation"},
+          {"name": "pa-requirements", "desc": "Bandwidth, frequency, and bias point"}
+        ],
+        "outputs": [
+          {"name": "pa-matching-networks", "desc": "Input and output matching network schematics with element values or transmission line dimensions"},
+          {"name": "pa-bias-circuit", "desc": "Bias network design including bias tee, decoupling, thermal tracking, and sequencing"}
+        ],
+        "process": [
+          "Design the output matching network to transform 50 ohms to the optimal load impedance at the transistor drain/collector. Use the impedance matching methodology: select topology based on bandwidth (narrowband: L-network or stub match; broadband: multi-section transformer or Klopfenstein taper).",
+          "The output matching network must also provide the correct harmonic terminations if harmonic tuning is used. This requires additional resonant elements or stubs tuned to 2f0 and 3f0.",
+          "Design the input matching network for the optimal source impedance (from source-pull data or conjugate of large-signal S11). The input match primarily affects gain flatness and stability. Check stability at all frequencies with the input match in place.",
+          "Design the bias network: the DC bias must reach the transistor without interfering with the RF signal. Use a quarter-wave stub (at the operating frequency) as an RF choke, presenting high impedance at RF while passing DC. Add bypass capacitors at the end of the stub for wideband grounding.",
+          "For GaN HEMTs: gate bias must be applied before drain bias (negative Vgs first, then positive Vds) to prevent excessive current during turn-on. Design a sequencing circuit or use the PA controller IC's sequencing feature.",
+          "Thermal stability: the transistor's gain and bias point change with temperature. For GaN and LDMOS, use a temperature-compensating bias circuit (thermistor in the bias divider) to maintain the quiescent current as junction temperature varies. This prevents thermal runaway in class AB."
+        ],
+        "tags": ["rf", "pa", "matching", "bias", "hardware"]
+      },
+      {
+        "flow_name": "pa-stability-linearity-verification",
+        "description": "Verify PA stability across frequency and temperature, and characterize linearity to determine if linearization is needed.",
+        "inputs": [
+          {"name": "pa-matching-networks", "desc": "Completed matching networks"},
+          {"name": "pa-bias-circuit", "desc": "Bias design"},
+          {"name": "pa-requirements", "desc": "Linearity requirements (EVM, ACPR, spectral mask)"}
+        ],
+        "outputs": [
+          {"name": "pa-stability-analysis", "desc": "K-factor and mu-factor across frequency from DC to well above the operating band, with stability circles at any conditionally stable frequencies"},
+          {"name": "pa-linearity-characterization", "desc": "AM-AM (gain compression), AM-PM (phase distortion), two-tone IMD (IP3), ACPR with modulated signal, and EVM measurement results"}
+        ],
+        "process": [
+          "Check small-signal stability: calculate the Rollett K-factor and |delta| (or mu-factor) from the S-parameters of the complete PA (transistor plus matching networks) at all frequencies from DC to at least 5 * f_operating. K > 1 and |delta| < 1 at all frequencies = unconditionally stable.",
+          "Check for low-frequency oscillation: bias networks can create feedback paths at low frequencies. Verify that the bias network provides low impedance (good bypassing) at all frequencies, not just at the operating frequency.",
+          "Measure AM-AM compression: sweep the input power and plot gain versus input power. The 1-dB compression point (P1dB) and saturation power (Psat) define the linear and saturated operating range. For linear operation, back off from P1dB by the PAPR of the signal plus some margin.",
+          "Measure AM-PM: plot the output phase shift as a function of input power. AM-PM conversion causes spectral regrowth in wideband signals. A well-designed PA should have less than 5 degrees of phase shift at P1dB.",
+          "Measure two-tone IMD: apply two equal-amplitude tones spaced by a representative modulation bandwidth. Measure the third-order intermodulation products (2f1-f2 and 2f2-f1). OIP3 = Pout + IMR/2 where IMR is the ratio of the fundamental to the IMD product.",
+          "Measure ACPR with the actual modulated signal: apply the intended modulated waveform (LTE, 5G NR, Wi-Fi OFDM) at the intended average output power. Measure the adjacent channel power ratio. If ACPR does not meet the spectral mask, digital pre-distortion (DPD) may be needed.",
+          "If DPD is required: the PA must have sufficient bandwidth for the DPD correction signal (typically 3 to 5x the signal bandwidth). Verify the PA's memory effects (AM-AM and AM-PM variation with signal envelope frequency) are within the DPD algorithm's correction capability."
+        ],
+        "tags": ["rf", "pa", "stability", "linearity", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "intermodulation-analysis",
+    "description": "Analyze the intermodulation distortion performance of an RF receiver or transmitter chain, calculating the spurious-free dynamic range, IP3, and compression behavior.",
+    "domain": "hardware",
+    "tags": ["rf", "intermodulation", "linearity", "dynamic-range", "hardware"],
+    "steps": [
+      {
+        "flow_name": "intermodulation-product-prediction",
+        "description": "Predict all intermodulation products that fall in the receiver band from the two-tone test or from the system frequency plan, identifying which are problematic.",
+        "inputs": [
+          {"name": "frequency-plan", "desc": "System frequencies: desired signal, LO, IF, and any known interferers with their power levels"},
+          {"name": "receiver-architecture", "desc": "Receiver block diagram showing each nonlinear stage: LNA, mixer, IF amplifier, ADC"}
+        ],
+        "outputs": [
+          {"name": "intermod-product-map", "desc": "Table of intermodulation products (order, input frequencies, output frequency, power level estimate) that fall within or near the receiver IF band"},
+          {"name": "critical-intermod-products", "desc": "The specific IM products that limit system performance, ranked by power level at the receiver IF"}
+        ],
+        "process": [
+          "For two input signals at f1 and f2, the intermodulation products of order n appear at frequencies m*f1 + n*f2 where |m| + |n| = order. Third-order products at 2f1-f2 and 2f2-f1 are closest to the fundamental signals and hardest to filter.",
+          "Calculate the IM product frequencies for all pairs of signals in the frequency plan up to at least 5th order. Include the desired signal, LO harmonics, and any known interferers.",
+          "For a mixer, the spurious products at m*RF + n*LO map to the IF band when m*f_RF + n*f_LO = f_IF. Use a mixing spur chart (published by mixer manufacturers) to identify which m,n products have significant amplitude.",
+          "Estimate the power level of each IM product. For third-order products in an amplifier: P_IM3 = 3*P_in - 2*OIP3 (all in dBm). For fifth-order: P_IM5 = 5*P_in - 4*OIP5. The IM products grow at (order) dB per dB of input power.",
+          "Rank the products by their power level at the IF output. The product with the highest level relative to the desired signal sets the spurious-free dynamic range."
+        ],
+        "tags": ["rf", "intermodulation", "spurious", "hardware"]
+      },
+      {
+        "flow_name": "cascaded-ip3-calculation",
+        "description": "Calculate the cascaded third-order intercept point of the receiver chain, identifying which stage limits the overall linearity.",
+        "inputs": [
+          {"name": "receiver-architecture", "desc": "Block diagram with gain and IP3 for each stage"},
+          {"name": "critical-intermod-products", "desc": "Identified IM products to protect against"}
+        ],
+        "outputs": [
+          {"name": "cascaded-ip3", "desc": "System IIP3 and OIP3 with the contribution from each stage shown"},
+          {"name": "linearity-limiting-stage", "desc": "The stage that contributes most to the overall IM3, with the fraction of total IM power from each stage"}
+        ],
+        "process": [
+          "For cascaded stages, the overall IIP3 (referred to the system input) is: 1/IIP3_total = 1/IIP3_1 + G1/IIP3_2 + G1*G2/IIP3_3 + ... where all quantities are in linear power (not dBm).",
+          "Convert each stage's IP3 and gain to linear: IIP3_linear = 10^(IIP3_dBm/10), G_linear = 10^(G_dB/10).",
+          "Apply the cascade formula. Each term represents one stage's contribution to the system IM3. The stage with the largest term is the linearity bottleneck.",
+          "High gain before a nonlinear stage amplifies the signals, making the IM products from that stage larger. This is why the LNA's linearity often limits the system: it has maximum gain preceding it (the antenna gain and any pre-amplifier).",
+          "The mixer is typically the most nonlinear component. Its contribution is weighted by all the gain before it. If the mixer limits, options include: reduce LNA gain, use a higher-IP3 mixer, or add attenuation before the mixer (at the cost of degraded noise figure).",
+          "Calculate the OIP3 = IIP3 + total system gain. The OIP3 determines the intermodulation level at the output for a given output signal level."
+        ],
+        "tags": ["rf", "ip3", "cascade", "hardware"]
+      },
+      {
+        "flow_name": "dynamic-range-calculation",
+        "description": "Calculate the spurious-free dynamic range, blocking dynamic range, and useful dynamic range from the noise figure and IP3.",
+        "inputs": [
+          {"name": "cascaded-ip3", "desc": "System IIP3"},
+          {"name": "cascaded-noise-figure", "desc": "System noise figure (if available from noise-figure-analysis chain, otherwise input directly)"},
+          {"name": "receiver-requirements", "desc": "Bandwidth and BER/SNR requirements"}
+        ],
+        "outputs": [
+          {"name": "dynamic-range-analysis", "desc": "SFDR, BDR, MDS (minimum detectable signal), and the input power range from MDS to the compression or IM-limited level"},
+          {"name": "agc-requirements", "desc": "Required automatic gain control range and strategy if the signal dynamic range exceeds the instantaneous dynamic range"}
+        ],
+        "process": [
+          "Calculate the noise floor: MDS = -174 + 10*log10(BW) + NF + required_SNR (all in dB). This is the minimum detectable signal.",
+          "Spurious-free dynamic range (SFDR): the range of input power over which the desired signal is above the noise floor and the IM3 products are below the noise floor. SFDR = 2/3 * (IIP3 - MDS) for third-order limited systems. In dB: SFDR = 2/3 * (IIP3_dBm - (-174 + 10*log10(BW) + NF)).",
+          "Blocking dynamic range (BDR): the ratio of the strongest tolerable interferer (at the 1 dB compression point) to the minimum detectable signal. BDR = P1dB_input - MDS. Typically P1dB is about 10 dB below IIP3 for a weakly nonlinear device.",
+          "If the required signal dynamic range (ratio of strongest to weakest expected signal) exceeds the SFDR, automatic gain control (AGC) is needed. The AGC range must cover the difference. Determine whether front-end AGC (before LNA, preserves linearity at the cost of sensitivity) or IF AGC (after mixing, preserves sensitivity at the cost of linearity) is more appropriate.",
+          "Plot the full dynamic range picture: noise floor, MDS, SFDR boundary, 1 dB compression, and IM3 intercept on a single power-in vs. power-out chart. This visualization shows all the operating limits and the useful operating range."
+        ],
+        "tags": ["rf", "dynamic-range", "sfdr", "hardware"]
+      },
+      {
+        "flow_name": "intermodulation-measurement",
+        "description": "Measure the intermodulation performance of the receiver chain or individual components using two-tone and modulated signal tests.",
+        "inputs": [
+          {"name": "dynamic-range-analysis", "desc": "Predicted SFDR and IP3 values to verify"},
+          {"name": "receiver-architecture", "desc": "DUT identification and test setup requirements"}
+        ],
+        "outputs": [
+          {"name": "measured-ip3-compression", "desc": "Measured IIP3, OIP3, P1dB, and Psat from two-tone test and power sweep, compared to cascade prediction"},
+          {"name": "intermod-measurement-record", "desc": "Complete measurement record: test setup, signal generator levels, spectrum analyzer settings, measured data, and correlation with prediction"}
+        ],
+        "process": [
+          "Two-tone IP3 measurement: apply two equal-amplitude CW tones spaced by delta_f (typically 1 to 10 MHz for wideband systems, 10 to 100 kHz for narrowband). Set the tone power at least 10 dB below the expected P1dB to stay in the small-signal region.",
+          "Measure the output spectrum on a spectrum analyzer. Record the power of the fundamental tones (P_fund) and the third-order products at 2f1-f2 and 2f2-f1 (P_IM3). Calculate OIP3 = P_fund + (P_fund - P_IM3)/2.",
+          "Verify the 3:1 slope: reduce the input power by 1 dB and confirm IM3 drops by 3 dB. If the slope is not 3:1, the device is not in the weakly nonlinear regime (either compressed or near the noise floor). Adjust the input level.",
+          "Measure P1dB: sweep the input power of a single CW tone and plot gain vs. input power. The 1 dB compression point is where the gain drops 1 dB from its small-signal value. Record both input and output P1dB.",
+          "For IP2 measurement: use two tones at f1 and f2 where f2 - f1 falls in the IF band. This is critical for direct-conversion receivers. IP2 is measured similarly: OIP2 = P_fund + (P_fund - P_IM2).",
+          "Compare all measurements to the cascade analysis predictions. If measured IP3 is lower (worse) than predicted, check for: oscillation at out-of-band frequencies (very common cause of unexpected nonlinearity), impedance mismatch between stages, or leakage/coupling on the PCB."
+        ],
+        "tags": ["rf", "intermodulation", "measurement", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electromagnetic-simulation-methodology",
+    "description": "Set up, run, and validate electromagnetic simulations for RF structures using the appropriate solver type, mesh refinement, and correlation methodology.",
+    "domain": "hardware",
+    "tags": ["rf", "electromagnetic", "simulation", "hardware"],
+    "steps": [
+      {
+        "flow_name": "em-solver-selection",
+        "description": "Select the appropriate electromagnetic solver type for the structure being analyzed, based on the geometry, frequency range, and the quantities needed.",
+        "inputs": [
+          {"name": "structure-description", "desc": "The RF structure to simulate: planar (PCB trace, antenna on substrate), 3D enclosed (cavity, waveguide), 3D open (antenna in free space), or periodic (array, FSS)"},
+          {"name": "analysis-goals", "desc": "What needs to be extracted: S-parameters, radiation pattern, fields, coupling, or resonant frequencies"}
+        ],
+        "outputs": [
+          {"name": "solver-selection", "desc": "Selected solver type (MoM, FEM, FDTD) with justification and expected simulation time and memory requirements"},
+          {"name": "simulation-setup-plan", "desc": "Plan for model construction, meshing strategy, boundary conditions, and excitation type"}
+        ],
+        "process": [
+          "Method of Moments (MoM): best for planar or layered structures (PCB, microstrip, planar antennas). Solves on the surface currents only, so it is efficient for structures with large free-space volumes. Frequency-domain (one frequency per solve). Good for S-parameter extraction and radiation patterns of planar antennas.",
+          "Finite Element Method (FEM): best for 3D structures with complex geometry (cavity filters, connectors, transitions between transmission lines, packaged ICs). Solves the fields throughout the volume. Handles arbitrary 3D shapes and material distributions. Frequency-domain with adaptive mesh refinement. HFSS is the most common FEM tool for RF.",
+          "Finite-Difference Time-Domain (FDTD): best for broadband problems and transient analysis. Solves in the time domain, so a single simulation gives the response across a wide frequency range (via FFT). Good for UWB antennas, EMC analysis, and structures where broadband response is needed. CST is the most common FDTD-based tool.",
+          "For periodic structures (infinite arrays, frequency-selective surfaces): use a single unit cell with periodic boundary conditions in MoM or FEM. This dramatically reduces the simulation size compared to modeling the full array.",
+          "Estimate the simulation size: the mesh must resolve the smallest feature (trace width, gap, via diameter) and the wavelength. For FEM: typically 6 to 10 tetrahedral elements per wavelength in each material. For FDTD: at least 10 to 20 cells per wavelength. Memory scales with the number of mesh elements; time scales with elements * frequency points (FEM) or elements * time steps (FDTD)."
+        ],
+        "tags": ["rf", "em-simulation", "solver", "hardware"]
+      },
+      {
+        "flow_name": "em-model-construction",
+        "description": "Build the 3D model in the EM simulator with correct material properties, port definitions, and boundary conditions.",
+        "inputs": [
+          {"name": "solver-selection", "desc": "Chosen solver and simulation approach"},
+          {"name": "structure-description", "desc": "Physical structure details: dimensions, materials, layer stackup"}
+        ],
+        "outputs": [
+          {"name": "em-model", "desc": "The constructed EM model with all geometric features, material assignments, port definitions, and boundary conditions documented"},
+          {"name": "model-simplifications", "desc": "Any simplifications made to the model (removed features, symmetry planes) with justification for why they do not affect the result"}
+        ],
+        "process": [
+          "Import or construct the 3D geometry. For PCB structures, import from the layout tool (Gerber, ODB++, or STEP). Remove features that are electrically insignificant at the frequency of interest (silkscreen, solder mask if far from the signal, small mounting holes away from the signal path).",
+          "Assign material properties: conductor conductivity (copper = 5.8e7 S/m, gold = 4.1e7 S/m), dielectric constant and loss tangent (FR-4: er = 4.3, tan_d = 0.02 at 1 GHz; Rogers 4350B: er = 3.66, tan_d = 0.004). Use frequency-dependent material models if available, especially for lossy dielectrics.",
+          "Define ports: waveports for waveguide or coaxial excitation (specify the mode to excite). Lumped ports for small structures or internal connections. The port defines the reference plane for S-parameter extraction.",
+          "Set boundary conditions: radiation boundary for open structures (place at least lambda/4 from the nearest radiating element). PEC boundary for symmetry planes (cuts simulation time in half for each symmetry plane). Periodic boundary for array unit cells.",
+          "Use symmetry wherever possible: a structure with a plane of symmetry can be cut in half, reducing memory by 2x and time by 2 to 4x. Electric symmetry (PEC) for even-mode excitation, magnetic symmetry (PMC) for odd-mode.",
+          "Document every simplification. If a feature was removed, justify why (e.g., mounting hole 10 mm from the trace with diameter < lambda/20 has negligible effect on S21). These simplifications are the most common source of simulation-measurement disagreement."
+        ],
+        "tags": ["rf", "em-simulation", "modeling", "hardware"]
+      },
+      {
+        "flow_name": "em-mesh-convergence",
+        "description": "Perform mesh convergence studies to ensure the simulation result is independent of the mesh density, and the solution is accurate to the required precision.",
+        "inputs": [
+          {"name": "em-model", "desc": "The constructed EM model"},
+          {"name": "analysis-goals", "desc": "Target accuracy for S-parameters, gain, or other quantities"}
+        ],
+        "outputs": [
+          {"name": "converged-mesh", "desc": "The mesh settings that produce converged results, with the convergence data showing how the result changed with refinement"},
+          {"name": "mesh-convergence-data", "desc": "Table of mesh density vs. result (S11, S21, gain, resonant frequency) showing the convergence trend"}
+        ],
+        "process": [
+          "For FEM (HFSS): use adaptive mesh refinement. Set the convergence criterion to delta_S < 0.01 (maximum change in S-parameter magnitude between consecutive adaptive passes). Run at least 3 adaptive passes after convergence is declared to confirm stability.",
+          "For FDTD: perform a cell size convergence study. Start with lambda/10 cell size, simulate, then reduce to lambda/15 and lambda/20. Plot the quantity of interest versus cell size. The result should approach a limit as cells get smaller.",
+          "For MoM: the mesh is on surfaces only. Converge on the edge length of the mesh triangles. Start at lambda/10, refine to lambda/15 and lambda/20 near edges, ports, and discontinuities where current density varies rapidly.",
+          "In all cases, refine the mesh more aggressively near geometric features: edges, corners, vias, narrow gaps, and slot apertures. These areas have rapidly varying fields or currents and dominate the simulation accuracy.",
+          "The convergence metric must be the quantity you care about. Converging on S11 at one frequency does not guarantee convergence of S21 at another frequency or the radiation pattern. Check convergence on all quantities of interest.",
+          "Record the final mesh statistics: number of elements, memory usage, solve time per frequency. This data is needed to estimate simulation time for future similar structures."
+        ],
+        "tags": ["rf", "em-simulation", "convergence", "hardware"]
+      },
+      {
+        "flow_name": "em-result-extraction-correlation",
+        "description": "Extract the simulation results (S-parameters, fields, patterns), compare to analytical predictions and measurements, and iterate if they disagree.",
+        "inputs": [
+          {"name": "converged-mesh", "desc": "Converged simulation mesh and settings"},
+          {"name": "em-model", "desc": "The EM model"},
+          {"name": "analysis-goals", "desc": "Quantities to extract and accuracy targets"}
+        ],
+        "outputs": [
+          {"name": "simulation-results", "desc": "Extracted S-parameters (Touchstone file), radiation patterns, field plots, and any derived quantities (impedance, gain, coupling)"},
+          {"name": "simulation-measurement-correlation", "desc": "Comparison of simulation to measurement (if available) or analytical prediction, with analysis of discrepancies and model corrections"}
+        ],
+        "process": [
+          "Extract S-parameters and export in Touchstone format for use in circuit simulators. Check passivity (|S11|^2 + |S21|^2 <= 1 for a lossless two-port) and reciprocity (S12 = S21 for passive structures). Violations indicate a simulation error.",
+          "For antennas: extract the far-field radiation pattern (gain in dBi vs. theta and phi), input impedance, efficiency (ratio of radiated power to accepted power), and bandwidth (frequency range where |S11| < -10 dB).",
+          "Visualize the current or field distribution at key frequencies. This provides physical insight: where is the current flowing, where are the losses, where is the radiation coming from. This understanding is more valuable than the numbers alone for diagnosing problems and making design improvements.",
+          "Compare to analytical predictions. For a microstrip line, the simulated impedance should agree with the analytical formula to within 1 to 2%. For a patch antenna, the resonant frequency should agree with the cavity model to within 2 to 3%. Larger discrepancies suggest a modeling error.",
+          "Compare to measurement when available. Common sources of discrepancy: dielectric constant different from nominal (measure it or use a trim coupon), conductor surface roughness (increases loss at high frequencies, model with Huray or Hammerstad correction), connector and probe transition effects (de-embed or include in the model).",
+          "If simulation and measurement disagree by more than the expected uncertainty, systematically vary model parameters (dielectric constant, loss tangent, conductor conductivity, dimensions) to identify which parameter, when corrected, brings the simulation into agreement. This calibrated model is then reliable for design variations."
+        ],
+        "tags": ["rf", "em-simulation", "correlation", "hardware"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rf-measurement-technique",
+    "description": "Execute accurate RF measurements using vector network analyzers, spectrum analyzers, and power meters, with proper calibration and uncertainty analysis.",
+    "domain": "hardware",
+    "tags": ["rf", "measurement", "calibration", "vna", "hardware"],
+    "steps": [
+      {
+        "flow_name": "vna-calibration-methodology",
+        "description": "Calibrate a vector network analyzer for accurate S-parameter measurement using the appropriate calibration method for the measurement scenario.",
+        "inputs": [
+          {"name": "measurement-scenario", "desc": "What is being measured: coaxial DUT, on-wafer device, PCB fixture, waveguide component. Frequency range and port configuration."},
+          {"name": "calibration-standards", "desc": "Available calibration kit: SOLT (short-open-load-thru), TRL (thru-reflect-line), or electronic calibration module (ECal)"}
+        ],
+        "outputs": [
+          {"name": "calibration-procedure", "desc": "Step-by-step calibration procedure for the measurement scenario, including the standards to apply and the order"},
+          {"name": "calibration-verification", "desc": "Methods to verify calibration quality before proceeding with measurements"}
+        ],
+        "process": [
+          "SOLT calibration (most common for coaxial measurements): connect Short, Open, Load (50 ohm), and Thru standards at the measurement plane. The VNA uses the known response of these standards to calculate 12 error terms (for a full 2-port calibration). Use the calibration kit matched to the connector type.",
+          "TRL calibration (for non-coaxial or high-accuracy measurements): requires a Thru (zero-length or known length), Reflect (short or open, same at both ports), and Line (transmission line of known impedance, length approximately lambda/4 at the center frequency). TRL is self-calibrating: the line impedance defines the reference impedance, and the reflect does not need to be characterized.",
+          "For on-wafer measurements (probing a chip or MMIC): use TRL or multiline TRL with on-wafer calibration standards fabricated on the same substrate. This de-embeds the probe-to-wafer transition. Verify by measuring a known on-wafer verification standard (through line of known length).",
+          "For fixture-based measurements (PCB test fixture): calibrate at the fixture connectors with SOLT, then de-embed the fixture using time-domain gating or a fixture characterization (measure the fixture itself and mathematically remove its effect).",
+          "Verify calibration quality: measure a known standard not used in the calibration (verification standard). For example, after SOLT calibration, measure a precision airline (known impedance and length). The measured S11 should be below -40 dB and S21 should match the airline's calculated loss. Also check that the Smith chart trace for an open is on the right side and for a short is on the left.",
+          "Note the calibration valid frequency range and the reference plane location. All subsequent measurements are only valid within this range and at this plane."
+        ],
+        "tags": ["rf", "vna", "calibration", "hardware"]
+      },
+      {
+        "flow_name": "s-parameter-measurement",
+        "description": "Measure the S-parameters of a DUT with proper fixturing, including de-embedding of fixture effects and time-domain techniques for isolating reflections.",
+        "inputs": [
+          {"name": "calibration-procedure", "desc": "Completed VNA calibration"},
+          {"name": "dut-description", "desc": "Device under test: type, connectors, frequency range of interest"}
+        ],
+        "outputs": [
+          {"name": "measured-s-parameters", "desc": "S-parameter data (S11, S21, S12, S22) across frequency in Touchstone format, with de-embedding applied if needed"},
+          {"name": "measurement-uncertainty-estimate", "desc": "Estimated uncertainty in the measured S-parameters from connector repeatability, calibration residuals, and environmental factors"}
+        ],
+        "process": [
+          "Connect the DUT to the calibrated VNA ports. Use consistent torque on connectors (8 in-lb for SMA, 12 in-lb for N-type) with a torque wrench. Inconsistent connector torque is the single largest source of measurement error in coaxial measurements.",
+          "Set the VNA parameters: start and stop frequency (matching calibration range), number of points (enough to resolve features; 401 or 801 typical), IF bandwidth (narrower = lower noise floor but slower; 1 kHz for general, 10 Hz for high dynamic range), and power level (in the linear range of the DUT, typically -10 to 0 dBm for passive devices).",
+          "Measure and inspect all four S-parameters. For a passive reciprocal device, S12 should equal S21. If they differ by more than the measurement uncertainty, check for a bad connection or calibration drift.",
+          "Use time-domain gating to isolate the DUT response from fixture effects when de-embedding is not practical. Transform the frequency-domain S-parameters to time domain (inverse FFT). Gate (window) around the DUT response, excluding reflections from connectors and fixture transitions. Transform back to frequency domain.",
+          "For differential (balanced) devices: measure all four single-ended S-parameters of the 4-port, then convert to mixed-mode S-parameters (Sdd, Scc, Sdc, Scd) using the mixed-mode transformation matrix.",
+          "Estimate measurement uncertainty: connector repeatability (measure, disconnect, reconnect, measure again; the variation is the repeatability uncertainty, typically 0.01 to 0.05 in |S11|). Add calibration residual error, cable stability (flexing cables changes S-parameters), and temperature variation during the measurement."
+        ],
+        "tags": ["rf", "vna", "s-parameters", "hardware"]
+      },
+      {
+        "flow_name": "spectrum-power-measurement",
+        "description": "Measure RF signal power, spectral content, and spurious emissions using spectrum analyzers and power meters with appropriate detector and bandwidth settings.",
+        "inputs": [
+          {"name": "signal-description", "desc": "Signal to measure: CW, pulsed, modulated, or noise-like. Approximate frequency and power level."},
+          {"name": "measurement-requirement", "desc": "What needs to be measured: absolute power, spectral shape, spurious emissions, phase noise, or occupied bandwidth"}
+        ],
+        "outputs": [
+          {"name": "spectrum-measurement-result", "desc": "Measured spectrum or power with the instrument settings used and any corrections applied"},
+          {"name": "measurement-accuracy-assessment", "desc": "Assessment of measurement accuracy including instrument uncertainty, mismatch loss, and any corrections"}
+        ],
+        "process": [
+          "For absolute power measurement: a calibrated power meter (thermal or diode sensor) is more accurate than a spectrum analyzer. Thermal sensors measure true RMS power regardless of waveform (accurate for any signal type, limited dynamic range). Diode sensors are more sensitive but only accurate for CW unless they have a wide dynamic range mode.",
+          "Spectrum analyzer RBW selection: RBW determines the noise floor and frequency resolution. For CW signals, RBW does not affect the displayed amplitude (the signal is narrower than any RBW). For noise-like signals, displayed power changes with RBW: P_displayed = P_noise_density + 10*log10(RBW). For modulated signals, set RBW wider than the signal bandwidth to capture total power, or use channel power measurement mode.",
+          "Spectrum analyzer VBW: video bandwidth smooths the display. For noise measurements, set VBW <= RBW/3 to reduce measurement variance. For CW, VBW can equal RBW for faster sweep.",
+          "Detector type: peak detector shows the highest instantaneous value in each display bin (standard for spurious searches). Sample detector samples one point per bin (correct for noise power measurements). Average detector averages all samples in each bin (reduces variance). RMS detector computes true RMS of each bin (best for accurate power measurement of any signal type).",
+          "For spurious emission measurement: scan a wide frequency range with the RBW set narrow enough to resolve the spurious from the noise floor but wide enough for reasonable sweep time. First do a wide scan to locate spurs, then zoom in on each spur with narrower RBW for accurate level measurement.",
+          "Apply corrections: cable loss between DUT and instrument (add it back to the measured power), mismatch loss (from VSWR of source and load), and any attenuator at the instrument input. For precise measurements, measure the cable loss on the VNA and apply it frequency by frequency."
+        ],
+        "tags": ["rf", "spectrum", "power", "measurement", "hardware"]
+      },
+      {
+        "flow_name": "phase-noise-antenna-pattern-measurement",
+        "description": "Measure phase noise of oscillators and radiation patterns of antennas using specialized techniques and setups.",
+        "inputs": [
+          {"name": "measurement-requirement", "desc": "Phase noise measurement of an oscillator/synthesizer, or antenna pattern measurement"},
+          {"name": "dut-description", "desc": "Device under test with approximate specifications"}
+        ],
+        "outputs": [
+          {"name": "specialized-measurement-result", "desc": "Phase noise plot (dBc/Hz vs. offset) or antenna pattern (gain vs. angle in E-plane and H-plane) with measurement setup documented"},
+          {"name": "measurement-limitations", "desc": "Known limitations of the measurement: instrument noise floor, dynamic range, angular resolution, and any corrections or assumptions"}
+        ],
+        "process": [
+          "Phase noise measurement via direct spectrum: tune the spectrum analyzer to the carrier, set RBW to the offset of interest (e.g., 1 kHz RBW for 10 kHz offset measurement), and measure the noise power in that bandwidth. L(f) = P_noise_in_1Hz_BW - P_carrier = P_measured - P_carrier - 10*log10(RBW) + correction_factors. This method is limited by the spectrum analyzer's own phase noise.",
+          "Phase noise measurement via PLL-based method (signal source analyzer): the instrument locks an internal clean reference to the DUT, and the PLL error voltage represents the phase noise. This method has a lower noise floor than direct spectrum, especially at close-in offsets. Cross-correlation (two independent measurement channels averaged) reduces the floor further, by 5*log10(N_correlations) dB.",
+          "For antenna pattern measurement: set up the DUT on a positioner in an anechoic chamber or on an outdoor range. The source antenna illuminates the DUT from the far field (minimum distance 2*D^2/lambda). Rotate the DUT in azimuth and elevation while recording the received power.",
+          "For near-field to far-field: scan the near field on a planar surface (for directive antennas) or spherical surface (for omnidirectional). Sample spacing must be less than lambda/2 (Nyquist). The far field is computed by Fourier transform of the measured near-field data. This method is more compact and controlled than a far-field range.",
+          "Measure gain by substitution: in the same setup, replace the DUT with a standard gain horn of known gain. The DUT gain = horn_gain + (P_received_DUT - P_received_horn). This eliminates path loss and cable loss from the calculation.",
+          "Document the measurement limitations: anechoic chamber quiet zone size and reflectivity level, positioner alignment accuracy, source antenna pattern (any illumination taper across the DUT aperture reduces measured gain), and cable flexing during rotation (use a rotary joint or route cables to minimize movement)."
+        ],
+        "tags": ["rf", "phase-noise", "antenna-pattern", "measurement", "hardware"]
+      }
+    ]
+  }
+]

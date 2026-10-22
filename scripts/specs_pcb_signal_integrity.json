@@ -1,0 +1,1159 @@
+[
+  {
+    "chain_name": "impedance-controlled-routing-method",
+    "description": "Calculate target impedance from signal bandwidth, design stackup geometry for microstrip/stripline/coplanar structures, run field solver extraction, and route differential pairs with length matching and skew budgets.",
+    "domain": "hardware",
+    "tags": ["pcb", "signal-integrity", "impedance", "routing", "differential-pairs"],
+    "steps": [
+      {
+        "flow_name": "signal-bandwidth-to-impedance-target",
+        "description": "Derive target impedance from signal rise time and protocol specification. Calculate knee frequency (0.35/t_rise for 10-90, 0.22/t_rise for 20-80), determine wavelength at knee frequency, set trace length threshold at lambda/10 for lumped vs distributed treatment, and extract impedance target from protocol spec (e.g., 50 ohm single-ended, 85/90/100 ohm differential for USB/HDMI/Ethernet).",
+        "inputs": [
+          {"name": "signal-protocol", "desc": "Protocol name and version (e.g., PCIe Gen4, USB 3.2, DDR4)"},
+          {"name": "rise-time-spec", "desc": "Signal rise time from transmitter datasheet in picoseconds"},
+          {"name": "trace-lengths", "desc": "Estimated longest trace length in millimeters"}
+        ],
+        "outputs": [
+          {"name": "knee-frequency", "desc": "Bandwidth limit in GHz calculated from rise time"},
+          {"name": "critical-wavelength", "desc": "Wavelength at knee frequency in the PCB dielectric, using effective Dk"},
+          {"name": "impedance-target", "desc": "Target impedance (single-ended and differential) with tolerance band from protocol spec"},
+          {"name": "distributed-treatment-flag", "desc": "Whether trace length exceeds lambda/10 and requires transmission line treatment"}
+        ],
+        "process": [
+          "Extract rise time from the transmitter datasheet (use 20-80% if specified, otherwise 10-90%). Calculate knee frequency: f_knee = 0.35/t_r (10-90%) or 0.22/t_r (20-80%).",
+          "Calculate wavelength in the PCB medium: lambda = c / (f_knee * sqrt(Dk_eff)). For microstrip, Dk_eff is approximately (Dk+1)/2 for a rough first pass. For stripline, Dk_eff = Dk of the laminate.",
+          "Compare trace length to lambda/10. If trace length exceeds this threshold, the trace is a transmission line and impedance control is mandatory, not optional.",
+          "Look up the protocol impedance target. Record the nominal value and the tolerance (typically +/- 10% for most protocols, tighter for some). This is the number the stackup must hit."
+        ],
+        "tags": ["signal-integrity", "impedance", "bandwidth"]
+      },
+      {
+        "flow_name": "stackup-geometry-for-target-impedance",
+        "description": "Design the PCB cross-section geometry (dielectric height, trace width, copper weight) to achieve the target impedance for microstrip, stripline, and coplanar waveguide structures.",
+        "inputs": [
+          {"name": "impedance-target", "desc": "Target impedance with tolerance band"},
+          {"name": "layer-count", "desc": "Number of PCB layers available"},
+          {"name": "laminate-material", "desc": "Laminate type (e.g., FR-4, Megtron 6, Rogers 4350B) with Dk and Df at frequency of interest"}
+        ],
+        "outputs": [
+          {"name": "stackup-cross-section", "desc": "Layer-by-layer cross section with dielectric heights, copper weights, and trace widths for each impedance class"},
+          {"name": "microstrip-geometry", "desc": "Outer layer trace width and dielectric height to reference plane for target impedance"},
+          {"name": "stripline-geometry", "desc": "Inner layer trace width and dielectric heights above and below to reference planes"},
+          {"name": "manufacturing-notes", "desc": "Notes on etch compensation, resin content, and glass weave style needed from the fabricator"}
+        ],
+        "process": [
+          "For microstrip: use the IPC-2141 approximation Z0 = (87 / sqrt(Dk_eff + 1.41)) * ln(5.98 * h / (0.8 * w + t)) as a starting point. Iterate trace width (w) for given dielectric height (h) and copper thickness (t) to approach the target.",
+          "For stripline: use Z0 = (60 / sqrt(Dk)) * ln(4 * b / (0.67 * pi * (0.8 * w + t))) where b is the distance between reference planes. Adjust w for the target.",
+          "For coplanar waveguide with ground: the gap-to-trace-width ratio controls impedance alongside dielectric height. Use when you need tighter impedance control on outer layers or when routing over plane splits.",
+          "Document the geometry for the fabricator: specify dielectric height as finished (post-lamination), copper weight as starting weight (the fab will etch-compensate), and request the specific prepreg resin content and glass style needed to hit the Dk at your frequency."
+        ],
+        "tags": ["stackup", "geometry", "microstrip", "stripline"]
+      },
+      {
+        "flow_name": "field-solver-impedance-extraction",
+        "description": "Run a 2D field solver on the designed cross-section to extract actual impedance, propagation delay, and coupling coefficients. Compare to closed-form estimates and iterate.",
+        "inputs": [
+          {"name": "stackup-cross-section", "desc": "Designed layer stackup with all geometry"},
+          {"name": "impedance-target", "desc": "Target impedance with tolerance"},
+          {"name": "microstrip-geometry", "desc": "Outer layer geometry"},
+          {"name": "stripline-geometry", "desc": "Inner layer geometry"}
+        ],
+        "outputs": [
+          {"name": "extracted-impedance", "desc": "Field-solver-calculated impedance for each trace class (single-ended and differential)"},
+          {"name": "propagation-delay", "desc": "Signal propagation delay per unit length for each layer"},
+          {"name": "coupling-coefficients", "desc": "Near-end and far-end coupling between adjacent traces at minimum spacing"},
+          {"name": "impedance-sensitivity", "desc": "How much impedance changes per mil of dielectric height variation and per mil of trace width variation"}
+        ],
+        "process": [
+          "Model the exact cross-section in the field solver (Polar Si9000, Ansys 2D Extractor, or equivalent). Include the solder mask layer for outer traces because solder mask (Dk around 3.3 to 3.8) lowers microstrip impedance by 2 to 5 ohms.",
+          "Extract Z0 (single-ended), Zdiff (differential), propagation delay (ps/inch), and coupling coefficients (Kf, Kb) for adjacent traces at minimum spacing.",
+          "Compare field solver results to the closed-form estimates. If they differ by more than 5%, investigate: the closed-form ignores solder mask, trapezoidal etch profile, and frequency-dependent Dk. Trust the field solver.",
+          "Run a sensitivity sweep: vary dielectric height by +/- 10% (typical manufacturing tolerance) and trace width by +/- 0.5 mil (typical etch tolerance). If impedance falls outside the target tolerance at these extremes, the design has no manufacturing margin and the geometry must be adjusted."
+        ],
+        "tags": ["field-solver", "extraction", "simulation"]
+      },
+      {
+        "flow_name": "differential-pair-routing-with-skew-budget",
+        "description": "Route differential pairs with proper length matching, skew budgets, and spacing rules derived from the coupling coefficients and timing requirements.",
+        "inputs": [
+          {"name": "extracted-impedance", "desc": "Verified impedance values from field solver"},
+          {"name": "propagation-delay", "desc": "Propagation delay per unit length"},
+          {"name": "coupling-coefficients", "desc": "Coupling data for spacing decisions"},
+          {"name": "signal-protocol", "desc": "Protocol with its timing and skew requirements"}
+        ],
+        "outputs": [
+          {"name": "routing-constraints", "desc": "Complete constraint set: trace width, spacing, length match tolerance, max stub length, via transition rules"},
+          {"name": "skew-budget-allocation", "desc": "Intra-pair skew budget broken into connector, via, and trace contributions"},
+          {"name": "length-matching-report", "desc": "Achieved length matching for each differential pair with margin to spec"},
+          {"name": "routing-exceptions", "desc": "Any rule violations with engineering justification for why they are acceptable"}
+        ],
+        "process": [
+          "Calculate the intra-pair skew budget from the protocol spec. For example, USB 3.2 allows 5 ps intra-pair skew. Convert to length: skew_length = skew_time / propagation_delay. For 5 ps at 170 ps/inch, that is 29 mils of length difference. That is the total budget across the entire path including connectors and vias.",
+          "Allocate the skew budget: connectors consume a fixed portion (check the connector datasheet for differential skew), vias consume a fixed portion (simulate or use 1 to 3 ps per via transition as a rule of thumb), and the remainder is the trace routing budget. If the connector and via skew already consume most of the budget, the routing must be nearly perfect.",
+          "Set pair-to-pair spacing at 3x the trace-to-trace spacing within the pair (minimum) to limit crosstalk. Verify with the coupling coefficients: far-end crosstalk between pairs should be below the protocol's noise budget allocation for crosstalk.",
+          "Route with serpentine (accordion) length matching. Set the serpentine amplitude and pitch to avoid self-coupling: amplitude should not fold traces closer than 3x trace width, and pitch should be at least 4x the dielectric height to the reference plane. Use the EDA tool's differential pair router with these constraints, then verify the length match report."
+        ],
+        "tags": ["routing", "differential-pairs", "skew", "length-matching"]
+      },
+      {
+        "flow_name": "impedance-verification-and-signoff",
+        "description": "Verify the routed design meets impedance targets through simulation and prepare the impedance coupon specification for the fabricator.",
+        "inputs": [
+          {"name": "routing-constraints", "desc": "Applied constraint set"},
+          {"name": "length-matching-report", "desc": "Achieved length matching"},
+          {"name": "routing-exceptions", "desc": "Any violations needing review"},
+          {"name": "impedance-sensitivity", "desc": "Sensitivity data for manufacturing tolerance assessment"}
+        ],
+        "outputs": [
+          {"name": "impedance-coupon-spec", "desc": "Test coupon definition for the fabricator: trace geometries, layer references, and target impedances with tolerances"},
+          {"name": "tdr-measurement-plan", "desc": "Time domain reflectometry measurement points and expected waveforms for incoming board verification"},
+          {"name": "signoff-checklist", "desc": "Complete impedance control signoff: targets met, margins documented, coupon spec issued, TDR plan ready"}
+        ],
+        "process": [
+          "Define impedance test coupons for the fabricator. Each unique impedance class (50 ohm single-ended microstrip, 100 ohm differential stripline, etc.) needs its own coupon on the panel. Specify the exact geometry: trace width, spacing (for diff pairs), length (minimum 6 inches for TDR), and reference layer.",
+          "Specify the TDR measurement method: the fabricator will measure impedance using TDR per IPC-TM-650 2.5.5.7. Define the measurement window (ignore the first 0.5 ns for connector artifact) and the pass/fail criteria (nominal +/- tolerance from the protocol spec).",
+          "Review all routing exceptions. For each violation, document the engineering justification: a via stub that is 5 mils long when the budget allows 20 mils is acceptable, document the calculation. A length mismatch of 10 mils when the budget is 29 mils uses 34% of margin, document the remaining margin.",
+          "Issue the signoff: impedance targets, manufacturing tolerances, coupon spec, TDR measurement plan, and the list of exceptions with justifications. This document goes to the fabricator with the Gerber files."
+        ],
+        "tags": ["verification", "tdr", "signoff", "manufacturing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-delivery-network-design",
+    "description": "Design a power delivery network from target impedance specification through decoupling capacitor selection, anti-resonance mitigation, plane capacitance contribution, and current density verification.",
+    "domain": "hardware",
+    "tags": ["pcb", "power-integrity", "pdn", "decoupling", "capacitors"],
+    "steps": [
+      {
+        "flow_name": "pdn-target-impedance-calculation",
+        "description": "Calculate the PDN target impedance from the IC transient current demand and allowable voltage ripple. Derive the impedance vs frequency profile the PDN must meet.",
+        "inputs": [
+          {"name": "supply-voltage", "desc": "Nominal supply voltage in volts"},
+          {"name": "voltage-tolerance", "desc": "Allowable voltage ripple as percentage or absolute value"},
+          {"name": "transient-current", "desc": "Maximum transient current step in amps from the IC datasheet or power model"},
+          {"name": "clock-frequency", "desc": "Primary clock frequency of the IC drawing this power"}
+        ],
+        "outputs": [
+          {"name": "target-impedance", "desc": "Z_target = V_ripple / I_transient in milliohms, the flat impedance ceiling the PDN must stay below"},
+          {"name": "frequency-range", "desc": "Frequency range over which the target impedance must be met, from DC to the clock's third or fifth harmonic"},
+          {"name": "impedance-profile", "desc": "Target impedance vs frequency curve showing the flat region and the rolloff points"}
+        ],
+        "process": [
+          "Calculate target impedance: Z_target = (V_supply * tolerance_percent) / I_transient. For a 1.0V rail with 3% tolerance and 5A transient, Z_target = 0.03V / 5A = 6 milliohms. This is the ceiling the PDN impedance must stay below.",
+          "Determine the frequency range: the PDN must meet this target from DC up to at least the third harmonic of the clock frequency (fifth harmonic for aggressive designs). For a 1 GHz clock, that means DC to 3 GHz or 5 GHz.",
+          "Plot the target as a flat line on an impedance vs frequency chart (log-log scale). Everything below this line is acceptable. The PDN design task is to assemble VRM, bulk caps, ceramic caps, and plane capacitance so their combined impedance stays below this line across the entire frequency range."
+        ],
+        "tags": ["power-integrity", "target-impedance", "specification"]
+      },
+      {
+        "flow_name": "decoupling-capacitor-selection-and-placement",
+        "description": "Select decoupling capacitors by analyzing their real impedance curves (including ESR and ESL), identify anti-resonance between capacitor groups, and determine placement strategy relative to the IC power pins.",
+        "inputs": [
+          {"name": "target-impedance", "desc": "PDN target impedance in milliohms"},
+          {"name": "frequency-range", "desc": "Frequency range the PDN must cover"},
+          {"name": "available-capacitors", "desc": "Capacitor library with values, packages, ESR, and ESL from vendor SPICE models"}
+        ],
+        "outputs": [
+          {"name": "capacitor-bill-of-materials", "desc": "Selected capacitors with values, packages, quantities, and their individual impedance contributions by frequency band"},
+          {"name": "anti-resonance-analysis", "desc": "Identified anti-resonance peaks between capacitor groups, their frequencies, and whether they breach the target impedance"},
+          {"name": "placement-priority-map", "desc": "Capacitor placement priority: which caps must be closest to the IC pins and why, with maximum loop inductance budget for each"}
+        ],
+        "process": [
+          "For each candidate capacitor, plot its real impedance curve: Z = sqrt(ESR^2 + (2*pi*f*ESL - 1/(2*pi*f*C))^2). The minimum impedance occurs at the series resonant frequency f_res = 1/(2*pi*sqrt(L*C)) and equals ESR at that point. A 100nF 0402 cap with 0.5nH ESL resonates at about 22 MHz.",
+          "Build the PDN impedance by paralleling capacitor groups. Start from the VRM (covers DC to about 10 kHz), add bulk electrolytics (10 kHz to 1 MHz), add MLCCs in decreasing values (1 MHz to hundreds of MHz), and rely on plane capacitance above that. Each group hands off to the next.",
+          "Identify anti-resonance: when a large capacitor becomes inductive (above its SRF) and a smaller capacitor is still capacitive, they form a parallel LC tank that creates an impedance peak. This peak can be 10x to 100x above the individual capacitor impedances. If any anti-resonance peak breaches the target impedance, add intermediate-value capacitors to fill the gap, or increase the quantity of existing values to lower the peak.",
+          "Assign placement priority: the smallest capacitors (highest SRF) must be closest to the IC power pins because they handle the fastest transients. Calculate the maximum loop inductance budget for each cap: L_max = Z_target / (2*pi*f_max) where f_max is the upper frequency this cap serves. Convert to physical distance: each mm of trace adds roughly 1 nH, each via adds 0.5 to 1 nH."
+        ],
+        "tags": ["decoupling", "capacitors", "anti-resonance", "placement"]
+      },
+      {
+        "flow_name": "pdn-impedance-simulation",
+        "description": "Simulate the complete PDN including VRM output impedance, all decoupling stages, plane capacitance, and interconnect inductance to verify the target impedance is met across the full frequency range.",
+        "inputs": [
+          {"name": "capacitor-bill-of-materials", "desc": "Selected capacitors with SPICE models"},
+          {"name": "target-impedance", "desc": "PDN target impedance ceiling"},
+          {"name": "stackup-cross-section", "desc": "PCB stackup for plane capacitance calculation"},
+          {"name": "placement-priority-map", "desc": "Physical placement constraints"}
+        ],
+        "outputs": [
+          {"name": "pdn-impedance-curve", "desc": "Simulated PDN impedance vs frequency at the IC power pin, showing contribution of each stage"},
+          {"name": "margin-analysis", "desc": "Margin between simulated impedance and target at each frequency decade, identifying the tightest point"},
+          {"name": "plane-capacitance-contribution", "desc": "Calculated plane pair capacitance and the frequency range where it dominates the PDN impedance"}
+        ],
+        "process": [
+          "Build the PDN circuit model: VRM output impedance (from vendor model or measured data) in series with bulk cap bank, MLCC banks at each stage, plane pair capacitance (C_plane = epsilon_0 * epsilon_r * A / d where A is overlap area and d is dielectric thickness), and mounting inductance for each component.",
+          "Include the via and trace inductance from each capacitor to the IC power pin. Use 1 nH/mm for traces and 0.5 nH per via as first-order estimates. For critical paths, extract the actual inductance from a 3D field solver.",
+          "Run AC impedance simulation from 1 Hz to 10 GHz. Plot the result on a log-log impedance vs frequency chart overlaid with the target impedance line. Identify any frequency where the simulated impedance exceeds the target.",
+          "Calculate margin at each frequency decade. The tightest margin point is the design's vulnerability. If margin is less than 3 dB (factor of 1.4) at any point, the design is at risk from manufacturing variation and component tolerance. Add capacitors or redesign the plane geometry to increase margin."
+        ],
+        "tags": ["simulation", "pdn", "impedance-profile"]
+      },
+      {
+        "flow_name": "plane-current-density-analysis",
+        "description": "Analyze current distribution in power and ground planes to identify current crowding, verify copper can handle the thermal load, and check for return current discontinuities.",
+        "inputs": [
+          {"name": "pdn-impedance-curve", "desc": "Verified PDN impedance performance"},
+          {"name": "supply-voltage", "desc": "Supply voltage for power calculation"},
+          {"name": "transient-current", "desc": "Maximum current for thermal analysis"},
+          {"name": "stackup-cross-section", "desc": "Copper weights and plane geometries"}
+        ],
+        "outputs": [
+          {"name": "current-density-map", "desc": "Current density distribution across power and ground planes showing hot spots"},
+          {"name": "thermal-rise-estimate", "desc": "Temperature rise at the highest current density point using IPC-2152 methodology"},
+          {"name": "return-path-discontinuities", "desc": "Locations where return current is forced to detour around plane splits, slots, or voids, with the additional loop inductance this creates"}
+        ],
+        "process": [
+          "Identify the current flow path from the VRM output to the IC power pins. Current does not spread uniformly across the plane; it concentrates in the direct path and crowds around obstacles (via fields, plane cuts, connectors).",
+          "Calculate current density at the narrowest point (neck-down). Use J = I / (w * t) where w is the effective current path width and t is the copper thickness. For 1 oz copper (35 um), carrying 10A through a 5mm neck-down gives J = 10 / (5e-3 * 35e-6) = 57 A/mm^2.",
+          "Apply IPC-2152 for temperature rise. The old IPC-2221 charts are for external traces only and are conservative for internal planes. IPC-2152 accounts for copper weight, board thickness, plane area, and ambient temperature. A 10 degree C rise is a common design limit for internal planes.",
+          "Check return current paths for all high-speed signals. The return current for a signal on layer N flows on the nearest reference plane. If that plane has a split or slot, the return current must detour around it, increasing loop inductance and creating EMI. Map every split and slot, identify which signals cross them, and quantify the additional inductance."
+        ],
+        "tags": ["current-density", "thermal", "return-path", "planes"]
+      },
+      {
+        "flow_name": "pdn-measurement-and-correlation",
+        "description": "Measure the built PDN impedance using VNA or probing techniques, correlate with simulation, and iterate the model for accuracy on future designs.",
+        "inputs": [
+          {"name": "pdn-impedance-curve", "desc": "Simulated PDN impedance to correlate against"},
+          {"name": "margin-analysis", "desc": "Predicted margin to compare with measured"},
+          {"name": "capacitor-bill-of-materials", "desc": "Actual components placed for measurement comparison"}
+        ],
+        "outputs": [
+          {"name": "measured-pdn-impedance", "desc": "Measured impedance vs frequency at the IC power pin location"},
+          {"name": "simulation-correlation-report", "desc": "Comparison of simulated vs measured impedance with RMS error and identification of model inaccuracies"},
+          {"name": "model-correction-factors", "desc": "Corrections to apply to future simulations: adjusted ESL for specific packages, actual plane capacitance vs calculated, VRM output impedance at temperature"}
+        ],
+        "process": [
+          "Measure PDN impedance at the IC power pin using a 2-port shunt-through VNA measurement (preferred) or a 1-port measurement with a short SMA probe. The 2-port method gives better dynamic range below 10 milliohms. De-embed the probe and cable contribution.",
+          "Overlay the measured impedance on the simulated curve. Expect agreement within 3 dB (factor of 1.4) across most of the frequency range. Differences above 6 dB indicate a model error that needs investigation.",
+          "Common model errors: plane capacitance is often 10 to 20% lower than calculated due to via antipads reducing effective area. ESL of capacitors is higher than datasheet values because the datasheet ESL does not include mounting pad and via inductance. VRM output impedance changes with load and temperature.",
+          "Record correction factors for each discrepancy. Apply these corrections to the component library and simulation methodology for future designs. A PDN design team that correlates every design builds accuracy over time. A team that never measures repeats the same errors."
+        ],
+        "tags": ["measurement", "vna", "correlation", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "high-speed-serial-link-budget",
+    "description": "Model a high-speed serial link end-to-end: channel loss characterization, eye diagram analysis, TX pre-emphasis and RX equalization budgeting, jitter decomposition, and BER compliance verification.",
+    "domain": "hardware",
+    "tags": ["pcb", "signal-integrity", "serdes", "eye-diagram", "equalization"],
+    "steps": [
+      {
+        "flow_name": "channel-loss-characterization",
+        "description": "Measure or simulate the channel's S-parameters (insertion loss, return loss, crosstalk) and convert to time-domain impulse response for ISI analysis.",
+        "inputs": [
+          {"name": "channel-topology", "desc": "Physical description: TX package, PCB traces, connectors, cables, backplane, RX package with lengths and via counts"},
+          {"name": "data-rate", "desc": "Line rate in Gbps (e.g., 10.3125 Gbps for 10GbE, 25.78125 Gbps for 100GbE per lane)"},
+          {"name": "nyquist-frequency", "desc": "Half the data rate in GHz, the fundamental frequency of the NRZ signal"}
+        ],
+        "outputs": [
+          {"name": "insertion-loss-profile", "desc": "S21 magnitude vs frequency showing total channel loss, with loss at Nyquist frequency highlighted"},
+          {"name": "return-loss-profile", "desc": "S11 magnitude vs frequency showing impedance discontinuities"},
+          {"name": "crosstalk-profiles", "desc": "Near-end (S31) and far-end (S41) crosstalk from adjacent channels"},
+          {"name": "impulse-response", "desc": "Time-domain impulse response via IFFT of S21, showing pre-cursor and post-cursor ISI taps"}
+        ],
+        "process": [
+          "Simulate the channel S-parameters from DC to at least 2.5x the Nyquist frequency (e.g., to 32 GHz for a 25 Gbps NRZ link). Include every discontinuity: package ball/pin, package trace, board via, PCB trace (with loss tangent), connector, cable, and receiving package.",
+          "Extract insertion loss at Nyquist: this is the single most important number. Protocol specs define maximum allowable insertion loss at Nyquist (e.g., IEEE 802.3 defines channel operating margin budgets). Typical thresholds: 10 dB is easy for most SerDes, 20 dB needs equalization, 30+ dB needs strong TX and RX equalization.",
+          "Check return loss: impedance mismatches create reflections that arrive at the receiver as ISI. Return loss should be better than -10 dB (ideally -15 dB) across the band. A resonance dip at a specific frequency indicates a stub or impedance discontinuity at a specific location; calculate the location from f_resonance = c/(4*L*sqrt(Dk)).",
+          "Convert S21 to time-domain impulse response via IFFT. The main cursor is the desired signal; pre-cursors and post-cursors are ISI. Count significant post-cursors (amplitude > 1% of main cursor). This count determines how many DFE taps the receiver needs."
+        ],
+        "tags": ["s-parameters", "channel", "insertion-loss", "crosstalk"]
+      },
+      {
+        "flow_name": "eye-diagram-and-isi-analysis",
+        "description": "Generate the statistical eye diagram from the channel response, quantify eye opening before and after equalization, and determine if the link has margin.",
+        "inputs": [
+          {"name": "insertion-loss-profile", "desc": "Channel S21 data"},
+          {"name": "impulse-response", "desc": "Channel impulse response with ISI taps"},
+          {"name": "data-rate", "desc": "Line rate for UI calculation"},
+          {"name": "crosstalk-profiles", "desc": "Crosstalk from adjacent lanes"}
+        ],
+        "outputs": [
+          {"name": "unequalized-eye", "desc": "Eye diagram at the receiver input with no equalization applied, showing voltage and timing margins"},
+          {"name": "isi-budget", "desc": "ISI contribution from each post-cursor and pre-cursor tap, ranked by magnitude"},
+          {"name": "crosstalk-penalty", "desc": "Eye closure in mV due to near-end and far-end crosstalk from adjacent lanes"},
+          {"name": "eye-opening-raw", "desc": "Voltage height and timing width of the raw eye at BER = 1e-12 contour"}
+        ],
+        "process": [
+          "Generate the statistical eye: convolve a PRBS pattern through the channel impulse response. Use a long enough pattern (PRBS-31 for accurate ISI representation). The statistical eye shows all possible bit transitions superimposed, producing the eye shape.",
+          "Measure the eye opening at the BER = 1e-12 contour (not at the center, which is optimistic). The 1e-12 contour accounts for the combined probability of all ISI patterns and noise landing in the decision threshold. Extract voltage height (mV) and timing width (ps or fraction of UI).",
+          "Decompose ISI: the impulse response tells you exactly which cursors (time offsets) contribute the most eye closure. Rank them by amplitude. The largest post-cursors are the ones equalization must cancel.",
+          "Add crosstalk penalty: superimpose crosstalk from adjacent aggressor channels. Each aggressor adds a noise-like contribution that further closes the eye. Measure the additional eye closure. If crosstalk penalty exceeds 10% of the raw eye opening, the channel spacing or isolation needs improvement."
+        ],
+        "tags": ["eye-diagram", "isi", "statistical-eye", "ber"]
+      },
+      {
+        "flow_name": "tx-preemphasis-rx-equalization-design",
+        "description": "Design the transmitter pre-emphasis (de-emphasis and pre-shoot) and receiver equalization (CTLE and DFE) to open the eye to meet the BER target.",
+        "inputs": [
+          {"name": "unequalized-eye", "desc": "Raw eye diagram showing the problem to solve"},
+          {"name": "isi-budget", "desc": "ISI tap magnitudes to cancel"},
+          {"name": "data-rate", "desc": "Line rate for equalization tap timing"},
+          {"name": "eye-opening-raw", "desc": "Starting eye metrics to improve upon"}
+        ],
+        "outputs": [
+          {"name": "tx-fir-coefficients", "desc": "Transmitter FIR filter tap values: pre-cursor, main cursor, and post-cursor coefficients with amplitude constraint"},
+          {"name": "ctle-parameters", "desc": "Continuous time linear equalizer settings: DC gain, peaking frequency, peaking gain in dB"},
+          {"name": "dfe-tap-values", "desc": "Decision feedback equalizer tap values for each post-cursor, number of taps needed"},
+          {"name": "equalized-eye", "desc": "Eye diagram after full TX pre-emphasis + RX CTLE + DFE showing the achieved eye opening"}
+        ],
+        "process": [
+          "Start with TX pre-emphasis: the transmitter FIR filter has 2 to 4 taps (1 pre-cursor, 1 main, 1 to 2 post-cursors). The coefficients must sum to 1.0 (or the constrained maximum amplitude). Set the post-cursor tap to cancel the largest post-cursor ISI from the channel. The pre-cursor tap cancels the largest pre-cursor ISI. This is a linear operation that reduces ISI but also reduces signal amplitude.",
+          "Apply CTLE at the receiver: CTLE is a linear analog filter that boosts high frequencies relative to low frequencies, partially compensating for the channel's frequency-dependent loss. Set the peaking frequency near Nyquist and the peaking gain to partially flatten the channel response. Too much CTLE gain amplifies noise and crosstalk along with the signal.",
+          "Apply DFE: DFE cancels post-cursor ISI using the receiver's own bit decisions. Each tap cancels one UI of post-cursor. DFE does not amplify noise (it subtracts a known value), making it superior to linear equalization for post-cursor cancellation. However, DFE cannot cancel pre-cursor ISI and has error propagation risk if a bit decision is wrong.",
+          "Optimize the combination: allocate equalization between TX FIR, CTLE, and DFE to maximize the equalized eye opening. The general principle: use TX pre-emphasis for the first 1 to 2 cursors, CTLE for broadband loss compensation (keeping gain moderate to limit noise amplification), and DFE for remaining post-cursors. Simulate the equalized eye and measure opening at BER = 1e-12."
+        ],
+        "tags": ["equalization", "pre-emphasis", "ctle", "dfe", "fir"]
+      },
+      {
+        "flow_name": "jitter-decomposition-and-budgeting",
+        "description": "Decompose total jitter into its components (random, deterministic, periodic, data-dependent), allocate jitter budgets, and verify the link meets timing margin.",
+        "inputs": [
+          {"name": "equalized-eye", "desc": "Equalized eye diagram"},
+          {"name": "data-rate", "desc": "Line rate for UI to time conversion"},
+          {"name": "tx-fir-coefficients", "desc": "TX settings that affect DJ through ISI residual"}
+        ],
+        "outputs": [
+          {"name": "jitter-decomposition", "desc": "Breakdown: Tj = Rj (rms, converted to peak-peak at target BER) + Dj_pp (Dj = DDJ + DCD + PJ + BUJ)"},
+          {"name": "timing-margin", "desc": "Remaining timing margin in ps and fraction of UI after jitter allocation at target BER"},
+          {"name": "jitter-budget-table", "desc": "Budget showing each jitter source, its allocation, and the margin per source"}
+        ],
+        "process": [
+          "Measure or simulate total jitter (Tj) at the receiver sampling point. Tj decomposes into random jitter (Rj, Gaussian, unbounded) and deterministic jitter (Dj, bounded). Separate them using a dual-Dirac model or tail-fit method on the jitter histogram.",
+          "Convert Rj (rms) to peak-peak at the target BER: Rj_pp = 2 * Q * Rj_rms, where Q = 7.03 for BER = 1e-12, Q = 7.94 for BER = 1e-15. Then Tj_pp = Rj_pp + Dj_pp. This is the total timing uncertainty.",
+          "Decompose Dj into: data-dependent jitter (DDJ, caused by ISI residual after equalization), duty cycle distortion (DCD, caused by threshold offset), periodic jitter (PJ, from power supply noise or crosstalk coupling at specific frequencies), and bounded uncorrelated jitter (BUJ, everything else).",
+          "Calculate timing margin: the equalized eye width at the target BER contour minus Tj_pp. Express as fraction of UI: for a 25 Gbps link (UI = 40 ps), if equalized eye width at 1e-12 is 32 ps and Tj_pp is 24 ps, margin is 8 ps = 0.2 UI. Protocol specs define minimum margin (typically 0.1 to 0.3 UI depending on the spec). If margin is insufficient, identify the dominant jitter source and attack it."
+        ],
+        "tags": ["jitter", "timing", "random-jitter", "deterministic-jitter"]
+      },
+      {
+        "flow_name": "link-compliance-verification",
+        "description": "Run the full compliance test suite for the protocol, including transmitter output, channel, and receiver tolerance testing, and document the results for certification.",
+        "inputs": [
+          {"name": "equalized-eye", "desc": "Equalized eye meeting internal targets"},
+          {"name": "jitter-decomposition", "desc": "Jitter budget verified"},
+          {"name": "timing-margin", "desc": "Timing margin meeting spec"},
+          {"name": "insertion-loss-profile", "desc": "Channel S-parameters for compliance"}
+        ],
+        "outputs": [
+          {"name": "tx-compliance-results", "desc": "Transmitter output measurements vs protocol mask: amplitude, rise/fall time, jitter, pre-emphasis levels"},
+          {"name": "channel-compliance-results", "desc": "Channel S-parameter measurements vs protocol limits: IL, RL, crosstalk, ILD (insertion loss deviation)"},
+          {"name": "rx-tolerance-results", "desc": "Receiver stressed eye test results: worst-case input the receiver must tolerate and whether it achieves target BER"},
+          {"name": "compliance-report", "desc": "Complete compliance report ready for protocol certification body"}
+        ],
+        "process": [
+          "Run TX compliance: measure transmitter output into a compliance test fixture. Compare against the protocol's TX output mask: voltage amplitude (Vdiff_pp), rise and fall time, output impedance, and TX jitter. Apply the specified FIR settings if the protocol defines compliance tap values.",
+          "Run channel compliance: measure the channel S-parameters with calibrated VNA using the protocol's test methodology. Compare insertion loss at Nyquist, return loss, crosstalk, and insertion loss deviation (ILD, the deviation from a fitted loss curve, indicating resonances). Each must pass the protocol's defined limits.",
+          "Run RX tolerance: inject a stressed signal at the receiver (using a compliance pattern generator with calibrated stress: sinusoidal jitter, random jitter, ISI from a compliance channel) and verify the receiver achieves the target BER. The stressed eye represents the worst-case signal the protocol says the receiver must handle.",
+          "Compile the compliance report: all measurements, pass/fail against each limit, test equipment used with calibration dates, and the test fixture description. This report goes to the certification body (USB-IF, PCI-SIG, IEEE, etc.) as evidence of compliance."
+        ],
+        "tags": ["compliance", "certification", "testing", "protocol"]
+      }
+    ]
+  },
+  {
+    "chain_name": "emc-emi-design-methodology",
+    "description": "Design for electromagnetic compatibility from first principles: identify radiation mechanisms, minimize loop areas, design filters for conducted emissions, and execute a pre-compliance testing strategy.",
+    "domain": "hardware",
+    "tags": ["pcb", "emc", "emi", "radiation", "filtering"],
+    "steps": [
+      {
+        "flow_name": "radiation-mechanism-identification",
+        "description": "Identify whether emissions are common mode or differential mode, locate the radiating structure, and determine the dominant mechanism before attempting fixes.",
+        "inputs": [
+          {"name": "circuit-description", "desc": "Schematic and layout with clock frequencies, switching regulators, and I/O interfaces identified"},
+          {"name": "frequency-bands", "desc": "Regulatory frequency bands of concern (e.g., FCC Part 15B, CISPR 32)"},
+          {"name": "cable-interfaces", "desc": "All cables attached to the product with their type, length, and shielding"}
+        ],
+        "outputs": [
+          {"name": "emission-source-map", "desc": "Map of potential emission sources: clock harmonics, switching regulator harmonics, digital bus transitions, with their fundamental frequencies and significant harmonics"},
+          {"name": "radiation-mode-assessment", "desc": "For each source: whether it radiates as differential mode (the signal loop is the antenna) or common mode (the cable or chassis is the antenna), with the reasoning"},
+          {"name": "dominant-mechanisms", "desc": "Ranked list of the top 3 to 5 most likely emission problems, based on frequency, amplitude, and antenna efficiency"}
+        ],
+        "process": [
+          "List every periodic signal source: crystal oscillators, PLLs, switching regulators (and their harmonics to the 10th or higher), digital buses (clock and data harmonics). Calculate harmonic amplitudes: a trapezoidal waveform with rise time t_r has harmonic amplitudes that roll off at -20 dB/decade above f1 = 1/(pi*t_r) and -40 dB/decade above f2 = 1/(pi*t_r) (where t_r is 10-90% rise time).",
+          "Determine the radiation mode for each source. Differential mode: the signal and its return form a small loop that radiates. Radiated power scales as (loop area)^2 * f^4. Common mode: a voltage difference drives current onto a cable or structure that acts as a monopole antenna. Common mode dominates above a few hundred MHz in most products because cable lengths are efficient antennas at those frequencies.",
+          "Estimate antenna efficiency for each radiating structure. A cable becomes an efficient quarter-wave antenna at f = c / (4 * L_cable). A 1-meter cable resonates at 75 MHz. A 15 cm trace resonates at 500 MHz. At resonance, even microamps of common-mode current produce fields that exceed regulatory limits.",
+          "Rank the mechanisms: the combination of source amplitude at that frequency multiplied by antenna efficiency at that frequency gives the relative emission severity. Focus design effort on the top-ranked mechanisms first."
+        ],
+        "tags": ["emc", "radiation", "common-mode", "differential-mode"]
+      },
+      {
+        "flow_name": "current-loop-area-minimization",
+        "description": "Minimize radiation from differential-mode sources by reducing current loop areas in the PCB layout, with specific techniques for clocks, switching regulators, and digital buses.",
+        "inputs": [
+          {"name": "emission-source-map", "desc": "Identified emission sources with frequencies"},
+          {"name": "radiation-mode-assessment", "desc": "Which sources radiate as differential mode"},
+          {"name": "stackup-cross-section", "desc": "PCB layer stackup for reference plane planning"}
+        ],
+        "outputs": [
+          {"name": "loop-area-reduction-plan", "desc": "Specific layout changes for each differential-mode source: component placement, trace routing, via placement to minimize loop area"},
+          {"name": "reference-plane-strategy", "desc": "Ground and power plane assignments to provide continuous return paths under all high-frequency traces"},
+          {"name": "estimated-emission-reduction", "desc": "Expected dB reduction from each layout change based on loop area ratio"}
+        ],
+        "process": [
+          "For switching regulators: the hot loop (input capacitor to high-side FET to low-side FET to ground and back to input capacitor) must be minimized. Place the input capacitor within 5 mm of the FET pins. Route the loop on a single layer if possible. Every mm^2 of loop area costs dB of margin. Calculate: reducing loop area by a factor of 2 reduces differential-mode radiation by 6 dB.",
+          "For clock signals: route clock traces over continuous reference planes with no splits, slots, or voids. If a clock trace must change layers, place the via directly adjacent to a ground via to provide a low-inductance return path. A layer change without a return via forces the return current to find another path, increasing the effective loop area by the detour distance.",
+          "For digital buses: keep signals and their returns on adjacent layers (signal on layer N, reference on layer N+1 or N-1). The loop area is trace_length * dielectric_height. Using thinner dielectric between signal and reference (e.g., 3 mil instead of 5 mil) reduces loop area by 40% and radiation by about 4 dB.",
+          "For every trace that crosses a plane split or slot: either move the trace or bridge the split with stitching capacitors (100 nF or larger) placed at the crossing point. The capacitor provides a return current path across the split at frequencies above its SRF."
+        ],
+        "tags": ["layout", "loop-area", "return-path", "emi-reduction"]
+      },
+      {
+        "flow_name": "conducted-emission-filter-design",
+        "description": "Design filters for conducted emissions on power lines and I/O cables, using LISN measurement data to determine filter requirements.",
+        "inputs": [
+          {"name": "dominant-mechanisms", "desc": "Ranked emission sources"},
+          {"name": "frequency-bands", "desc": "Regulatory limits and frequency ranges"},
+          {"name": "cable-interfaces", "desc": "Cables requiring filtering"}
+        ],
+        "outputs": [
+          {"name": "filter-topologies", "desc": "Pi, T, or L filter topology for each interface with component values and their rationale"},
+          {"name": "common-mode-choke-specs", "desc": "Common-mode choke specifications: impedance at frequency, DC resistance, saturation current"},
+          {"name": "filter-insertion-loss", "desc": "Calculated and simulated insertion loss vs frequency for each filter, compared to the required attenuation"}
+        ],
+        "process": [
+          "Determine the required filter attenuation: measure or estimate conducted emissions at the LISN without filtering. Compare to the regulatory limit (e.g., CISPR 32 Class B). The difference plus 6 dB margin is the required filter insertion loss at each frequency.",
+          "Choose the filter topology based on source and load impedance. Noise from a switching regulator (low source impedance) into a LISN (50 ohm) needs a high-impedance-first filter: inductor (or ferrite bead) facing the source, capacitor facing the LISN. The LC combination gives -40 dB/decade rolloff above the cutoff frequency.",
+          "For common-mode conducted emissions (which become radiated emissions from the cable): use a common-mode choke. The choke presents high impedance to common-mode current while passing differential-mode current. Select the choke by its impedance at the problem frequency (not by inductance alone, because the choke's impedance is resistive above its SRF, which is often desirable for broadband attenuation).",
+          "Simulate the complete filter including parasitic elements: capacitor ESL limits high-frequency performance, inductor inter-winding capacitance creates a parallel resonance. A filter that looks good in ideal simulation may have a null in insertion loss at the parasitic resonance frequency. Use the vendor's SPICE models that include parasitics."
+        ],
+        "tags": ["filtering", "conducted-emissions", "lisn", "common-mode-choke"]
+      },
+      {
+        "flow_name": "cable-shield-grounding-and-io-design",
+        "description": "Design cable shield terminations and I/O connector filtering for minimum common-mode emission, including the pigtail vs 360-degree grounding decision.",
+        "inputs": [
+          {"name": "cable-interfaces", "desc": "All cables with type and shielding"},
+          {"name": "common-mode-choke-specs", "desc": "Choke specs if applicable"},
+          {"name": "radiation-mode-assessment", "desc": "Common-mode emission assessment for cable interfaces"}
+        ],
+        "outputs": [
+          {"name": "shield-termination-design", "desc": "For each shielded cable: termination method (360-degree, pigtail, both ends, one end), with the engineering rationale"},
+          {"name": "connector-filter-layout", "desc": "I/O connector area layout with filter capacitors, ferrite beads, and ESD protection placement"},
+          {"name": "chassis-bonding-spec", "desc": "Chassis ground bonding specification: bond impedance target, surface preparation, fastener spacing"}
+        ],
+        "process": [
+          "Default to 360-degree shield termination (shield soldered or clamped around the full circumference of the connector). A pigtail (wire from shield braid to a ground point) has inductance of approximately 1 nH/mm. A 25 mm pigtail has 25 nH of inductance, which is an impedance of 15 ohms at 100 MHz. This defeats the shield above a few tens of MHz. Only use a pigtail when 360-degree termination is physically impossible and the emission concern is below 30 MHz.",
+          "For each I/O connector: place filter capacitors between each signal pin and the chassis ground (not logic ground) as close to the connector as physically possible. These capacitors shunt common-mode noise to the chassis before it reaches the cable. Values: 100 pF to 1 nF for data lines (higher values cause signal integrity issues), larger values for power pins.",
+          "Design the chassis bonding: the PCB ground plane must bond to the chassis (metal enclosure) at the I/O connector with the lowest possible impedance. Use multiple ground vias from the PCB ground plane to a pad that contacts the chassis through the connector's mounting tabs or a separate bond strap. Bond impedance target: below 2.5 milliohms at the highest frequency of concern.",
+          "For unshielded cables (e.g., power cords, simple wire harnesses): common-mode filtering is the only defense. Place common-mode chokes on the cable entry to the PCB. Add series ferrite beads on individual lines for additional high-frequency attenuation. The combination of choke (effective to ~100 MHz) and ferrites (effective above 100 MHz) covers the full conducted emission range."
+        ],
+        "tags": ["shielding", "grounding", "connectors", "common-mode"]
+      },
+      {
+        "flow_name": "pre-compliance-testing-strategy",
+        "description": "Execute a pre-compliance EMC test sequence using near-field probes and a spectrum analyzer to find and fix emission problems before formal testing.",
+        "inputs": [
+          {"name": "emission-source-map", "desc": "Known emission sources and frequencies"},
+          {"name": "filter-topologies", "desc": "Designed filters to verify"},
+          {"name": "shield-termination-design", "desc": "Shield designs to verify"},
+          {"name": "dominant-mechanisms", "desc": "Ranked mechanisms to hunt for"}
+        ],
+        "outputs": [
+          {"name": "near-field-scan-results", "desc": "Near-field probe measurements identifying the physical location of each emission source on the PCB"},
+          {"name": "pre-compliance-radiated-results", "desc": "Radiated emissions measured in a shielded room or OATS approximation, compared to regulatory limits"},
+          {"name": "fix-priority-list", "desc": "Prioritized list of fixes with expected dB improvement for each, ordered by cost-effectiveness"},
+          {"name": "test-report", "desc": "Pre-compliance test report documenting measurements, identified issues, and implemented fixes"}
+        ],
+        "process": [
+          "Start with near-field probing: use an H-field probe (small loop) to scan the PCB surface while monitoring the spectrum analyzer. The probe shows where current loops are radiating. Move systematically across the board, noting the physical location and frequency of each emission peak. This identifies the source before you try to fix it.",
+          "Measure conducted emissions with a LISN (or LISN emulator) on each power port. Compare to the regulatory limit. Identify frequencies that exceed or approach the limit. Correlate with the known switching frequencies and their harmonics from the emission source map.",
+          "Measure radiated emissions in a shielded room (or outdoors with ambient subtracted if no chamber is available). Use a calibrated antenna at 3 meters (10 meters for Class A, normalize to 10 m using -20*log10(3/10) = +10.5 dB correction for 3m measurements). Rotate the EUT and scan all polarizations. Compare to CISPR 32 or FCC Part 15 limits.",
+          "Build the fix priority list: for each emission that exceeds the limit, calculate the required attenuation (excess + 6 dB margin). Match to the available fix (filter, shield improvement, layout change, ferrite addition). Rank by cost-effectiveness: a 10-cent ferrite bead that gives 15 dB at the problem frequency beats a $2 shield can that gives 20 dB. Implement fixes, re-measure, and iterate."
+        ],
+        "tags": ["testing", "pre-compliance", "near-field", "spectrum-analyzer"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-management-pcb",
+    "description": "Design thermal management for PCB-mounted components: thermal resistance network modeling, copper spreading, thermal via optimization, heat sink selection, and correlation with measurement.",
+    "domain": "hardware",
+    "tags": ["pcb", "thermal", "heat-dissipation", "thermal-vias", "heat-sink"],
+    "steps": [
+      {
+        "flow_name": "thermal-resistance-network-model",
+        "description": "Build the thermal resistance network from junction to ambient for each heat-generating component, identifying every thermal resistance in the path.",
+        "inputs": [
+          {"name": "component-power-dissipation", "desc": "Power dissipated by each component in watts (from datasheet or measured)"},
+          {"name": "package-thermal-data", "desc": "Theta_JC (junction to case), Theta_JB (junction to board), and Psi_JT (junction to top) from component datasheets"},
+          {"name": "ambient-temperature", "desc": "Maximum ambient temperature specification for the product"},
+          {"name": "max-junction-temperature", "desc": "Maximum allowable junction temperature from component datasheet"}
+        ],
+        "outputs": [
+          {"name": "thermal-budget", "desc": "Allowable temperature rise from junction to ambient: T_j_max - T_ambient, and how it is allocated across each thermal resistance in the path"},
+          {"name": "thermal-resistance-network", "desc": "Complete thermal circuit: R_jc (junction to case top), R_jb (junction to board), R_cs (case to heat sink), R_sa (heat sink to ambient), R_ba (board to ambient), with parallel paths identified"},
+          {"name": "dominant-thermal-path", "desc": "Which path (top of package to heat sink, or bottom of package through board) carries the majority of heat, with the percentage split"}
+        ],
+        "process": [
+          "Calculate the thermal budget: delta_T_max = T_j_max - T_ambient. For a component rated at 125C junction max in a 55C ambient, the budget is 70C. Every watt dissipated consumes budget proportional to the total thermal resistance: delta_T = P * R_theta_ja.",
+          "Build the thermal circuit with two parallel paths: top path (R_jc + R_cs + R_sa) and bottom path (R_jb + R_ba). For exposed-pad packages (QFN, BGA with thermal pad), the bottom path dominates because R_jb is low (the die is directly above the exposed pad). For plastic packages without exposed pads, the top path through a heat sink may dominate.",
+          "Look up thermal resistances from the datasheet. Theta_JC and Theta_JB are the key parameters. Theta_JA is board-dependent and only valid for the JEDEC test board; do not use it for design. Psi_JT is a characterization parameter for measuring junction temperature from the top of the package, not a true thermal resistance.",
+          "Identify the dominant path: if the bottom path resistance is less than the top path resistance, the board is the primary heat sink and PCB thermal design is critical. For most modern ICs in exposed-pad packages, 60 to 80% of heat flows through the board."
+        ],
+        "tags": ["thermal-resistance", "network-model", "junction-temperature"]
+      },
+      {
+        "flow_name": "copper-spreading-and-thermal-via-design",
+        "description": "Design the PCB copper area for heat spreading and optimize thermal via arrays for heat transfer from component pad to internal copper planes and backside.",
+        "inputs": [
+          {"name": "thermal-resistance-network", "desc": "Thermal circuit with R_jb identified"},
+          {"name": "dominant-thermal-path", "desc": "Confirmation that board path is significant"},
+          {"name": "component-power-dissipation", "desc": "Power to dissipate through the board"},
+          {"name": "stackup-cross-section", "desc": "PCB stackup with copper weights and layer count"}
+        ],
+        "outputs": [
+          {"name": "thermal-via-array-design", "desc": "Via diameter, plating thickness, pitch, and count in the thermal pad area with calculated thermal resistance"},
+          {"name": "copper-spreading-area", "desc": "Required copper area on each layer for adequate heat spreading, with the thermal resistance of each spreading layer"},
+          {"name": "board-thermal-resistance", "desc": "Total R_ba (board to ambient) including via array, copper spreading, and convection from board surfaces"}
+        ],
+        "process": [
+          "Design the thermal via array under the exposed pad. Each via's thermal resistance: R_via = L / (k * A) where L is the board thickness, k is copper thermal conductivity (385 W/m*K), and A is the cross-sectional area of the copper in the via barrel. For a 0.3 mm drill, 25 um plating, the copper annulus area is pi * ((0.15)^2 - (0.125)^2) = 0.0216 mm^2. For a 1.6 mm board, R_via = 1.6e-3 / (385 * 0.0216e-6) = 192 C/W per via.",
+          "Parallel N vias: R_total = R_via / N. For 25 vias: R_total = 192/25 = 7.7 C/W. Filled and plated vias (solid copper plug) have approximately 5x lower thermal resistance per via than plated-through vias because the full cross section conducts.",
+          "Set via pitch to the minimum allowed by the fabricator (typically 0.8 to 1.0 mm for standard drill, 0.5 mm for laser drill). Fill the entire exposed pad area with vias. More vias is always better thermally; the limit is manufacturing capability and cost.",
+          "Calculate copper spreading on internal planes: heat spreads laterally through copper planes. The effective spreading area depends on copper thickness and thermal conductivity. For 1 oz copper (35 um), heat spreads roughly 10 to 15 mm from the via array before the spreading resistance becomes significant. Larger copper area helps but with diminishing returns. Use the spreading resistance formula: R_spread = 1/(pi * k * t) * (ln(r_spread/r_source) + some correction factor for finite thickness)."
+        ],
+        "tags": ["thermal-vias", "copper-spreading", "heat-transfer"]
+      },
+      {
+        "flow_name": "heat-sink-selection-and-attachment",
+        "description": "Select a heat sink based on the required thermal resistance from case to ambient, choose the thermal interface material, and design the attachment method.",
+        "inputs": [
+          {"name": "thermal-budget", "desc": "Remaining thermal budget for case-to-ambient path"},
+          {"name": "component-power-dissipation", "desc": "Power to dissipate through the heat sink path"},
+          {"name": "available-airflow", "desc": "Natural convection, forced convection velocity, or contact to chassis"}
+        ],
+        "outputs": [
+          {"name": "heat-sink-specification", "desc": "Required R_sa (heat sink to ambient), selected heat sink part number with its R_sa at the available airflow, and physical dimensions"},
+          {"name": "thermal-interface-selection", "desc": "TIM type (thermal pad, paste, or phase-change material) with its thermal conductivity, thickness, and resulting R_cs"},
+          {"name": "attachment-method", "desc": "How the heat sink is attached: push-pin, clip, adhesive, or screw-down, with retention force and thermal impact"}
+        ],
+        "process": [
+          "Calculate required R_sa: R_sa_required = (delta_T_budget_top_path / P) - R_jc - R_cs. You need to estimate R_cs to solve this: thermal pads range from 1 to 5 C/W depending on area and pad material; thermal paste gives 0.2 to 1 C/W; phase-change material gives 0.5 to 2 C/W.",
+          "Select the heat sink: compare vendor datasheets for R_sa at your airflow condition. Heat sink R_sa is specified at a particular airflow (natural convection or a specific LFM). At natural convection, R_sa is 2 to 5x higher than at 200 LFM forced air. Verify the heat sink fits the component footprint and does not interfere with adjacent components.",
+          "Select the TIM: thermal paste gives the lowest R_cs but is messy in manufacturing and can pump out over thermal cycles. Thermal pads are manufacturing-friendly but have higher thermal resistance. Phase-change materials offer a middle ground: solid at room temperature (easy to handle), they soften at operating temperature to fill air gaps. Match TIM thickness to the tolerance stackup between the component top and the heat sink base.",
+          "Design the attachment: the attachment must maintain pressure on the TIM (typically 10 to 50 psi for paste, 5 to 20 psi for pads) without cracking the IC package or the PCB. Push-pins are common for BGA packages; spring clips work for larger heat sinks; adhesive thermal tape is used when no mechanical attachment is possible but has lower reliability over temperature cycling."
+        ],
+        "tags": ["heat-sink", "thermal-interface", "attachment"]
+      },
+      {
+        "flow_name": "convection-calculation-and-airflow",
+        "description": "Calculate natural and forced convection heat transfer coefficients for the PCB and heat sink, and determine if the thermal design meets requirements.",
+        "inputs": [
+          {"name": "heat-sink-specification", "desc": "Selected heat sink geometry"},
+          {"name": "board-thermal-resistance", "desc": "Board thermal path resistance"},
+          {"name": "component-power-dissipation", "desc": "Total power to dissipate"},
+          {"name": "ambient-temperature", "desc": "Ambient temperature for convection calculation"}
+        ],
+        "outputs": [
+          {"name": "natural-convection-result", "desc": "Temperature rise with natural convection only, whether it meets the thermal budget"},
+          {"name": "forced-convection-result", "desc": "Temperature rise at specified airflow, whether it meets the thermal budget"},
+          {"name": "airflow-requirement", "desc": "Minimum airflow in LFM needed to meet the thermal budget, if natural convection is insufficient"}
+        ],
+        "process": [
+          "For natural convection: h_natural is approximately 5 to 15 W/m^2*K for a horizontal surface (varies with surface temperature and geometry). Use the Rayleigh number correlation: h = (k/L) * C * (Ra)^n where Ra = (g * beta * delta_T * L^3) / (nu * alpha). For typical PCB conditions (delta_T = 40C, L = 50 mm), h is around 8 to 12 W/m^2*K.",
+          "For forced convection: h_forced is approximately 20 to 100 W/m^2*K depending on airflow velocity. Use the flat plate correlation: h = (k/L) * 0.664 * Re^0.5 * Pr^0.33 for laminar flow (Re < 5e5). For a heat sink with fins, use the vendor's thermal resistance curve (R_sa vs airflow) which already accounts for the fin geometry.",
+          "Calculate total power dissipation: P_total = (T_j - T_ambient) / R_theta_ja_total. Solve for T_j: T_j = T_ambient + P * (R_jc * R_jb / (R_jc + R_jb)) for the parallel path model. If T_j exceeds T_j_max, either increase airflow, add a larger heat sink, or reduce power dissipation.",
+          "If natural convection is insufficient, calculate the required airflow: solve for h_forced that gives the needed R_sa, then convert to airflow velocity using the correlation or the heat sink vendor's data. Specify the fan requirement: CFM needed = airflow_velocity * cross_section_area. Add 20% margin for system-level pressure drop."
+        ],
+        "tags": ["convection", "airflow", "thermal-calculation"]
+      },
+      {
+        "flow_name": "thermal-derating-and-measurement-correlation",
+        "description": "Apply component derating rules, verify the thermal design through measurement on prototype boards, and correlate simulation with measurement.",
+        "inputs": [
+          {"name": "natural-convection-result", "desc": "Calculated thermal performance"},
+          {"name": "forced-convection-result", "desc": "Calculated thermal performance with airflow"},
+          {"name": "max-junction-temperature", "desc": "Component maximum ratings"},
+          {"name": "component-power-dissipation", "desc": "Power dissipation values to verify"}
+        ],
+        "outputs": [
+          {"name": "derating-analysis", "desc": "Each component's operating temperature vs its derated maximum, with margin percentage"},
+          {"name": "thermal-measurement-results", "desc": "Thermocouple or IR camera measurements on the prototype, at each critical component"},
+          {"name": "simulation-correlation", "desc": "Comparison of predicted vs measured temperatures with correction factors for future designs"}
+        ],
+        "process": [
+          "Apply derating: most reliability standards (IPC-9592, JEDEC, or company-specific) require operating 10 to 25C below the absolute maximum junction temperature. For example, if T_j_max = 125C and the derating policy is 80% of the absolute range above 25C, the derated limit is 25 + 0.8*(125-25) = 105C. Verify every component operates below its derated limit.",
+          "Measure on prototype: attach Type-K thermocouples to the top of critical components using thermal epoxy (not tape, which adds insulation). Measure at worst-case operating conditions (maximum load, maximum ambient, minimum airflow). For exposed-pad packages, also measure the PCB backside temperature under the component.",
+          "For components where thermocouple access is difficult (BGA underside), use an IR camera with the surface coated in high-emissivity paint (emissivity > 0.95). Bare copper and solder have low emissivity (0.05 to 0.2) and will read inaccurately without the coating.",
+          "Correlate: compare measured temperatures to the thermal model predictions. If measured is more than 5C higher than predicted, investigate: thermal via connections may have insufficient plating, TIM may have voids or excess thickness, airflow may be lower than assumed due to system-level obstructions. Record correction factors and apply to the thermal model for production verification."
+        ],
+        "tags": ["derating", "measurement", "thermocouple", "ir-camera", "correlation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "stackup-design-methodology",
+    "description": "Design a PCB layer stackup from requirements: determine layer count, assign signal and reference layers, select materials, ensure symmetry for warp control, and verify impedance manufacturability.",
+    "domain": "hardware",
+    "tags": ["pcb", "stackup", "laminate", "layer-assignment", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "layer-count-determination",
+        "description": "Determine the minimum layer count from routing density analysis, signal integrity requirements, and power delivery requirements.",
+        "inputs": [
+          {"name": "component-pin-count", "desc": "Total I/O pin count and BGA pitch for all components"},
+          {"name": "signal-classes", "desc": "Signal types with their impedance, spacing, and reference plane requirements"},
+          {"name": "power-rail-count", "desc": "Number of distinct power rails and their current requirements"},
+          {"name": "board-area", "desc": "Available board area after component placement"}
+        ],
+        "outputs": [
+          {"name": "minimum-layer-count", "desc": "Minimum layers needed, broken down: N signal layers + M reference planes + K power planes"},
+          {"name": "routing-density-analysis", "desc": "Traces per channel between BGA pads, available routing channels vs required, and the layer count that resolves the bottleneck"},
+          {"name": "layer-count-justification", "desc": "Engineering rationale for each layer: why it is needed and what happens if it is removed"}
+        ],
+        "process": [
+          "Calculate routing density: for a BGA with P mm pitch, the channel width between pads is approximately P - pad_diameter. At 1.0 mm pitch with 0.5 mm pads, the channel is 0.5 mm. A 4 mil (0.1 mm) trace with 4 mil space fits 2 traces per channel (one trace + one space = 0.2 mm, two fit in 0.5 mm with 0.1 mm margin). For a 400-pin BGA, roughly 200 signals must escape, requiring 200/2 = 100 channels on a single layer, or fewer layers if more channels are available.",
+          "Add reference plane requirements: every signal layer needs a continuous reference plane on an adjacent layer for impedance control and return current. The minimum is signal-reference-signal (3 layers) but this only works if both signal layers can share the reference. For controlled impedance on both signal layers, each needs its own dedicated reference.",
+          "Add power plane requirements: each power rail that supplies more than 1A typically needs its own plane (or a large pour on a shared layer). Count the rails. The most common arrangement: core voltage, I/O voltage, analog voltage each get a plane or pour.",
+          "The standard stackup formula: L = 2 * (S + 1) where S is the number of signal layers needed and each signal layer has a reference. Add power planes. Round up to an even number (fabricators prefer even layer counts for symmetric construction). Common counts: 4 (2 signal, 2 reference/power), 6 (3+3), 8 (4+4), 10 (5+5), 12 (6+6)."
+        ],
+        "tags": ["layer-count", "routing-density", "stackup-planning"]
+      },
+      {
+        "flow_name": "layer-assignment-and-reference-plane-strategy",
+        "description": "Assign each layer's function (signal, ground, power) and pair signal layers with their reference planes to ensure continuous return current paths.",
+        "inputs": [
+          {"name": "minimum-layer-count", "desc": "Layer count determined from density analysis"},
+          {"name": "signal-classes", "desc": "Signal types with speed and impedance requirements"},
+          {"name": "power-rail-count", "desc": "Power planes needed"}
+        ],
+        "outputs": [
+          {"name": "layer-assignment-table", "desc": "Each layer's function (signal routing, ground reference, power plane), the signal classes routed on each signal layer, and the reference plane for each signal layer"},
+          {"name": "signal-to-reference-pairing", "desc": "Which reference plane each signal layer uses for impedance control and return current"},
+          {"name": "layer-transition-rules", "desc": "Rules for via transitions: which layer transitions are allowed without adding return vias, and which require ground stitching vias"}
+        ],
+        "process": [
+          "Place ground planes on layers 2 and N-1 (second from top and second from bottom) for an N-layer board. This gives both outer signal layers a close reference plane for tight impedance control (thin dielectric = narrow trace for 50 ohms, good for fine-pitch BGAs).",
+          "Route the fastest signals on the layers closest to their reference planes. The outer layers (1 and N) have the thinnest dielectric to their reference (layer 2 and N-1), giving the tightest impedance control and smallest loop area. Route high-speed differential pairs here.",
+          "Assign power planes to inner layers. A ground-power plane pair separated by thin dielectric (2 to 4 mils) provides significant plane capacitance for PDN decoupling. Place this pair in the center of the stackup.",
+          "Define layer transition rules: a signal transitioning from layer 1 (referenced to ground on layer 2) to layer 3 (referenced to power on layer 4) changes reference planes. The return current must transfer between planes. Add a stitching capacitor (100 nF minimum) near the via to provide this path. If both layers reference the same ground plane, no stitching is needed."
+        ],
+        "tags": ["layer-assignment", "reference-plane", "return-current"]
+      },
+      {
+        "flow_name": "material-selection-and-symmetry",
+        "description": "Select laminate materials for the target Dk/Df at operating frequency, and ensure the stackup is symmetric about the center for warp control.",
+        "inputs": [
+          {"name": "layer-assignment-table", "desc": "Layer functions and signal speeds"},
+          {"name": "signal-classes", "desc": "Frequencies and loss budgets for material selection"},
+          {"name": "minimum-layer-count", "desc": "Layer count for symmetry planning"}
+        ],
+        "outputs": [
+          {"name": "material-selection", "desc": "Laminate and prepreg materials for each dielectric layer, with Dk and Df at the operating frequency"},
+          {"name": "symmetry-verification", "desc": "Stackup cross-section showing symmetry about the center line: matching copper weights, dielectric thicknesses, and materials above and below center"},
+          {"name": "glass-weave-specification", "desc": "Glass style selection for each prepreg layer to control Dk uniformity and avoid fiber weave effect"}
+        ],
+        "process": [
+          "Select laminate based on loss requirements: standard FR-4 (Dk ~ 4.2, Df ~ 0.02 at 1 GHz) works for signals up to about 5 Gbps. Mid-loss materials like Megtron 4 (Dk ~ 3.8, Df ~ 0.008) support 10 to 16 Gbps. Low-loss materials like Megtron 6 (Dk ~ 3.6, Df ~ 0.004) or Rogers (Dk ~ 3.5, Df ~ 0.003) are needed above 16 Gbps. The rule: if insertion loss at Nyquist exceeds 0.5 dB/inch on FR-4, move to a lower-loss material.",
+          "Ensure stackup symmetry: the layers above the center must mirror the layers below in copper weight, dielectric thickness, and material type. An asymmetric stackup warps during lamination because the different materials have different coefficients of thermal expansion. Warp causes assembly problems (components do not sit flat) and can cause BGA solder joint failures.",
+          "Select glass weave style: the glass fibers in prepreg have Dk ~ 6.2 while the resin has Dk ~ 3.1. Where a trace runs over glass vs resin, it sees different Dk, causing impedance variation (the fiber weave effect). For signals above 10 Gbps, specify spread-glass or flat-glass prepreg (e.g., 1078, 2116 with spread weave) to reduce this variation. Alternatively, route traces at an angle to the weave direction.",
+          "Specify resin content: higher resin content lowers the effective Dk (more resin, less glass) but also reduces mechanical strength. The fabricator controls resin content by selecting glass style and pressing conditions. Work with the fabricator to choose a glass/resin combination that hits your Dk target while maintaining structural integrity."
+        ],
+        "tags": ["materials", "symmetry", "warp", "glass-weave"]
+      },
+      {
+        "flow_name": "impedance-sensitivity-to-manufacturing-tolerances",
+        "description": "Analyze how manufacturing variations (dielectric thickness, trace width, copper weight, Dk) affect impedance, and set specifications that the fabricator can hold.",
+        "inputs": [
+          {"name": "material-selection", "desc": "Selected materials with Dk values"},
+          {"name": "symmetry-verification", "desc": "Verified symmetric stackup"},
+          {"name": "signal-classes", "desc": "Impedance targets and tolerances"}
+        ],
+        "outputs": [
+          {"name": "sensitivity-analysis", "desc": "Impedance change per unit change in each parameter: dZ/dh (dielectric height), dZ/dw (trace width), dZ/dDk (dielectric constant), dZ/dt (copper thickness)"},
+          {"name": "manufacturing-tolerance-budget", "desc": "Allocated tolerance for each parameter such that the combined impedance variation stays within the target tolerance (RSS or worst-case)"},
+          {"name": "fabricator-specification", "desc": "Specification document for the fabricator: target dielectric heights with tolerances, trace widths with tolerances, copper weights, and impedance coupon requirements"}
+        ],
+        "process": [
+          "Run sensitivity sweeps in the field solver: vary each parameter independently by its expected manufacturing range. Typical tolerances: dielectric height +/- 10% (for standard, +/- 5% for controlled), trace width +/- 0.5 mil (standard) to +/- 0.25 mil (fine line), copper thickness +/- 10%, Dk +/- 5% (standard FR-4) to +/- 2% (controlled Dk materials).",
+          "Calculate partial derivatives: dZ/dh, dZ/dw, dZ/dDk, dZ/dt from the sweep data. For a typical 50-ohm microstrip: increasing h by 1 mil raises Z by about 3 to 5 ohms; increasing w by 1 mil lowers Z by about 3 to 4 ohms; increasing Dk by 0.1 lowers Z by about 1 ohm.",
+          "Combine using RSS (root sum of squares) for statistical tolerance: delta_Z_total = sqrt((dZ/dh * delta_h)^2 + (dZ/dw * delta_w)^2 + (dZ/dDk * delta_Dk)^2 + (dZ/dt * delta_t)^2). If the RSS result exceeds the impedance tolerance, tighten the dominant contributor. Usually dielectric height and trace width dominate.",
+          "Write the fabricator specification: specify finished dielectric heights (not prepreg thickness, which changes during lamination) with tolerances, trace widths as finished (after etching) with tolerances, and request controlled-Dk material if needed. Include impedance coupons for each impedance class with the target, tolerance, and TDR measurement method."
+        ],
+        "tags": ["tolerance", "manufacturing", "sensitivity", "specification"]
+      },
+      {
+        "flow_name": "stackup-review-and-fabricator-negotiation",
+        "description": "Review the stackup with the fabricator, negotiate achievable specifications, and finalize the stackup for production.",
+        "inputs": [
+          {"name": "fabricator-specification", "desc": "Initial specification document"},
+          {"name": "manufacturing-tolerance-budget", "desc": "Required tolerances"},
+          {"name": "impedance-sensitivity-to-manufacturing-tolerances", "desc": "Sensitivity data for trade-off discussions"}
+        ],
+        "outputs": [
+          {"name": "fabricator-feedback", "desc": "Fabricator's response: what they can hold, what they cannot, proposed alternatives"},
+          {"name": "final-stackup", "desc": "Agreed stackup with fabricator-confirmed dielectric heights, materials, impedance targets, and tolerances"},
+          {"name": "stackup-drawing", "desc": "Engineering drawing of the stackup cross-section suitable for inclusion in the fabrication package"}
+        ],
+        "process": [
+          "Send the stackup specification to the fabricator and request a DFM review. Ask specifically: can you hold the dielectric height tolerance on layers X and Y? What is your standard etch tolerance for this trace width? What glass/resin combinations do you stock for this Dk requirement?",
+          "Negotiate: if the fabricator cannot hold the requested tolerance (e.g., +/- 5% dielectric height is a premium option), use the sensitivity analysis to determine if relaxing to +/- 10% still keeps impedance within spec. Adjust trace width to compensate if needed. The goal is a design that the fabricator can build reliably without premium charges.",
+          "Finalize: document the agreed stackup in a drawing that shows every layer, its material, thickness (finished), copper weight (starting), impedance targets, and coupon specifications. Both the designer and fabricator should sign off on this document before Gerber release.",
+          "Include the note: the stackup drawing is a controlled document. Any change by the fabricator (material substitution, thickness adjustment, process change) requires notification and re-approval. Without this note, fabricators may substitute 'equivalent' materials that have different Dk or Df."
+        ],
+        "tags": ["fabricator", "review", "negotiation", "production"]
+      }
+    ]
+  },
+  {
+    "chain_name": "design-for-manufacturing-pcb",
+    "description": "Apply DFM principles to PCB design: panelization, solder paste stencil optimization, component placement for assembly yield, and IPC class selection.",
+    "domain": "hardware",
+    "tags": ["pcb", "dfm", "manufacturing", "assembly", "soldering"],
+    "steps": [
+      {
+        "flow_name": "panelization-and-fiducial-design",
+        "description": "Design the PCB panel layout for efficient manufacturing: board arrangement, breakaway tabs, tooling holes, and fiducial placement for pick-and-place alignment.",
+        "inputs": [
+          {"name": "board-outline", "desc": "Individual board dimensions and shape"},
+          {"name": "panel-size", "desc": "Fabricator's standard panel size (typically 18x24 inches or 16x18 inches)"},
+          {"name": "assembly-process", "desc": "Single-side or double-side SMT, wave solder, selective solder, or hand assembly"}
+        ],
+        "outputs": [
+          {"name": "panel-layout", "desc": "Board arrangement in the panel with margins, rails, and breakaway tabs"},
+          {"name": "fiducial-placement", "desc": "Global panel fiducials and local board fiducials with diameter, clearance, and position"},
+          {"name": "tooling-features", "desc": "Tooling holes, bad-mark locations, and panel identification markings"}
+        ],
+        "process": [
+          "Arrange boards to maximize panel utilization. Rotate boards 90 or 180 degrees to test which arrangement fits more boards per panel. Leave 5 mm minimum between boards for routing (V-score needs less but limits breakaway to straight lines). Add 10 mm rails on at least two sides for conveyor transport through the SMT line.",
+          "Place three global fiducials on the panel: two on diagonal corners and one on a third corner. These allow the pick-and-place machine to correct for panel offset, rotation, and scaling. Use 1 mm diameter copper circles with 2 mm solder-mask-free clearance around them. Do not place fiducials near edges where panel warpage distorts their position.",
+          "Add local fiducials to each individual board (two per board, diagonally opposite). These correct for stretch and rotation within the individual board that the global fiducials cannot capture. For fine-pitch components (< 0.5 mm pitch), add component-level fiducials on diagonally opposite corners of the component footprint.",
+          "Design breakaway tabs: 3 to 5 tabs per board edge, each 3 to 5 mm wide with perforations or mouse bites for clean separation. For boards with components near the edge, place tabs away from those components to prevent damage during depanelization. V-scoring is cleaner but only works for straight edges."
+        ],
+        "tags": ["panelization", "fiducials", "tooling", "assembly"]
+      },
+      {
+        "flow_name": "solder-paste-stencil-optimization",
+        "description": "Design the solder paste stencil with aperture modifications for fine-pitch, large-pad, and mixed-technology components to achieve consistent paste deposition.",
+        "inputs": [
+          {"name": "component-library", "desc": "All components with their pad geometries and pitch"},
+          {"name": "stencil-thickness", "desc": "Baseline stencil thickness (typically 100 to 150 um for general SMT)"},
+          {"name": "solder-paste-type", "desc": "Paste type and mesh size (e.g., Type 3 for general, Type 4 or 5 for fine-pitch)"}
+        ],
+        "outputs": [
+          {"name": "aperture-modifications", "desc": "Aperture size and shape modifications for each pad type: reduction ratios, home-plate shapes, rounded corners"},
+          {"name": "stencil-specification", "desc": "Stencil material (stainless steel or nickel), thickness, cut method (laser vs electroform), and any step-down or step-up regions"},
+          {"name": "area-ratio-verification", "desc": "Area ratio calculation for every unique pad, confirming all exceed the 0.66 minimum (0.5 for Type 4 paste)"}
+        ],
+        "process": [
+          "Calculate the area ratio for every unique pad: AR = aperture_area / (aperture_perimeter * stencil_thickness). For a rectangular aperture: AR = (L*W) / (2*(L+W)*T). The minimum area ratio for reliable paste release is 0.66 for laser-cut stencils with Type 3 paste (IPC-7525 guideline). For Type 4 paste, the minimum drops to 0.5.",
+          "For fine-pitch (< 0.5 mm pitch): the pad size is small and area ratio may fall below 0.66 at standard stencil thickness. Solutions: reduce stencil thickness in the fine-pitch area (step-down stencil, typical step is 25 to 50 um), or use Type 4/5 paste for the entire board, or modify the aperture shape (round the corners to improve paste release).",
+          "For large pads (QFN thermal pads, large ground pads): a 1:1 aperture deposits too much paste, causing mid-chip solder balls or voiding. Reduce the aperture to 50-75% of the pad area using a window-pane pattern (grid of smaller apertures) or cross-hatch pattern. The pattern should leave at least 0.2 mm between sub-apertures for the paste to adhere during transfer.",
+          "For mixed technology (fine-pitch QFP next to large QFN thermal pad): the fine-pitch needs thin paste and the thermal pad needs thick paste. Use a step stencil: the fine-pitch area is stepped down (thinner) while the rest of the stencil is standard thickness. Alternatively, use two separate paste prints with different stencils (more expensive but more controllable)."
+        ],
+        "tags": ["stencil", "solder-paste", "aperture", "fine-pitch"]
+      },
+      {
+        "flow_name": "component-placement-for-assembly-yield",
+        "description": "Place components to prevent tombstoning, shadowing, and thermal imbalance during reflow, following the actual physics of solder surface tension.",
+        "inputs": [
+          {"name": "board-outline", "desc": "Board dimensions and keep-out areas"},
+          {"name": "component-library", "desc": "Component sizes, weights, and pad geometries"},
+          {"name": "assembly-process", "desc": "Reflow profile direction and wave solder direction if applicable"}
+        ],
+        "outputs": [
+          {"name": "placement-rules", "desc": "Spacing rules: component-to-component, component-to-edge, orientation relative to reflow conveyor direction"},
+          {"name": "tombstone-prevention-measures", "desc": "Specific measures for each passive size (0402, 0201, etc.): pad symmetry, thermal relief, trace routing approach direction"},
+          {"name": "thermal-balance-check", "desc": "Verification that both pads of each passive component are thermally balanced (similar copper connection) to prevent one side wetting before the other"}
+        ],
+        "process": [
+          "Orient passives perpendicular to the reflow conveyor direction so both pads enter the peak temperature zone simultaneously. If one pad reaches reflow temperature before the other, the molten solder pulls that side flat while the other side is still solid, standing the component up (tombstoning).",
+          "Check thermal balance for every passive component: if one pad connects to a large copper pour or plane and the other connects to a thin trace, the large-copper pad heats slower and wets later. Mitigate with thermal relief on the large-copper pad (narrow spoke connections to the plane, allowing the pad to heat independently). For 0201 and smaller, both pads must have nearly identical copper connections.",
+          "Set component-to-component spacing based on assembly method: 0.5 mm minimum for reflow-only (to prevent solder bridging during placement inaccuracy), 1.0 mm minimum near wave-solder components (solder wave can bridge closer components), 2.5 mm minimum for hand rework access (if rework is anticipated).",
+          "Avoid shadowing in wave solder: tall components block the solder wave from reaching shorter components behind them. Orient tall components parallel to the wave direction (long axis along the direction of travel). Place small components at least 2 mm upstream of tall components. For mixed SMT/through-hole boards, keep SMT components on the primary (reflow) side and through-hole on the wave side when possible."
+        ],
+        "tags": ["placement", "tombstoning", "reflow", "thermal-balance"]
+      },
+      {
+        "flow_name": "via-in-pad-and-advanced-via-rules",
+        "description": "Apply via-in-pad design rules for BGA and fine-pitch components, including fill requirements, cap plating, and the cost implications of each via technology.",
+        "inputs": [
+          {"name": "component-library", "desc": "BGA and fine-pitch components requiring via-in-pad"},
+          {"name": "stackup-cross-section", "desc": "Stackup for via depth and drilling capability"},
+          {"name": "assembly-process", "desc": "Reflow profile and solder paste considerations"}
+        ],
+        "outputs": [
+          {"name": "via-in-pad-specification", "desc": "For each BGA: via type (through, blind, microvia), fill method (copper fill, non-conductive fill, conductive fill), and cap plating requirement"},
+          {"name": "via-technology-comparison", "desc": "Cost and capability comparison: through-hole vs blind vs microvia vs any-layer HDI, with the pitch at which each technology becomes necessary"},
+          {"name": "drill-and-aspect-ratio-verification", "desc": "Drill size, aspect ratio (depth/diameter), and fabricator capability check for each via type"}
+        ],
+        "process": [
+          "Determine when via-in-pad is required: for BGAs with pitch below 0.8 mm, routing between pads is not possible, and vias must be placed directly in the BGA pads. These vias must be filled and planarized so the pad surface is flat for solder paste printing. An unfilled via-in-pad will wick solder into the via during reflow, causing an open joint.",
+          "Choose the via fill method: non-conductive epoxy fill + copper cap plate (most common, cost-effective) provides a flat, solderable surface. Conductive fill (copper or silver-filled epoxy) provides a thermal path through the via and a flat surface. Solid copper fill (copper plating to fill the entire via) provides the best thermal and electrical path but is most expensive and limited to small via diameters.",
+          "Check aspect ratios: mechanical drill vias have a maximum reliable aspect ratio of 10:1 (e.g., 10 mil drill in a 100 mil board). Laser-drilled microvias are limited to about 1:1 aspect ratio (4 mil drill in 4 mil dielectric). For fine-pitch BGAs (0.4 mm pitch and below), microvias on the first layer pair are typically required, connecting to deeper layers through stacked or staggered microvias.",
+          "Calculate the cost impact: each additional via technology step adds cost. Through-hole vias with standard drill are baseline. Blind vias add one to two sequential lamination steps. Microvias add laser drilling. Stacked microvias add copper fill between laser drill steps. Any-layer HDI (every layer has microvias) is the most expensive but allows maximum routing density. Choose the minimum technology that meets the routing density requirement."
+        ],
+        "tags": ["via-in-pad", "microvia", "hdi", "bga-routing"]
+      },
+      {
+        "flow_name": "ipc-class-selection-and-acceptance-criteria",
+        "description": "Select the appropriate IPC class (1, 2, or 3) based on product requirements, and understand the manufacturing implications of each class on cost, yield, and reliability.",
+        "inputs": [
+          {"name": "product-application", "desc": "Product type and environment (consumer, industrial, automotive, aerospace, medical)"},
+          {"name": "reliability-requirement", "desc": "Expected product lifetime and operating conditions"},
+          {"name": "component-library", "desc": "Component types for acceptance criteria application"}
+        ],
+        "outputs": [
+          {"name": "ipc-class-selection", "desc": "Selected IPC class with justification, and the specific IPC standards that apply (IPC-A-610 for assembly, IPC-6012 for bare board)"},
+          {"name": "critical-acceptance-criteria", "desc": "Key acceptance criteria that differ between classes and affect design or manufacturing: solder joint shape, hole fill percentage, annular ring minimum, conductor spacing"},
+          {"name": "cost-impact-analysis", "desc": "Expected cost increase for each class step-up: Class 1 baseline, Class 2 typically 5-15% over Class 1, Class 3 typically 25-50% over Class 2"}
+        ],
+        "process": [
+          "Match the product to an IPC class: Class 1 (general electronics, consumer products with limited life expectancy), Class 2 (dedicated service electronics, industrial and commercial equipment where continued operation is important), Class 3 (high-performance electronics, aerospace, military, medical life-support, where failure is not acceptable).",
+          "Understand what changes between classes: Class 3 requires minimum 75% through-hole fill (Class 2 allows 50%), minimum 2 mil annular ring (Class 2 allows 1 mil), zero solder voids over a percentage of the pad area (Class 2 is more lenient), and tighter conductor width/spacing tolerances. Each tighter requirement reduces manufacturing yield and increases cost.",
+          "For most commercial and industrial products, Class 2 is the correct choice. Class 3 is appropriate only when the application genuinely requires it (human-safety critical, impossible to service, extreme reliability). Do not specify Class 3 for cost reasons or perceived quality improvement; the cost and lead time increase is significant and the additional reliability is only needed in specific applications.",
+          "Document the IPC class on the fabrication and assembly drawings. Include specific callouts for any criteria where you need to deviate from the class default (e.g., Class 2 board with Class 3 annular ring on specific nets, or specific solder joint criteria for safety-critical connections)."
+        ],
+        "tags": ["ipc", "class-selection", "acceptance", "reliability"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mixed-signal-layout-methodology",
+    "description": "Layout a mixed-signal PCB: resolve the ground partitioning question, design guard rings, optimize ADC/DAC placement for SNR, and mitigate substrate coupling.",
+    "domain": "hardware",
+    "tags": ["pcb", "mixed-signal", "analog", "adc", "ground-partitioning"],
+    "steps": [
+      {
+        "flow_name": "ground-partitioning-strategy",
+        "description": "Resolve the analog/digital ground split vs single ground plane debate using the actual physics of return current flow and current density.",
+        "inputs": [
+          {"name": "circuit-topology", "desc": "Schematic showing analog and digital sections, their interconnections, and the ADC/DAC bridge points"},
+          {"name": "signal-frequencies", "desc": "Analog signal bandwidth and digital clock frequencies"},
+          {"name": "noise-budget", "desc": "Allowable noise on the analog signals in LSBs or microvolts"}
+        ],
+        "outputs": [
+          {"name": "ground-strategy", "desc": "Single ground plane with controlled current flow, or split ground with defined bridge point, with the engineering rationale"},
+          {"name": "current-flow-map", "desc": "Map showing where digital return currents flow and where analog signals are sensitive, identifying any overlap"},
+          {"name": "partition-implementation", "desc": "Physical implementation: moat location (if split), bridge point location, stitching via placement"}
+        ],
+        "process": [
+          "Start with the principle: a solid, unbroken ground plane has the lowest impedance and is the default correct answer. A split ground plane is only correct when digital return currents would flow through the analog measurement area AND you can guarantee that no signal trace crosses the split.",
+          "Map the digital return current paths: for each digital signal, the return current flows on the nearest ground plane directly under the trace (at high frequency, return current follows the signal trace path, not the shortest DC path). Identify where these return current paths overlap with the analog signal area.",
+          "If digital return currents do not flow through the analog area (the digital section is physically separated), a single ground plane is correct. Connect analog and digital ground at a single point (the ADC/DAC ground pin). This is not a split; it is a star connection on a single plane.",
+          "If digital return currents must flow through the analog area (compact layout, cannot separate sections), consider a moat: a slot in the ground plane that forces digital return currents to flow around the analog section. The moat must not be crossed by any trace (signal or power). Connect the two sides of the moat at one point, directly under the ADC/DAC. This is the classic split-ground approach and is only correct when the moat can be kept inviolate."
+        ],
+        "tags": ["ground-plane", "partitioning", "return-current", "mixed-signal"]
+      },
+      {
+        "flow_name": "guard-ring-and-sensitive-analog-protection",
+        "description": "Design guard rings and guard traces to protect sensitive analog nodes from leakage current, noise coupling, and field pickup.",
+        "inputs": [
+          {"name": "ground-strategy", "desc": "Ground approach from partitioning step"},
+          {"name": "sensitive-nodes", "desc": "Nodes requiring protection: high-impedance inputs, reference voltages, low-level analog signals"},
+          {"name": "noise-budget", "desc": "Maximum tolerable noise per sensitive node"}
+        ],
+        "outputs": [
+          {"name": "guard-ring-design", "desc": "Guard ring for each sensitive node: ring potential (driven or grounded), width, clearance to the sensitive trace, and connection to the circuit"},
+          {"name": "layout-rules-for-analog", "desc": "Routing rules: minimum clearance from digital traces, maximum trace length for sensitive signals, via rules for analog connections"},
+          {"name": "shielding-requirements", "desc": "Whether a ground pour, shield can, or Faraday cage is needed for specific sensitive areas"}
+        ],
+        "process": [
+          "For high-impedance nodes (> 10 Mohm, such as photodiode amplifier inputs): surface leakage on the PCB can inject picoamps to nanoamps of current. A guard ring driven to the same potential as the sensitive node (by the op-amp output in a follower configuration) intercepts surface leakage current. The guard ring must completely surround the sensitive node on all PCB layers that the node touches.",
+          "For reference voltage nodes: surround with a ground guard ring (connected to the local analog ground) to prevent noise coupling from nearby digital or switching traces. The guard ring width should be at least 20 mils and connected to ground with vias every 100 mils to maintain low impedance at high frequency.",
+          "Set routing rules for analog signals: keep analog traces at least 3x the trace width away from digital traces (5x for sensitive signals). Keep analog traces short (minimize antenna pickup length). Route analog signals on internal layers between ground planes when possible (stripline provides natural shielding). Use vias sparingly for analog signals (each via adds parasitic inductance and can create a stub).",
+          "For the most sensitive circuits (microvolts, nanoamps): consider a metal shield can soldered over the sensitive area. The shield can connects to the ground plane through multiple vias and provides 30 to 60 dB of additional isolation from radiated interference. Alternatively, use a ground pour on the layer above and below the sensitive circuit (a PCB Faraday cage)."
+        ],
+        "tags": ["guard-ring", "shielding", "analog-protection", "leakage"]
+      },
+      {
+        "flow_name": "adc-dac-layout-for-optimal-performance",
+        "description": "Layout ADC and DAC circuits for maximum SNR and minimum distortion, applying the converter manufacturer's recommendations with the physics behind them.",
+        "inputs": [
+          {"name": "partition-implementation", "desc": "Ground strategy implementation"},
+          {"name": "guard-ring-design", "desc": "Protection for sensitive nodes"},
+          {"name": "component-datasheets", "desc": "ADC/DAC datasheets with layout recommendations and evaluation board layout"}
+        ],
+        "outputs": [
+          {"name": "adc-dac-placement", "desc": "Component placement for each converter: decoupling capacitor positions, reference circuit location, input network placement"},
+          {"name": "critical-trace-routing", "desc": "Routing plan for clock, analog input, reference, and digital output traces with length and spacing constraints"},
+          {"name": "performance-verification-plan", "desc": "How to verify the layout achieves the datasheet SNR: test points, measurement method, expected degradation from layout"}
+        ],
+        "process": [
+          "Place the ADC/DAC decoupling capacitors first, before any other component in the area. Each AVDD pin gets a 100 nF capacitor within 2 mm, connected directly to the AGND pin (not to a distant ground via). Each DVDD pin gets a 100 nF capacitor connected to DGND. A 10 uF bulk capacitor serves each power domain. These capacitor positions are non-negotiable; other components route around them.",
+          "Place the voltage reference circuit adjacent to the ADC reference pins. The reference decoupling capacitor must be within 3 mm of the REF pin. Route the reference trace as a wide (20 mil minimum), short, direct connection. Any noise on the reference appears directly as gain error in every sample. Shield the reference trace between ground traces or on a shielded internal layer.",
+          "Route the ADC clock as a controlled-impedance trace, matched to the clock source impedance (usually 50 ohms). Keep the clock trace away from analog input traces (10 mm minimum separation or on different layers with a ground plane between them). Clock jitter degrades SNR: a 1 ps rms jitter on a 100 MHz input signal costs 1 dB of SNR. The clock trace is as critical as the analog input.",
+          "Route digital output traces away from analog inputs. The digital outputs switch during each conversion and create transient currents in the ground plane. Route digital outputs toward the digital section, away from the analog section. If the ADC has a serial output (SPI, LVDS), prefer it over parallel outputs because fewer traces switch simultaneously, creating less ground bounce."
+        ],
+        "tags": ["adc", "dac", "layout", "snr", "decoupling"]
+      },
+      {
+        "flow_name": "crystal-oscillator-layout",
+        "description": "Layout a crystal oscillator circuit for reliable startup, frequency accuracy, and minimum EMI.",
+        "inputs": [
+          {"name": "crystal-parameters", "desc": "Crystal frequency, load capacitance, ESR, and drive level"},
+          {"name": "oscillator-ic", "desc": "IC with oscillator pins (XTAL_IN, XTAL_OUT) and its recommended circuit"},
+          {"name": "emc-emi-requirements", "desc": "EMI constraints on the clock circuit"}
+        ],
+        "outputs": [
+          {"name": "crystal-placement", "desc": "Crystal position relative to IC, load capacitor positions, and ground connection"},
+          {"name": "routing-rules", "desc": "Trace length, width, and spacing rules for XTAL_IN and XTAL_OUT traces"},
+          {"name": "emi-mitigation", "desc": "Guard ring or ground pour design around the crystal circuit for EMI containment"}
+        ],
+        "process": [
+          "Place the crystal as close to the IC oscillator pins as physically possible (5 mm maximum for most crystals, 3 mm for high-frequency crystals above 25 MHz). The traces from IC to crystal must be short because they carry a high-impedance, low-amplitude signal that is susceptible to noise pickup and adds parasitic capacitance that detunes the oscillator.",
+          "Place the load capacitors (CL1, CL2) directly at the crystal pads, connected to ground through short, dedicated ground vias. These capacitors set the oscillator frequency: C_load = (CL1 * CL2) / (CL1 + CL2) must equal the crystal's specified load capacitance minus the parasitic capacitance of the traces and IC pins (typically 3 to 5 pF). Getting this wrong shifts the frequency and can prevent startup.",
+          "Route XTAL_IN and XTAL_OUT as short, direct traces. Do not route them as parallel traces (couple noise between them). Keep them away from all other signals, especially digital clocks and switching regulators. A 10 mil minimum clearance from other traces, 50 mil from noisy signals. Do not put vias in the crystal traces; route on a single layer.",
+          "Surround the crystal circuit with a ground guard pour on the same layer, connected to the ground plane with vias every 50 to 100 mils. This contains the crystal's EMI (the crystal is a narrow-band radiator at its fundamental frequency and harmonics) and shields the circuit from external noise. Do not route any other signal through this ground pour."
+        ],
+        "tags": ["crystal", "oscillator", "layout", "emi"]
+      },
+      {
+        "flow_name": "power-supply-sequencing-physical-layout",
+        "description": "Layout power supply circuits for correct sequencing, minimizing coupling between regulators, and ensuring each supply has a clean, isolated ground return.",
+        "inputs": [
+          {"name": "power-tree", "desc": "Power supply tree showing all regulators, their inputs, outputs, and sequencing requirements"},
+          {"name": "ground-strategy", "desc": "Ground partitioning approach"},
+          {"name": "component-datasheets", "desc": "Regulator datasheets with layout recommendations"}
+        ],
+        "outputs": [
+          {"name": "regulator-placement-plan", "desc": "Physical placement of each regulator optimized for thermal management and minimizing output-to-input coupling"},
+          {"name": "sequencing-circuit-layout", "desc": "Layout of sequencing and enable circuits ensuring signal integrity on enable/power-good nets"},
+          {"name": "supply-isolation-verification", "desc": "Verification that each supply's input and output decoupling are isolated from other supplies' noise"}
+        ],
+        "process": [
+          "Place switching regulators away from sensitive analog circuits. The switching node (where the inductor connects to the FET) radiates at the switching frequency and harmonics. Maintain at least 10 mm between a switching regulator's inductor and any sensitive analog component. If closer placement is unavoidable, orient the inductor's magnetic axis perpendicular to the sensitive circuit.",
+          "For each switching regulator: place the input capacitor, boot capacitor, and output capacitor according to the datasheet's recommended layout. The input capacitor to high-side FET to low-side FET to ground loop must be minimized (this is the hot loop that radiates). The output capacitor placement is less critical for EMI but important for output ripple.",
+          "Route power-good and enable signals as controlled signals, not afterthoughts. These signals determine sequencing order and timing. A noisy enable signal can cause false startup or glitched sequencing. Route enable signals away from switching nodes and high-di/dt traces. Add a 100 nF bypass capacitor at the enable pin if the trace is longer than 25 mm.",
+          "Verify supply isolation: each regulator's input decoupling capacitor should sit between the input trace and the regulator, not shared with other regulators. If two regulators share an input rail, each must have its own local input capacitor. The return current from each regulator's output should flow back to its own output capacitor and then to its own input capacitor, not through another regulator's ground path."
+        ],
+        "tags": ["power-supply", "sequencing", "regulator-layout", "isolation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "flex-rigid-design-method",
+    "description": "Design flex and rigid-flex PCBs: bend radius calculation, material selection for static vs dynamic flex, controlled impedance in flex regions, and reliability at rigid-to-flex transitions.",
+    "domain": "hardware",
+    "tags": ["pcb", "flex", "rigid-flex", "bend-radius", "reliability"],
+    "steps": [
+      {
+        "flow_name": "flex-application-classification",
+        "description": "Classify the flex application as static (bend once during assembly), dynamic (repeated bending in use), or flex-to-install, and select the design rules accordingly.",
+        "inputs": [
+          {"name": "application-description", "desc": "How the flex will be used: hinge, cable replacement, fold for packaging, connector elimination"},
+          {"name": "bend-cycles", "desc": "Expected number of bend cycles over product lifetime"},
+          {"name": "bend-angle", "desc": "Maximum bend angle required in degrees"}
+        ],
+        "outputs": [
+          {"name": "flex-classification", "desc": "Static flex (< 25 bends), flex-to-install (25 to 1000 bends), or dynamic flex (> 1000 bends)"},
+          {"name": "design-rule-set", "desc": "Which IPC-2223 design rules apply: copper type, layer count limits, bend radius multipliers"},
+          {"name": "material-constraints", "desc": "Copper type (rolled annealed for dynamic, electrodeposited acceptable for static), adhesive requirements, coverlay vs solder mask"}
+        ],
+        "process": [
+          "Count expected bend cycles over the product lifetime. Include assembly, service, and in-use bending. A laptop hinge that opens and closes 10 times per day for 5 years sees 18,000 cycles: that is dynamic flex and needs the most conservative design rules.",
+          "Classify: static flex allows more layers, tighter bend radius, and electrodeposited (ED) copper. Dynamic flex requires rolled annealed (RA) copper (ductile, survives repeated bending), fewer layers (ideally single-layer in the bend zone), and larger bend radius.",
+          "Select copper type: RA copper has an elongation of 20 to 30%, meaning it can stretch that much before cracking. ED copper has 5 to 10% elongation. In a dynamic flex application, the outer copper layer experiences tensile strain = t / (2 * R + t) where t is total stackup thickness and R is bend radius. This strain must stay below the copper's fatigue limit for the required cycle count.",
+          "Select coverlay vs solder mask: flexible coverlay (polyimide film adhesive-bonded over the traces) is required for all flex regions. Liquid photoimageable solder mask is too brittle for flex regions and will crack, exposing copper to corrosion and fatigue. Solder mask is used only in rigid sections and stiffened areas."
+        ],
+        "tags": ["flex-classification", "dynamic-flex", "static-flex", "copper-type"]
+      },
+      {
+        "flow_name": "bend-radius-and-layer-stack-design",
+        "description": "Calculate the minimum bend radius from material properties, layer count, and copper thickness, and design the flex stackup to meet it.",
+        "inputs": [
+          {"name": "flex-classification", "desc": "Static, flex-to-install, or dynamic"},
+          {"name": "material-constraints", "desc": "Copper type and coverlay requirements"},
+          {"name": "layer-count-in-flex", "desc": "Number of copper layers that pass through the bend zone"},
+          {"name": "copper-weight", "desc": "Copper weight on each layer in the bend zone"}
+        ],
+        "outputs": [
+          {"name": "minimum-bend-radius", "desc": "Calculated minimum bend radius in mm for the required cycle life"},
+          {"name": "flex-stackup", "desc": "Layer stackup in the flex region: copper layers, adhesive layers, polyimide substrate layers, with total thickness"},
+          {"name": "neutral-axis-location", "desc": "Position of the mechanical neutral axis and whether copper layers are balanced above and below it"}
+        ],
+        "process": [
+          "Calculate total flex thickness: sum all layers in the bend zone (copper, adhesive, polyimide substrate, coverlay). For a single-layer flex: 12 um copper + 25 um polyimide + 25 um coverlay adhesive + 25 um coverlay polyimide = 87 um total.",
+          "Apply the IPC-2223 bend radius rule: minimum bend radius = thickness * multiplier. For single-layer dynamic flex, the multiplier is 10 (R_min = 10 * t). For dual-layer dynamic flex, the multiplier is 15 to 20. For static flex, the multiplier is 6 for single-layer. These are conservative minimums.",
+          "Verify copper strain at the minimum bend radius: strain = t_total / (2 * R_bend). For 87 um thickness at R = 0.87 mm (10x multiplier): strain = 0.087 / (2 * 0.87 + 0.087) = 4.8%. RA copper's fatigue limit for 100,000 cycles is approximately 0.3% strain. So 10x is not enough for true dynamic flex at high cycle count; increase to 25x or 50x for > 10,000 cycles.",
+          "Balance the stackup about the neutral axis: place copper layers symmetrically. In a 2-layer flex, put one copper layer above and one below the polyimide core so the neutral axis falls between them. An unbalanced stackup puts copper at the maximum strain position (outermost surface), doubling the strain compared to a balanced design."
+        ],
+        "tags": ["bend-radius", "strain", "neutral-axis", "flex-stackup"]
+      },
+      {
+        "flow_name": "rigid-to-flex-transition-design",
+        "description": "Design the transition zone where rigid and flex sections meet, preventing stress concentration and delamination.",
+        "inputs": [
+          {"name": "flex-stackup", "desc": "Flex region layer stack"},
+          {"name": "minimum-bend-radius", "desc": "Bend radius driving transition zone length"},
+          {"name": "rigid-stackup", "desc": "Rigid section layer stack (more layers than flex)"}
+        ],
+        "outputs": [
+          {"name": "transition-zone-design", "desc": "Geometry of the rigid-to-flex transition: taper angle, stiffener overlap, strain relief features"},
+          {"name": "copper-routing-in-transition", "desc": "How traces are routed through the transition: staggered via placement, tear-stop features, keepout zones"},
+          {"name": "stiffener-specification", "desc": "Stiffener material, thickness, and adhesive for areas requiring mechanical support in the flex region"}
+        ],
+        "process": [
+          "The transition zone is the highest-stress area in a rigid-flex board. The abrupt change from rigid (thick, stiff) to flex (thin, flexible) creates a stress concentration at the boundary. All cracking failures in rigid-flex start here.",
+          "Design the transition with a gradual taper: the rigid section should taper toward the flex over a distance of at least 2.5 mm (IPC-2223 minimum). The taper can be achieved by stepping the rigid layers back from the flex boundary, so each layer ends at a different point.",
+          "Add tear-stop features: anchor the flex layers to the rigid section with tear-stop vias or slots at the transition boundary. These prevent the flex material from tearing or delaminating at the stress concentration. Place a row of vias 0.5 mm inside the rigid section, parallel to the flex boundary.",
+          "Route traces through the transition zone perpendicular to the flex boundary (not at an angle). Avoid vias within 1 mm of the transition boundary on the flex side. Stagger via locations (not in a straight line across the transition) to avoid creating a perforation line that could crack. In the flex region adjacent to the transition, do not place components for at least 2 mm to allow the flex to bend freely."
+        ],
+        "tags": ["transition", "rigid-flex", "stress-concentration", "delamination"]
+      },
+      {
+        "flow_name": "controlled-impedance-in-flex",
+        "description": "Achieve controlled impedance in flex sections despite the different dielectric properties and thinner construction.",
+        "inputs": [
+          {"name": "flex-stackup", "desc": "Flex region materials and thicknesses"},
+          {"name": "signal-classes", "desc": "Signals requiring impedance control in the flex region"},
+          {"name": "impedance-target", "desc": "Target impedance for flex-routed signals"}
+        ],
+        "outputs": [
+          {"name": "flex-impedance-geometry", "desc": "Trace width and spacing for target impedance in the flex stackup, accounting for polyimide Dk and adhesive Dk"},
+          {"name": "impedance-tolerance-in-flex", "desc": "Achievable impedance tolerance in flex (wider than rigid due to material variation and thinner dielectric)"},
+          {"name": "flex-routing-rules", "desc": "Routing rules specific to flex: no trace on the outer bend surface, curved traces (no right angles), hatched ground planes"}
+        ],
+        "process": [
+          "Calculate impedance using flex dielectric properties: polyimide has Dk around 3.2 to 3.5 (lower than FR-4's 4.2). Adhesive layers have Dk around 3.5 to 4.0. The effective Dk depends on the layer structure. For a microstrip on polyimide, Z0 will be higher than on FR-4 for the same geometry because the lower Dk reduces capacitance per unit length.",
+          "Expect wider impedance tolerance in flex: +/- 15% is typical for flex (vs +/- 10% for rigid). The thinner dielectric makes impedance more sensitive to thickness variation, and polyimide film has wider thickness tolerance than rigid laminate. If the protocol requires +/- 10%, the flex geometry must be designed with extra margin.",
+          "Route traces on the compression side (inner bend surface) when possible. Traces on the tension side (outer surface) experience direct tensile stress during bending and are more likely to crack. For single-sided flex, place copper on the inside of the bend.",
+          "Use hatched (crosshatched) ground planes instead of solid ground planes in flex regions. A solid copper plane makes the flex rigid and resistant to bending. A hatched ground plane (typically 50 to 70% copper coverage) maintains some reference plane integrity for impedance control while allowing the flex to bend. The impedance changes with hatch pattern: use the field solver to model the specific hatch geometry."
+        ],
+        "tags": ["impedance", "flex", "polyimide", "hatched-ground"]
+      },
+      {
+        "flow_name": "flex-reliability-testing-and-qualification",
+        "description": "Define and execute reliability testing for the flex design: bend testing, thermal cycling, and qualification criteria.",
+        "inputs": [
+          {"name": "flex-classification", "desc": "Static, flex-to-install, or dynamic classification"},
+          {"name": "minimum-bend-radius", "desc": "Design bend radius"},
+          {"name": "transition-zone-design", "desc": "Transition zone geometry"},
+          {"name": "bend-cycles", "desc": "Required cycle life"}
+        ],
+        "outputs": [
+          {"name": "bend-test-specification", "desc": "Test method: mandrel radius, bend rate, number of cycles, pass/fail criteria (resistance change, visual inspection)"},
+          {"name": "thermal-cycle-test", "desc": "Thermal cycling parameters: temperature range, dwell time, number of cycles, monitoring method"},
+          {"name": "qualification-report", "desc": "Test results with pass/fail for each criterion, any failures with root cause analysis"}
+        ],
+        "process": [
+          "Define the bend test per IPC-TM-650 2.4.3: mount the flex section on a mandrel at the minimum bend radius. Bend to the maximum angle at a controlled rate (1 cycle per second for dynamic flex). Monitor electrical continuity of all conductors during bending. Pass criteria: no resistance increase greater than 10% over the initial value for the required number of cycles.",
+          "Define thermal cycling per IPC-TM-650 2.6.7.2: cycle from -40C to +85C (or the product's operating range) with 10-minute dwells at each extreme. Minimum 500 cycles for consumer products, 1000 for industrial, 2000 for automotive. Monitor continuity after every 100 cycles. The rigid-to-flex transition zone is the most likely failure point.",
+          "For qualification, also test: peel strength of coverlay adhesion (IPC-TM-650 2.4.9), chemical resistance of coverlay (exposure to flux, cleaning solvents), and dimensional stability after reflow (flex material can shrink or bow during reflow soldering in the rigid sections).",
+          "If a bend test failure occurs: cross-section the failure point microscopically. Typical failure modes are copper cracking at the outer bend surface (bend radius too tight or wrong copper type), delamination at the adhesive interface (adhesion process issue), or cracking at the rigid-to-flex transition (stress concentration). Each failure mode has a different corrective action."
+        ],
+        "tags": ["reliability", "bend-testing", "thermal-cycling", "qualification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "design-rule-verification-method",
+    "description": "Set up and execute design rule verification: DRC, DFM, and signal integrity rule hierarchy, constraint-driven design, voltage clearance rules from IPC-2221, and a design review checklist.",
+    "domain": "hardware",
+    "tags": ["pcb", "drv", "drc", "clearance", "safety"],
+    "steps": [
+      {
+        "flow_name": "rule-hierarchy-and-constraint-setup",
+        "description": "Establish the DRC, DFM, and signal integrity rule hierarchy and set up the EDA tool's constraint manager with net classes derived from signal requirements.",
+        "inputs": [
+          {"name": "signal-classes", "desc": "All signal types with their impedance, speed, and spacing requirements"},
+          {"name": "power-rails", "desc": "All power nets with voltage levels and current requirements"},
+          {"name": "component-library", "desc": "Component footprints with pad sizes and spacing"}
+        ],
+        "outputs": [
+          {"name": "net-class-definitions", "desc": "Net classes with assigned trace widths, spacing, via sizes, and impedance targets"},
+          {"name": "rule-hierarchy", "desc": "Priority order: safety clearance > signal integrity > DFM > default routing rules"},
+          {"name": "constraint-manager-setup", "desc": "EDA tool constraint configuration file or setup instructions for the defined rules"}
+        ],
+        "process": [
+          "Define net classes by signal type: high-speed differential (USB, PCIe, Ethernet), high-speed single-ended (clock, JTAG TCK), general digital, analog, power, and high-voltage. Each class gets a set of rules: trace width (from impedance calculation), clearance to other classes (from crosstalk budget), via size (from current or impedance requirement), and length constraints.",
+          "Set the rule hierarchy: safety clearance rules (from voltage ratings) override all other rules. If two signals require 4 mil spacing for impedance but the voltage difference between them requires 8 mil per IPC-2221, the 8 mil rule wins. Signal integrity rules (impedance, length matching) override DFM rules. DFM rules (minimum annular ring, acid trap prevention) override default routing rules.",
+          "Configure the EDA tool's constraint manager: enter each net class with its rules. Assign every net to a class (no net should use default rules for a production design). Set differential pair constraints (impedance, spacing, length matching tolerance) and matched-length group constraints (DDR byte lanes, parallel buses).",
+          "Set up rule-checking automation: configure the EDA tool to run DRC continuously during routing (real-time DRC) for spacing, width, and connectivity rules. Signal integrity rules (impedance, length matching) can be checked interactively or in batch after routing. DFM rules should be checked before Gerber generation."
+        ],
+        "tags": ["constraints", "net-class", "rule-hierarchy", "eda"]
+      },
+      {
+        "flow_name": "voltage-clearance-and-safety-rules",
+        "description": "Calculate electrical clearance and creepage distances from operating voltages using IPC-2221 and safety standards, and apply them as design rules.",
+        "inputs": [
+          {"name": "operating-voltages", "desc": "All voltage levels present on the board, including transient voltages"},
+          {"name": "pollution-degree", "desc": "Environmental contamination level (1 = sealed, 2 = normal indoor, 3 = conductive pollution possible)"},
+          {"name": "safety-standard", "desc": "Applicable safety standard (IEC 62368-1, IEC 60950-1, UL 60950, etc.)"}
+        ],
+        "outputs": [
+          {"name": "clearance-table", "desc": "Minimum clearance (through air) between each voltage pair, from IPC-2221 Table 6-1 and the applicable safety standard"},
+          {"name": "creepage-table", "desc": "Minimum creepage (across surface) for safety-critical insulation barriers, from the safety standard"},
+          {"name": "design-rules-for-clearance", "desc": "EDA constraint entries for voltage-based clearance rules between specific nets or net classes"}
+        ],
+        "process": [
+          "Identify all voltage pairs that require clearance rules. This includes: power to ground, power to power (different rails), signal to signal (different voltage domains), and most critically, primary (mains-connected) to secondary (SELV) circuits. The primary-to-secondary barrier is a safety insulation barrier with specific clearance AND creepage requirements.",
+          "Calculate clearance from IPC-2221B Table 6-1: for internal conductors (conformal-coated or between layers), clearance is 0.1 mm + 0.1 mm per volt above 50V. For external conductors at sea level, bare board (no conformal coat), the requirements are more stringent. For example, 100V between bare external conductors at Pollution Degree 2 requires 0.4 mm clearance.",
+          "Calculate creepage from the safety standard: creepage depends on the voltage, pollution degree, material group (CTI of the PCB material), and the type of insulation (functional, basic, reinforced). Reinforced insulation (primary to secondary in a mains-powered device) typically requires 2x the basic insulation creepage. For FR-4 (Material Group IIIb), 240V reinforced insulation at Pollution Degree 2 requires approximately 5 mm creepage.",
+          "Implement as design rules: create net classes for primary-side and secondary-side nets. Set the clearance rule between these classes to the calculated value. For creepage, add a slot or cutout in the PCB between primary and secondary to increase the surface path length. A 1 mm wide slot adds the depth of the slot to the creepage path. Creepage is measured along the surface, including through slots."
+        ],
+        "tags": ["clearance", "creepage", "safety", "ipc-2221", "voltage"]
+      },
+      {
+        "flow_name": "dfm-rule-check-and-acid-trap-elimination",
+        "description": "Run DFM checks specific to PCB fabrication: acid traps, copper balance, annular ring, and minimum feature sizes, fixing issues before Gerber release.",
+        "inputs": [
+          {"name": "design-rules-for-clearance", "desc": "Clearance rules already applied"},
+          {"name": "fabricator-capabilities", "desc": "Minimum feature sizes the chosen fabricator can produce"},
+          {"name": "ipc-class-selection", "desc": "Selected IPC class for acceptance criteria"}
+        ],
+        "outputs": [
+          {"name": "dfm-violation-list", "desc": "All DFM violations found, categorized by severity (fatal, major, minor)"},
+          {"name": "acid-trap-locations", "desc": "Acute-angle intersections where etchant can pool, with fix instructions"},
+          {"name": "copper-balance-analysis", "desc": "Copper coverage percentage on each layer, identifying layers with significant imbalance that could cause warping or uneven etching"}
+        ],
+        "process": [
+          "Check minimum annular ring: the annular ring is the copper remaining around a drilled hole after drilling tolerance is applied. IPC-6012 Class 2 requires minimum 50 um (2 mil); Class 3 requires 50 um external and 25 um internal. The EDA tool calculates annular ring from pad size, drill size, and drill registration tolerance. If any via or through-hole pad has insufficient annular ring, increase the pad size or decrease the drill size.",
+          "Find acid traps: acute-angle intersections (< 90 degrees) between traces, or between traces and pads, trap etchant during the etching process. The trapped etchant continues etching after the rest of the board is clean, potentially opening the conductor. Check all trace intersections and pad connections. Fix by adding teardrops to pad connections (most EDA tools automate this) and rounding acute trace junctions.",
+          "Check copper balance: calculate the copper coverage percentage on each layer. If one side of the board has 80% copper and the other has 20%, the board will bow toward the low-copper side during lamination and reflow. Target copper coverage within 20% between the top and bottom halves of the stackup. Add copper thieving (non-functional copper fill) to sparse layers to improve balance.",
+          "Verify all feature sizes against the fabricator's capability: minimum trace width and space, minimum drill diameter, minimum pad size, maximum aspect ratio. Features below the fabricator's standard capability incur premium pricing or may be refused. Get the fabricator's capability document before starting the design, not after."
+        ],
+        "tags": ["dfm", "acid-trap", "copper-balance", "annular-ring"]
+      },
+      {
+        "flow_name": "signal-integrity-rule-verification",
+        "description": "Verify signal integrity rules: impedance, length matching, crosstalk, and stub lengths across all controlled nets.",
+        "inputs": [
+          {"name": "net-class-definitions", "desc": "Constraint definitions with SI rules"},
+          {"name": "rule-hierarchy", "desc": "Priority order for conflicting rules"},
+          {"name": "constraint-manager-setup", "desc": "EDA tool configuration"}
+        ],
+        "outputs": [
+          {"name": "impedance-verification-report", "desc": "Every controlled-impedance net: target, achieved (from field solver), and pass/fail"},
+          {"name": "length-matching-report", "desc": "Every matched-length group: target tolerance, achieved mismatch, and pass/fail"},
+          {"name": "crosstalk-report", "desc": "Near-end and far-end crosstalk between adjacent controlled nets, compared to budget"},
+          {"name": "stub-length-report", "desc": "Via stub lengths for all high-speed nets, compared to the lambda/10 limit at the signal's bandwidth"}
+        ],
+        "process": [
+          "Run impedance extraction on all controlled-impedance nets using the routed geometry and the fabricator-confirmed stackup. Compare extracted impedance to target. Flag any net where the impedance is outside the tolerance. Common causes: trace necked down near BGA pads (need to maintain width through the escape), reference plane void under the trace (need to check plane continuity).",
+          "Run length matching report for all matched groups: DDR byte lanes (each lane's data bits matched to its strobe, then all strobes matched to the clock), differential pairs (intra-pair matching), and bus groups (all bits of a parallel bus). Flag any group outside tolerance. Fix with serpentine length tuning.",
+          "Run crosstalk analysis on adjacent high-speed traces: extract near-end and far-end crosstalk from the 2D field solver at the actual routed spacing. Compare to the noise budget allocation for crosstalk. If crosstalk exceeds the budget, increase spacing between the victim and aggressor, or add a ground trace between them (a ground trace at the same layer, connected to the reference plane with vias, provides about 20 dB of additional isolation).",
+          "Calculate via stub lengths: for through-hole vias used by signals on inner layers, the unused portion of the via barrel is a stub that creates a resonance at f_res = c / (4 * L_stub * sqrt(Dk)). If this resonance frequency falls within the signal bandwidth, it causes insertion loss. The stub must be shorter than lambda/10 at the signal's bandwidth. If too long, use back-drilling to remove the stub (fabricator process) or use blind vias to avoid the stub entirely."
+        ],
+        "tags": ["signal-integrity", "impedance", "length-matching", "crosstalk", "stubs"]
+      },
+      {
+        "flow_name": "design-review-checklist-and-signoff",
+        "description": "Execute a structured design review using a checklist tied to the specific design's requirements and the fabricator's capabilities.",
+        "inputs": [
+          {"name": "dfm-violation-list", "desc": "DFM violations to clear"},
+          {"name": "impedance-verification-report", "desc": "SI verification results"},
+          {"name": "length-matching-report", "desc": "Length matching results"},
+          {"name": "clearance-table", "desc": "Voltage clearance verification"}
+        ],
+        "outputs": [
+          {"name": "review-checklist-completed", "desc": "Every checklist item marked pass, fail, or waived with justification"},
+          {"name": "open-issues-list", "desc": "Any items that could not be resolved with owner and target date"},
+          {"name": "release-authorization", "desc": "Sign-off that the design is ready for Gerber generation and fabricator release"}
+        ],
+        "process": [
+          "Walk through the checklist in order: schematic review items first (net connectivity, component values, power rail voltage/current), then layout review items (placement, routing, clearance, impedance, DFM), then output file review items (Gerber layers correct, drill file correct, pick-and-place file correct).",
+          "For each failed item: determine if it is a blocker (must fix before release) or a known-acceptable deviation (document the engineering justification). A DFM warning about minimum spacing on one trace may be acceptable if it is a non-critical signal and the fabricator has confirmed they can produce it. A safety clearance violation is always a blocker.",
+          "Verify the output files independently: generate Gerbers and view them in a Gerber viewer (not the EDA tool, which may show what is intended rather than what is generated). Check that every layer aligns, drill holes land on pads, solder mask openings expose the correct pads, and silkscreen text is readable and does not overlap pads.",
+          "Issue the release authorization with the signatures of the reviewer and the designer. Include the version, date, and a list of all waived items with justifications. This document becomes part of the design history file and is required for safety certification audits."
+        ],
+        "tags": ["design-review", "checklist", "signoff", "release"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,1077 @@
+[
+  {
+    "chain_name": "cmos-logic-design-method",
+    "description": "Size CMOS logic gates for speed and power using the logical effort method, select encoding styles, design clock distribution, and apply leakage reduction techniques for a target process node.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "cmos", "digital-design", "logic", "vlsi"],
+    "steps": [
+      {
+        "flow_name": "logic-path-delay-specification",
+        "description": "Extract the critical path delay target from system clock frequency, setup time, clock skew, and clock-to-q delay. Compute the available combinational delay budget and identify the logic stages on the critical path.",
+        "inputs": [
+          {"name": "target-clock-frequency", "desc": "System clock frequency in GHz"},
+          {"name": "clock-uncertainty-budget", "desc": "Clock skew, jitter, and OCV derating in picoseconds"},
+          {"name": "logic-netlist", "desc": "Gate-level netlist or RTL description of the critical path"}
+        ],
+        "outputs": [
+          {"name": "combinational-delay-budget", "desc": "Available delay for combinational logic in picoseconds after subtracting setup, clk-to-q, and uncertainty"},
+          {"name": "critical-path-stages", "desc": "Ordered list of logic gates on the critical path with their logical function"}
+        ],
+        "process": [
+          "Calculate the clock period from target frequency. Subtract flip-flop setup time (from cell library at worst-case corner), clock-to-q delay, and the full clock uncertainty budget (skew + jitter + OCV derating).",
+          "The remainder is the combinational delay budget. If negative, the target frequency is infeasible without microarchitectural changes (pipeline insertion or logic restructuring).",
+          "Trace the critical path through the netlist. List each gate type (NAND2, NOR3, INV, AOI22, etc.) in order. Record the fanout of each gate (number of loads) and the wire load estimate.",
+          "For each gate, note its logical effort (g) from the standard table: INV=1, NAND2=4/3, NOR2=5/3, NAND3=5/3, NOR3=7/3. For complex gates (AOI, OAI), compute from the transistor stack.",
+          "Compute the path logical effort G as the product of all individual gate logical efforts. Compute the path electrical effort H as the ratio of the output capacitance of the last stage to the input capacitance of the first stage."
+        ],
+        "tags": ["cmos", "timing", "critical-path"]
+      },
+      {
+        "flow_name": "logical-effort-gate-sizing",
+        "description": "Apply the method of logical effort to size each gate on the critical path for minimum delay, then adjust for power constraints.",
+        "inputs": [
+          {"name": "combinational-delay-budget", "desc": "Available delay budget in picoseconds"},
+          {"name": "critical-path-stages", "desc": "Ordered list of logic gates with logical effort values"}
+        ],
+        "outputs": [
+          {"name": "gate-sizes", "desc": "Width multiplier for each gate on the critical path relative to minimum-size"},
+          {"name": "estimated-path-delay", "desc": "Calculated path delay after sizing in picoseconds"}
+        ],
+        "process": [
+          "Compute the path effort F = G * H * B, where G is path logical effort, H is path electrical effort, and B is branching effort (product of branching factors at each stage where the signal fans out to other paths).",
+          "The minimum delay is achieved when each stage has the same stage effort f_hat = F^(1/N), where N is the number of stages. If f_hat is far from 4 (the optimal stage effort for a typical process), consider adding or removing inverter stages.",
+          "For each gate i, compute its electrical effort h_i = C_out_i / C_in_i = f_hat / g_i. From h_i and the known output load, calculate the required input capacitance, which sets the transistor widths.",
+          "Convert input capacitance to PMOS and NMOS widths. For NAND gates, the NMOS stack transistors must each be wider by the stack height factor to equalize rise and fall times. For NOR gates, the PMOS stack transistors are wider.",
+          "Verify the path delay: D = sum of (p_i + f_hat) * tau for each stage, where p_i is parasitic delay and tau is the process-dependent time constant (typically 10-20 ps in modern nodes). Compare to the delay budget.",
+          "If the delay meets budget with margin, reduce transistor sizes on non-critical stages to save power and area. Apply a 10-20% derating for wire delay not captured in the logical effort model."
+        ],
+        "tags": ["cmos", "logical-effort", "gate-sizing"]
+      },
+      {
+        "flow_name": "static-dynamic-logic-selection",
+        "description": "Evaluate whether static CMOS, domino, or other dynamic logic styles are appropriate for each critical path segment based on speed, noise margin, and testability requirements.",
+        "inputs": [
+          {"name": "gate-sizes", "desc": "Sized gate list from logical effort analysis"},
+          {"name": "estimated-path-delay", "desc": "Path delay from static CMOS sizing"}
+        ],
+        "outputs": [
+          {"name": "logic-style-assignments", "desc": "Each path segment tagged as static CMOS, foot-gated domino, or TSPC, with rationale"},
+          {"name": "revised-delay-estimate", "desc": "Updated delay estimate after logic style changes"}
+        ],
+        "process": [
+          "Static CMOS is the default. It has full rail-to-rail swing, good noise margins (approximately 40% of VDD), is ratioless, and needs no clock distribution to logic blocks. Use it unless delay is unachievable.",
+          "If static CMOS cannot meet the delay budget, evaluate domino logic for the critical stages. Domino eliminates the PMOS pull-up stack, reducing input capacitance by roughly 2x for the same drive strength. The delay improvement is typically 1.5-2x per stage.",
+          "Domino constraints: outputs are monotonic (can only transition once per cycle), so every other stage must be an inverter (creating NAND-INV-NAND domino chains). Wide OR functions (e.g., 8-input OR) are ideal candidates.",
+          "Check noise margin: domino gates have reduced noise margin during evaluation (approximately VTn above ground). Compute the charge-sharing ratio: if the internal node capacitance exceeds 10-15% of the output node capacitance, add keeper transistors or secondary precharge transistors.",
+          "For very high speed paths in clock-edge-critical circuits, evaluate true single-phase clock (TSPC) logic, which eliminates the need for complementary clocks. TSPC trades area for clock simplicity.",
+          "Assign each segment its logic style. Verify that domino-to-static interfaces have proper level conversion (typically a simple inverter). Update the delay estimate using style-specific delay models."
+        ],
+        "tags": ["cmos", "domino", "dynamic-logic"]
+      },
+      {
+        "flow_name": "clock-distribution-design",
+        "description": "Design the clock distribution network to meet skew and insertion delay targets, selecting between H-tree, mesh, and hybrid approaches based on die area and clock domain count.",
+        "inputs": [
+          {"name": "logic-style-assignments", "desc": "Logic style map showing which blocks need clock and at what phase"},
+          {"name": "target-clock-frequency", "desc": "System clock frequency"}
+        ],
+        "outputs": [
+          {"name": "clock-tree-topology", "desc": "Clock distribution architecture with buffer stages and routing plan"},
+          {"name": "skew-insertion-estimates", "desc": "Estimated clock skew and insertion delay across the die"}
+        ],
+        "process": [
+          "Calculate total clock load: sum the input capacitance of all clocked elements (flip-flops, latches, domino precharge transistors). Group loads by physical region.",
+          "For moderate die sizes with localized clock loads, use a balanced H-tree. Each branching level splits the load evenly. Size buffers at each level so each drives approximately 4x its input capacitance (optimal fan-out for minimum delay).",
+          "For large dies or when skew must be less than 5% of the clock period, use a clock mesh. The mesh shorts all H-tree endpoints together, averaging out local variations. The mesh consumes more power (short-circuit current in the mesh wires) but reduces skew to sub-picosecond levels.",
+          "For multiple clock domains, design each domain's tree independently. Place clock domain crossing synchronizers at domain boundaries. Minimize the number of domain crossings by careful floor planning.",
+          "Estimate insertion delay: count buffer stages, multiply by buffer delay, add wire RC delay for each segment. Typical insertion delay is 200-500 ps. Estimate skew as the maximum difference in insertion delay between any two endpoints.",
+          "Verify that skew plus jitter is within the clock uncertainty budget from the timing specification. If not, increase mesh density or add local clock buffers to equalize loads."
+        ],
+        "tags": ["cmos", "clock-tree", "clock-distribution"]
+      },
+      {
+        "flow_name": "voltage-scaling-leakage-analysis",
+        "description": "Analyze the trade-off between supply voltage scaling for dynamic power reduction and its effects on delay and leakage, then apply multi-threshold techniques to manage standby power.",
+        "inputs": [
+          {"name": "clock-tree-topology", "desc": "Clock distribution architecture"},
+          {"name": "gate-sizes", "desc": "Transistor sizes across the design"}
+        ],
+        "outputs": [
+          {"name": "voltage-power-delay-curves", "desc": "Power and delay as functions of VDD for the design"},
+          {"name": "leakage-mitigation-plan", "desc": "Assignment of high-Vt, standard-Vt, and low-Vt cells across the design with estimated leakage reduction"}
+        ],
+        "process": [
+          "Dynamic power scales as C * VDD^2 * f. Delay scales approximately as VDD / (VDD - Vt)^alpha where alpha is 1.0-1.5 depending on the velocity saturation regime. Plot both curves to find the minimum energy-delay product.",
+          "Subthreshold leakage scales exponentially with Vt: I_leak proportional to exp(-Vt / (n * Vt_thermal)). At advanced nodes (below 14nm), leakage can be 30-50% of total power. Gate leakage through thin oxide adds another component that scales with gate area and oxide thickness.",
+          "Apply multi-threshold CMOS (MTCMOS): use low-Vt cells only on timing-critical paths (typically 10-20% of all cells). Use high-Vt cells on non-critical paths (typically 60-70% of cells). Standard-Vt fills the remainder.",
+          "For blocks that can be power-gated during standby, insert header (PMOS) or footer (NMOS) sleep transistors between the supply rail and the block's virtual supply. Size the sleep transistor so its on-resistance causes less than 5% IR drop at peak current.",
+          "Calculate retention state requirements: if state must be preserved during sleep, use retention flip-flops (balloon latch with always-on supply) on critical registers. Each retention cell adds approximately 30-50% area overhead.",
+          "Estimate total power after MTCMOS assignment: sum dynamic power (now at the optimal VDD) plus leakage (reduced by Vt assignment plus power gating). Compare to the power budget. Iterate gate sizes if needed."
+        ],
+        "tags": ["cmos", "voltage-scaling", "leakage", "mtcmos"]
+      }
+    ]
+  },
+  {
+    "chain_name": "analog-circuit-design-method",
+    "description": "Design an analog circuit (amplifier, filter, or reference) from specification through topology selection, transistor sizing via gm/Id methodology, stability compensation, and noise analysis with Monte Carlo yield estimation.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "analog", "circuit-design", "vlsi"],
+    "steps": [
+      {
+        "flow_name": "analog-spec-to-topology-selection",
+        "description": "Translate analog performance specifications into a topology choice by evaluating gain, bandwidth, swing, power, and noise requirements against standard op-amp architectures.",
+        "inputs": [
+          {"name": "performance-specifications", "desc": "DC gain, unity-gain bandwidth, phase margin, output swing, power budget, noise, CMRR, PSRR requirements"},
+          {"name": "process-parameters", "desc": "Technology node, available Vt flavors, supply voltage, transistor models"}
+        ],
+        "outputs": [
+          {"name": "selected-topology", "desc": "Chosen op-amp architecture with annotated schematic showing each transistor's role"},
+          {"name": "topology-rationale", "desc": "Quantitative justification for why this topology meets each specification"}
+        ],
+        "process": [
+          "Check if a single-stage topology suffices: telescopic cascode provides the highest speed (single dominant pole) and best noise (only one gm in the signal path), but output swing is limited to VDD - 4*Vdsat. If swing is tight, rule it out.",
+          "Folded cascode trades one Vdsat of swing (VDD - 3*Vdsat) for the ability to handle rail-to-rail common-mode input. Speed is similar to telescopic. Use when CMRR or input range matters more than maximum swing.",
+          "Two-stage Miller compensated amplifier provides the widest output swing (VDD - 2*Vdsat) and separable gain and bandwidth. First stage sets gain and GBW; second stage sets swing and slew rate. The compensation capacitor Cc creates the dominant pole.",
+          "If DC gain exceeds 80 dB, a single cascode stage might not suffice in advanced nodes (where intrinsic gain gm*ro drops below 20). Consider gain-boosted cascode (regulated cascode) or a two-stage design.",
+          "For fully differential designs, a common-mode feedback (CMFB) circuit is required. Switched-capacitor CMFB is simpler but limits to clocked systems. Continuous-time CMFB uses a separate amplifier and is needed for continuous-time filters.",
+          "Record the topology choice with the specific quantitative reason: e.g., 'Two-stage Miller: need 80 dB gain (single-stage max is 60 dB at this node) and 0.8V output swing (telescopic gives only 0.4V at VDD=1.0V).'"
+        ],
+        "tags": ["analog", "topology", "op-amp"]
+      },
+      {
+        "flow_name": "gm-over-id-transistor-sizing",
+        "description": "Size each transistor using the gm/Id methodology, which provides a systematic way to navigate the inversion region trade-off between speed, gain, and power without relying on square-law approximations.",
+        "inputs": [
+          {"name": "selected-topology", "desc": "Op-amp topology with annotated schematic"},
+          {"name": "process-parameters", "desc": "Technology node and transistor models"}
+        ],
+        "outputs": [
+          {"name": "transistor-dimensions", "desc": "W/L for every transistor, with the gm/Id operating point and inversion coefficient"},
+          {"name": "bias-currents", "desc": "Branch current for each stage"}
+        ],
+        "process": [
+          "Generate the gm/Id lookup tables from SPICE simulation: sweep a single NMOS and PMOS transistor across Vgs at the nominal Vds. Plot gm/Id vs Id/(W/L), which is the intrinsic current density. This curve is independent of width.",
+          "For each transistor, determine the required gm from the specification it must meet. For the input pair, gm1 = GBW * 2 * pi * Cc (for a two-stage Miller). For current mirrors, gm is set by matching requirements.",
+          "Choose the gm/Id operating point on the lookup curve. High gm/Id (>20 V^-1, weak inversion) gives maximum gain and minimum power but is slow and noisy (higher flicker noise due to large W). Low gm/Id (<10 V^-1, strong inversion) gives speed and low area but wastes power.",
+          "For the input pair, target gm/Id of 15-20 V^-1 for a balance of noise and bandwidth. For cascode devices, gm/Id of 10-15 V^-1 is typical (they need moderate speed). For current mirrors, gm/Id of 5-10 V^-1 gives good matching (strong inversion).",
+          "From the chosen gm/Id and required gm, calculate Id = gm / (gm/Id). From Id and the current density at that gm/Id, calculate W/L. Choose L > Lmin for analog transistors to improve output resistance (ro proportional to L) and matching (mismatch proportional to 1/sqrt(W*L)).",
+          "Verify Vdsat at the operating point: Vdsat = 2 / (gm/Id). Ensure all transistors in a cascode stack fit within the available voltage headroom."
+        ],
+        "tags": ["analog", "gm-id", "transistor-sizing"]
+      },
+      {
+        "flow_name": "stability-compensation-design",
+        "description": "Design frequency compensation to achieve the target phase margin, handling the right-half-plane zero in Miller-compensated amplifiers and ensuring stability across PVT corners.",
+        "inputs": [
+          {"name": "transistor-dimensions", "desc": "Sized schematic"},
+          {"name": "bias-currents", "desc": "Branch currents"}
+        ],
+        "outputs": [
+          {"name": "compensation-network", "desc": "Compensation capacitor and nulling resistor values"},
+          {"name": "open-loop-response", "desc": "Simulated gain and phase vs frequency at typical and worst-case corners"}
+        ],
+        "process": [
+          "For a two-stage Miller amplifier, the compensation capacitor Cc creates the dominant pole at the output of the first stage: p1 = 1 / (2*pi*Rout1*Cc*A2), where A2 is the second-stage gain. This pole splitting pushes the non-dominant pole to higher frequency.",
+          "The non-dominant pole is at the output of the second stage: p2 approximately equals gm2 / (2*pi*CL), where CL is the load capacitance. For 60-degree phase margin, ensure that GBW < p2/2.2.",
+          "Miller compensation introduces a right-half-plane (RHP) zero at z = gm2 / (2*pi*Cc). This zero degrades phase margin. To cancel it, add a nulling resistor Rz in series with Cc: Rz = 1/gm2 moves the zero to infinity. Rz > 1/gm2 moves the zero to the left half plane to add phase boost.",
+          "Implement Rz with a triode-region MOSFET whose resistance tracks gm2 across PVT. This ensures the zero cancellation holds at all corners. Size the MOSFET so its W/L gives 1/gm2 at the bias point.",
+          "Simulate the open-loop frequency response (AC analysis) at five corners: TT, SS, FF, SF, FS, plus high and low temperatures. Verify phase margin exceeds the target (typically 60 degrees minimum) at all corners. The SS corner typically has the lowest GBW; the FF corner may have reduced phase margin due to shifted pole/zero locations.",
+          "If phase margin is insufficient, increase Cc (reduces GBW), increase gm2/CL ratio (push out p2), or add a feed-forward path from input to output stage for phase boost."
+        ],
+        "tags": ["analog", "compensation", "stability"]
+      },
+      {
+        "flow_name": "analog-noise-analysis",
+        "description": "Calculate the input-referred noise of the amplifier from thermal and flicker noise contributions of each transistor, then optimize sizing to meet the noise specification.",
+        "inputs": [
+          {"name": "transistor-dimensions", "desc": "Sized schematic with W/L and operating points"},
+          {"name": "compensation-network", "desc": "Compensation values affecting bandwidth"}
+        ],
+        "outputs": [
+          {"name": "noise-budget", "desc": "Input-referred noise spectral density and integrated noise, broken down by transistor contribution"},
+          {"name": "noise-optimized-sizes", "desc": "Adjusted W/L values if resizing was needed to meet noise spec"}
+        ],
+        "process": [
+          "Thermal noise of each transistor: Sv = 4*k*T*gamma/gm, where gamma is 2/3 for long-channel and approximately 1-1.5 for short-channel (check process documentation). Flicker noise: Sv = K/(Cox*W*L*f), where K is the flicker noise coefficient (process-dependent, typically 10x worse for NMOS than PMOS in a given process).",
+          "Input-refer each transistor's noise: multiply by the square of the gain from that transistor's gate to the input. For the input pair, the gain is 1 (their noise appears directly at the input). For cascode devices, the gain is approximately gm_cascode/gm_input, which is typically less than 0.5, so cascodes contribute little.",
+          "For load transistors (active load or current mirrors), the gain is gm_load/gm_input. Since gm_load is ideally equal to gm_input (for proper gain), load transistors contribute equally to input pair noise. To reduce their contribution, use PMOS loads (lower flicker noise) and increase their L.",
+          "Integrate the noise spectral density over the bandwidth of interest. For a wideband amplifier, integrate from the flicker noise corner frequency to the unity-gain bandwidth. The flicker corner (where 1/f noise equals thermal noise) is typically 100 kHz to 10 MHz depending on device area.",
+          "If integrated noise exceeds the spec, increase the input pair W*L product (reduces flicker noise as 1/(W*L)) and increase gm (reduces thermal noise contribution). This costs more current and area. Trade off: doubling W*L reduces flicker noise by 3 dB but doubles input capacitance.",
+          "Run SPICE noise simulation to verify. Compare the hand calculation to simulation. Discrepancies usually come from short-channel gamma values or neglected noise sources (e.g., bias current source noise injected through finite PSRR)."
+        ],
+        "tags": ["analog", "noise", "thermal-noise", "flicker-noise"]
+      },
+      {
+        "flow_name": "analog-monte-carlo-yield-estimation",
+        "description": "Run Monte Carlo simulation with process variation and mismatch models to estimate yield, identify the failing parameter, and resize devices to center the design for target yield.",
+        "inputs": [
+          {"name": "noise-optimized-sizes", "desc": "Final sized schematic"},
+          {"name": "performance-specifications", "desc": "All specs that define pass/fail"}
+        ],
+        "outputs": [
+          {"name": "yield-estimate", "desc": "Estimated yield percentage with confidence interval"},
+          {"name": "yield-limited-parameter", "desc": "The specification most likely to cause failure, with its statistical distribution"},
+          {"name": "final-design", "desc": "Design with any sizing adjustments for yield improvement"}
+        ],
+        "process": [
+          "Configure Monte Carlo simulation with both global (inter-die) and local (intra-die mismatch) variation. Global variation shifts all transistor parameters together (Vt, tox, L_eff). Local mismatch is independent per transistor and scales as 1/sqrt(W*L).",
+          "Run at least 1000 Monte Carlo iterations. For each iteration, measure all performance parameters (gain, GBW, phase margin, offset voltage, CMRR, noise). Record the full distribution of each.",
+          "Calculate yield: the fraction of iterations where ALL specifications are simultaneously met. For 3-sigma yield (99.73%), each parameter must pass with margin. Identify the yield-limited parameter (the one with the thinnest margin to its spec limit).",
+          "Offset voltage is typically yield-limited in differential amplifiers. Offset is dominated by Vt mismatch of the input pair: sigma_Vos = Avt / sqrt(W*L). If offset spec is 5 mV and sigma_Vos is 3 mV, only 90% yield. To reduce to 1 mV sigma, increase W*L by 9x.",
+          "For specifications involving absolute values (gain, bandwidth), global variation dominates. For specifications involving matching (offset, CMRR), local mismatch dominates. Address each with the appropriate countermeasure.",
+          "After resizing for yield, re-run Monte Carlo to confirm. Plot yield vs device area for the yield-limited devices to find the minimum area that meets the yield target. This is the Pareto-optimal design point."
+        ],
+        "tags": ["analog", "monte-carlo", "yield", "mismatch"]
+      }
+    ]
+  },
+  {
+    "chain_name": "pll-ic-design-method",
+    "description": "Design a phase-locked loop synthesizer from specification through architecture selection, charge pump and VCO design, loop filter calculation, and jitter analysis for on-chip integration.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "pll", "mixed-signal", "clock-generation"],
+    "steps": [
+      {
+        "flow_name": "pll-architecture-specification",
+        "description": "Define the PLL architecture from output frequency, phase noise, lock time, and spur requirements. Select integer-N vs fractional-N and determine the reference frequency.",
+        "inputs": [
+          {"name": "output-frequency-range", "desc": "Minimum and maximum output frequencies in MHz or GHz"},
+          {"name": "phase-noise-spec", "desc": "Phase noise target at specific offset frequencies (e.g., -100 dBc/Hz at 1 MHz offset)"},
+          {"name": "lock-time-requirement", "desc": "Maximum time to achieve lock in microseconds"},
+          {"name": "spur-specification", "desc": "Maximum reference spur and fractional spur levels in dBc"}
+        ],
+        "outputs": [
+          {"name": "pll-architecture", "desc": "Integer-N or fractional-N with division ratio range, reference frequency, and loop bandwidth target"},
+          {"name": "component-specifications", "desc": "Specs for each block: PFD, charge pump, loop filter, VCO, divider"}
+        ],
+        "process": [
+          "Determine the reference frequency. For integer-N, fref equals the channel spacing. For fractional-N, fref can be much higher (often 10-50 MHz), which allows wider loop bandwidth and faster lock time.",
+          "Calculate the division ratio N = fout / fref. For integer-N with narrow channel spacing, N is large (thousands), which multiplies the PFD noise by 20*log10(N) at the output. If this exceeds the close-in phase noise spec, fractional-N is required.",
+          "Set the loop bandwidth. For integer-N, bandwidth is limited to approximately fref/10 for reference spur rejection. For fractional-N, bandwidth can be fref/5 to fref/3, but fractional spurs set the practical limit. Wider bandwidth suppresses VCO phase noise at close-in offsets but passes more PFD/charge-pump noise.",
+          "Lock time is approximately 5/(2*pi*loop_bandwidth) for a critically damped loop. If the lock time spec requires wider bandwidth, fractional-N may be needed even if channel spacing alone does not require it.",
+          "Determine if sigma-delta modulation is needed for the fractional divider. A MASH 1-1-1 (third-order) modulator pushes quantization noise above the loop bandwidth. The sigma-delta order must be at least one more than the loop filter order for stability."
+        ],
+        "tags": ["pll", "architecture", "frequency-synthesis"]
+      },
+      {
+        "flow_name": "charge-pump-design",
+        "description": "Design the charge pump for the PLL, addressing current matching, dead zone elimination, charge sharing, and clock feed-through that generate reference spurs.",
+        "inputs": [
+          {"name": "pll-architecture", "desc": "PLL architecture with loop bandwidth and reference frequency"},
+          {"name": "component-specifications", "desc": "Charge pump current and matching requirements"}
+        ],
+        "outputs": [
+          {"name": "charge-pump-schematic", "desc": "Sized charge pump circuit with current matching and timing circuits"},
+          {"name": "reference-spur-estimate", "desc": "Estimated reference spur level from charge pump non-idealities"}
+        ],
+        "process": [
+          "Set the charge pump current Icp. Higher current allows smaller loop filter components but increases power and spur generation. Typical range is 50 uA to 5 mA. Icp sets the loop gain: Kpd = Icp / (2*pi) in A/rad.",
+          "Design matched up and down current sources. Current mismatch causes a static phase offset that produces reference spurs. Mismatch of 1% produces spurs approximately 20*log10(Icp_mismatch * Tpfd / (2*pi*Icp)) dBc below the carrier. Use cascode current mirrors and size transistors for matching (large L, common centroid layout).",
+          "Eliminate the dead zone: if the PFD has a dead zone (where both UP and DOWN are simultaneously off for small phase errors), noise in that region is unsuppressed. Add a minimum on-time by inserting delay in the reset path. This creates a brief period where both current sources are on simultaneously, but the net charge is zero if well matched.",
+          "Address charge sharing: when current source transistors turn off, charge stored on their drain capacitance is dumped onto the loop filter. Add dummy transistors that absorb this charge, or use a replica-biased topology where the current source drains are always near the loop filter voltage.",
+          "Estimate reference spurs: Spur_level = 20*log10(Icp_mismatch * T_mismatch * fref / (Icp * Kvco * C_total)). Each non-ideality (current mismatch, timing mismatch, charge sharing, clock feedthrough) adds a spur component. Sum them and compare to the spur specification."
+        ],
+        "tags": ["pll", "charge-pump", "spur"]
+      },
+      {
+        "flow_name": "vco-design-and-tuning",
+        "description": "Design the voltage-controlled oscillator, selecting between ring and LC topologies based on phase noise, tuning range, and area requirements, then sizing for the target frequency.",
+        "inputs": [
+          {"name": "pll-architecture", "desc": "Output frequency range and phase noise requirements"},
+          {"name": "process-parameters", "desc": "Available inductors, varactors, and transistor models in the process"}
+        ],
+        "outputs": [
+          {"name": "vco-schematic", "desc": "Sized VCO circuit with tuning curve"},
+          {"name": "vco-phase-noise-estimate", "desc": "Phase noise at key offset frequencies from Leeson's model"}
+        ],
+        "process": [
+          "Choose ring vs LC oscillator. Ring oscillators are compact (no inductors), have wide tuning range (2:1 or more), but have poor phase noise (typically -90 to -100 dBc/Hz at 1 MHz offset for GHz frequencies). LC oscillators have excellent phase noise (-110 to -130 dBc/Hz at 1 MHz) but need inductors (large area) and have limited tuning range (10-30%).",
+          "For LC VCO: Design the LC tank. The inductor Q dominates phase noise. On-chip spiral inductors in CMOS have Q of 5-15 at GHz frequencies. Use EM simulation to optimize geometry (number of turns, metal width, metal layer). The resonant frequency is f = 1/(2*pi*sqrt(L*C)).",
+          "Varactor design: MOS varactors (accumulation-mode or inversion-mode) provide the tuning capacitance. Kvco = df/dV depends on the C-V curve slope. Keep Kvco low enough that supply and substrate noise do not push the VCO, but high enough to cover the frequency range. Split the tuning range into coarse (switched capacitor bank) and fine (varactor) segments.",
+          "Apply Leeson's phase noise model: L(fm) = 10*log10((2*F*k*T / Psig) * (1 + (f0/(2*Q*fm))^2) * (1 + fc/fm)), where F is the noise factor (typically 2-3 for a cross-coupled LC VCO), Q is the loaded tank Q, fm is the offset frequency, and fc is the flicker noise corner.",
+          "For ring oscillator: phase noise scales as L(fm) = 10*log10((8*k*T*F / (N*Psig)) * (f0/fm)^2), where N is the number of stages. More stages improve phase noise by sqrt(N) but reduce maximum frequency. Minimum 3 stages for reliable oscillation.",
+          "Verify tuning range covers the PLL output range plus margin for PVT variation (typically 20-30% extra). Ensure the VCO starts up reliably: the negative resistance from the active devices must exceed the tank loss by at least 2x at the worst corner (SS, low supply)."
+        ],
+        "tags": ["pll", "vco", "oscillator", "phase-noise"]
+      },
+      {
+        "flow_name": "loop-filter-design",
+        "description": "Calculate the loop filter component values for the target loop bandwidth and phase margin, choosing between passive and active filter topologies based on integration constraints.",
+        "inputs": [
+          {"name": "charge-pump-schematic", "desc": "Charge pump current Icp"},
+          {"name": "vco-schematic", "desc": "VCO gain Kvco in Hz/V"},
+          {"name": "pll-architecture", "desc": "Loop bandwidth, phase margin, division ratio N"}
+        ],
+        "outputs": [
+          {"name": "loop-filter-values", "desc": "Component values (R, C1, C2, C3) with on-chip vs off-chip designation"},
+          {"name": "open-loop-transfer-function", "desc": "Bode plot of the open-loop gain showing crossover frequency and phase margin"}
+        ],
+        "process": [
+          "The open-loop gain is: G(s) = (Icp / (2*pi)) * Z(s) * (Kvco / s) * (1/N), where Z(s) is the loop filter impedance. For a type-II third-order PLL with a passive filter: Z(s) has one zero (from R1*C1), one pole at origin (from C1), and a high-frequency pole (from C2 and optionally C3).",
+          "Set the loop bandwidth (crossover frequency) wc. Calculate the zero frequency: wz = wc / (1 + T2/T1), where T2/T1 sets the phase margin. For 60 degrees phase margin, set T2/T1 approximately equal to tan(60 + atan(wc/wp2) - 90 + margin) which typically means the zero at wc/4 to wc/5.",
+          "Calculate C1: C1 = Icp * Kvco / (N * wc^2 * (2*pi)). Calculate R1: R1 = 1 / (wz * C1) = wc / (Icp * Kvco / (N * 2*pi)). Calculate C2: C2 is for the high-frequency pole, set at 5-10x the crossover frequency to attenuate reference spurs. C2 = C1 / (wp2/wz - 1), where wp2 is the second pole frequency.",
+          "Check if C1 can be integrated on-chip. On-chip MIM capacitors are typically 1-2 fF/um^2. If C1 exceeds 100 pF, it requires significant die area (0.05-0.1 mm^2). For very low bandwidth PLLs, the filter may need to go off-chip or use an active filter (op-amp based) to reduce capacitor values by the amplifier gain.",
+          "For an active (op-amp based) loop filter, the virtual ground eliminates the VCO control voltage ripple from charge pump current pulses, reducing reference spurs. However, the op-amp adds noise and consumes power. The capacitor values are reduced by the op-amp DC gain.",
+          "Simulate the open-loop transfer function. Verify crossover frequency and phase margin match the design targets. Check the closed-loop bandwidth and peaking (peaking > 2 dB indicates insufficient phase margin). Verify at PVT corners that the loop remains stable."
+        ],
+        "tags": ["pll", "loop-filter", "control-theory"]
+      },
+      {
+        "flow_name": "pll-jitter-analysis",
+        "description": "Analyze the PLL output jitter from all noise sources (reference, PFD, charge pump, VCO, divider), compute the transfer functions, and verify the total jitter meets the specification.",
+        "inputs": [
+          {"name": "loop-filter-values", "desc": "Loop filter components and transfer function"},
+          {"name": "vco-phase-noise-estimate", "desc": "VCO free-running phase noise"},
+          {"name": "charge-pump-schematic", "desc": "Charge pump noise spectral density"}
+        ],
+        "outputs": [
+          {"name": "jitter-budget", "desc": "RMS and peak-to-peak jitter with breakdown by noise source"},
+          {"name": "phase-noise-at-output", "desc": "Output phase noise profile showing each contributor and the total"}
+        ],
+        "process": [
+          "Each noise source sees a different transfer function to the output. Reference and charge pump noise are shaped by the closed-loop transfer function H(s) = G(s)/(1+G(s)), which is low-pass with bandwidth equal to the loop bandwidth. VCO noise is shaped by the error transfer function E(s) = 1/(1+G(s)), which is high-pass.",
+          "Reference oscillator phase noise at the output: multiply by N^2 (voltage gain of N) and by |H(jw)|^2. This dominates at offset frequencies below the loop bandwidth. A lower-noise reference or lower N directly reduces this contribution.",
+          "Charge pump noise at the output: Icp noise current spectral density is (4*k*T*gamma*gm + K/(Cox*W*L*f)) for each current source transistor. Multiply by |Z(jw) * Kvco / (s * N)|^2 * |H(jw)|^2. The flicker noise component is the main source of close-in phase noise in the PLL.",
+          "VCO phase noise at the output: multiply by |E(jw)|^2. The VCO dominates at offsets above the loop bandwidth. Wider loop bandwidth suppresses more VCO noise but passes more reference and charge pump noise. The optimal loop bandwidth is where the reference/CP noise (multiplied by N^2) equals the VCO noise.",
+          "Sum all noise contributions (in power, not amplitude) to get the total output phase noise. Integrate from the jitter measurement bandwidth lower limit (typically 12 kHz for SONET, 1 MHz for PCIe) to the upper limit (typically fout/2). RMS jitter = sqrt(2 * integral of L(f) df) / (2*pi*fout).",
+          "Convert RMS jitter to peak-to-peak using the appropriate multiplication factor (typically 14x for BER of 10^-12, assuming Gaussian distribution). Compare to the specification. If the jitter budget is tight, identify the dominant contributor and optimize that block."
+        ],
+        "tags": ["pll", "jitter", "phase-noise", "noise-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "adc-architecture-selection",
+    "description": "Select and design an analog-to-digital converter architecture from resolution and speed requirements through sampling theory, comparator design, and calibration methodology.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "adc", "mixed-signal", "data-converter"],
+    "steps": [
+      {
+        "flow_name": "adc-specification-analysis",
+        "description": "Map the ADC specifications (resolution, sampling rate, input bandwidth, power budget) to candidate architectures using the Walden figure of merit and Schreier figure of merit.",
+        "inputs": [
+          {"name": "resolution-requirement", "desc": "Effective number of bits (ENOB) or SNR/SNDR target"},
+          {"name": "sampling-rate", "desc": "Nyquist rate or oversampling rate in MS/s or GS/s"},
+          {"name": "power-budget", "desc": "Maximum power consumption in milliwatts"},
+          {"name": "input-bandwidth", "desc": "Signal bandwidth of interest"}
+        ],
+        "outputs": [
+          {"name": "candidate-architectures", "desc": "Ranked list of ADC architectures with estimated power and area for each"},
+          {"name": "selected-architecture", "desc": "Best architecture with quantitative justification"}
+        ],
+        "process": [
+          "Calculate the Walden FOM: FOM_W = Power / (2^ENOB * fs) in fJ/conversion-step. State-of-the-art SAR ADCs achieve 1-10 fJ/step. Pipeline ADCs achieve 10-100 fJ/step. Sigma-delta achieves 1-10 fJ/step at audio rates.",
+          "Calculate the Schreier FOM: FOM_S = SNDR + 10*log10(BW/Power) in dB. This FOM better captures the thermal noise limit. State-of-the-art exceeds 175 dB for SAR at moderate speeds.",
+          "Architecture selection by speed and resolution: Flash (1-8 bits, >1 GS/s, 2^N-1 comparators, extreme power), Pipeline (8-14 bits, 10 MS/s to 1 GS/s, staged conversion with residue amplification), SAR (6-18 bits, 1 kS/s to 500 MS/s, single comparator with binary search), Sigma-delta (12-24 bits, 1 kS/s to 50 MS/s, oversampling and noise shaping).",
+          "For 10-14 bits at 100 MS/s to 1 GS/s, SAR and pipeline compete. SAR has lower power at lower speeds; pipeline has a throughput advantage from pipelining. Time-interleaved SAR is increasingly dominant at 28nm and below.",
+          "For >16 bits at <10 MS/s, sigma-delta is the only practical choice. The oversampling ratio (OSR = fs/(2*BW)) determines the noise shaping benefit: each doubling of OSR adds (L+0.5)*6 dB of SNR, where L is the modulator order.",
+          "Check that the selected architecture's theoretical limits (kT/C noise, comparator metastability, quantization noise) do not preclude meeting the specification before beginning detailed design."
+        ],
+        "tags": ["adc", "architecture", "figure-of-merit"]
+      },
+      {
+        "flow_name": "sampling-and-anti-aliasing-design",
+        "description": "Design the sampling front-end including the track-and-hold circuit, analyze kT/C noise and aperture jitter limits, and specify the anti-aliasing filter.",
+        "inputs": [
+          {"name": "selected-architecture", "desc": "ADC architecture with sampling rate and resolution"},
+          {"name": "input-bandwidth", "desc": "Signal bandwidth"}
+        ],
+        "outputs": [
+          {"name": "sampling-capacitor-size", "desc": "Minimum sampling capacitor from kT/C noise constraint"},
+          {"name": "aperture-jitter-budget", "desc": "Maximum tolerable aperture jitter for the target SNR"},
+          {"name": "anti-aliasing-filter-spec", "desc": "Filter order, cutoff, and attenuation requirements"}
+        ],
+        "process": [
+          "Calculate the minimum sampling capacitor from kT/C noise: SNR_kTC = 10*log10(Vsig^2 / (kT/C)). For ENOB bits with full-scale sine wave: C_min = 12*kT / (Vfs^2 * 10^(-SNR/(10))). At room temperature with 1V full-scale and 12 ENOB, C_min is approximately 0.3 pF.",
+          "Calculate the aperture jitter limit: SNR_jitter = -20*log10(2*pi*fin*tj), where fin is the input frequency and tj is the RMS aperture jitter. For 14 bits at 100 MHz input, tj must be less than 0.12 ps. This sets the clock quality requirement.",
+          "The total SNR is: 1/SNR_total = 1/SNR_quantization + 1/SNR_kTC + 1/SNR_jitter + 1/SNR_distortion. Each must be at least 6 dB better than the target to avoid significant degradation when combined.",
+          "Design the anti-aliasing filter. The filter must attenuate out-of-band signals so that aliased components are below the noise floor. Attenuation at fs/2 must be at least SNDR + 10 dB. For sigma-delta with high OSR, the anti-aliasing requirements are relaxed because the first Nyquist zone is much narrower.",
+          "For the track-and-hold switch, calculate the on-resistance from settling time: the switch must settle to within 0.5 LSB in the available tracking time. Time constant tau = Ron * C_sample. Settling to N bits requires N*ln(2)*tau. Size the switch transistor width accordingly.",
+          "Account for switch nonlinearity: the MOSFET on-resistance varies with signal voltage (body effect and Vgs modulation). Use bootstrapped switches (gate voltage tracks the input) for >10-bit linearity, or transmission gates for lower resolution."
+        ],
+        "tags": ["adc", "sampling", "anti-aliasing", "ktc-noise"]
+      },
+      {
+        "flow_name": "comparator-design-method",
+        "description": "Design the comparator for the ADC, addressing offset, metastability probability, kickback noise, and speed requirements for the target resolution.",
+        "inputs": [
+          {"name": "selected-architecture", "desc": "ADC architecture and resolution"},
+          {"name": "sampling-capacitor-size", "desc": "Capacitor size affecting kickback sensitivity"}
+        ],
+        "outputs": [
+          {"name": "comparator-schematic", "desc": "Sized comparator circuit with preamplifier if needed"},
+          {"name": "metastability-analysis", "desc": "BER from metastability vs comparison time"}
+        ],
+        "process": [
+          "For SAR ADCs, the comparator resolves one bit per clock cycle. The regeneration time constant tau_regen = C_latch / gm_latch determines how fast the comparator resolves. Metastability probability: P_error = exp(-t_comparison / (2*tau_regen)).",
+          "For N-bit resolution at fs sampling rate, the comparator has approximately T_clk/(N+1) time to resolve (for SAR). Calculate tau_regen required for BER < 10^-15 (one error per 10^15 conversions): t_comparison > 2*tau_regen * ln(1/BER) * tau_regen. This sets the minimum gm/C ratio.",
+          "Comparator offset directly reduces ADC accuracy. For a SAR ADC, comparator offset appears as a code-dependent error. The offset sigma = Avt / sqrt(W*L) of the input pair. For 10-bit with 1V full-scale, 1 LSB = 1 mV, so sigma_offset should be < 0.5 mV (requiring large input devices).",
+          "If the required input device area for low offset is too large (slows regeneration), add a preamplifier stage. The preamplifier reduces the offset contribution of the latch by its gain A_pre: effective offset = sigma_preamp + sigma_latch/A_pre. A gain of 4-10 is typical.",
+          "Kickback noise: when the comparator regenerates, the rapid voltage swing couples through the input pair's gate-drain capacitance back to the DAC or sampling node. Quantify: delta_V_kickback = Cgd * delta_V_latch / C_dac. If this exceeds 0.5 LSB, add a kickback cancellation technique (neutralization capacitors or isolation switch).",
+          "Design the strong-ARM latch comparator for minimum energy: dynamic comparators consume power only during comparison (no static bias current). Energy per comparison = C_total * VDD^2 + I_preamp * t_preamp * VDD. Minimize total energy by balancing preamplifier gain against latch regeneration speed."
+        ],
+        "tags": ["adc", "comparator", "metastability", "kickback"]
+      },
+      {
+        "flow_name": "adc-dac-and-reference-design",
+        "description": "Design the internal DAC and reference circuits that set the ADC's linearity, covering charge redistribution, current steering, and resistor ladder topologies.",
+        "inputs": [
+          {"name": "selected-architecture", "desc": "ADC architecture determining DAC type"},
+          {"name": "resolution-requirement", "desc": "Resolution setting DAC matching requirements"}
+        ],
+        "outputs": [
+          {"name": "dac-topology-and-sizing", "desc": "DAC circuit with capacitor/current-source/resistor sizes for target INL/DNL"},
+          {"name": "reference-circuit", "desc": "Voltage or current reference design with PSRR and temperature coefficient"}
+        ],
+        "process": [
+          "For SAR ADC: charge redistribution DAC. Binary-weighted capacitor array where each capacitor is 2x the previous. Total capacitance C_total = 2^N * C_unit. For >10 bits, use a split-capacitor (bridge capacitor) architecture to reduce total capacitance from 2^N to 2^(N/2) + 2^(N/2) * C_unit.",
+          "Capacitor matching requirement: for N-bit INL < 0.5 LSB, the unit capacitor mismatch sigma_C/C must be < 1/(2^(N+1) * sqrt(6)). Mismatch scales as sigma_C/C = A_C / sqrt(W*L) for MIM capacitors, where A_C is process-dependent (typically 0.3-1% * um). This sets the minimum unit capacitor size.",
+          "For pipeline ADC: the MDAC (multiplying DAC) combines DAC and residue amplification. The op-amp gain error, capacitor mismatch, and incomplete settling all contribute to INL. Each stage needs accuracy only to the level of digital correction overlap (typically 0.5-1 bit of redundancy).",
+          "For sigma-delta ADC: the feedback DAC must be as accurate as the full-resolution output. Multi-bit DACs in the feedback loop need element mismatch shaping (data-weighted averaging) to push DAC errors out of band, or use a single-bit DAC (inherently linear but higher quantization noise).",
+          "Reference design: bandgap voltage reference provides approximately 1.2V with low temperature coefficient (10-50 ppm/C). For sub-1V supplies, use a current-mode bandgap. PSRR of the reference directly affects ADC PSRR. Add a low-noise LDO or buffer between the bandgap and the DAC reference input.",
+          "Reference noise directly adds to ADC noise. Reference noise spectral density * sqrt(bandwidth) must be less than 0.5 LSB. For a 14-bit ADC with 1V reference and 100 MHz bandwidth, the reference noise must be < 2 nV/sqrt(Hz). This typically requires a dedicated low-noise reference buffer."
+        ],
+        "tags": ["adc", "dac", "reference", "matching"]
+      },
+      {
+        "flow_name": "adc-calibration-methodology",
+        "description": "Design foreground and background calibration techniques to correct offset, gain, INL, and timing errors, enabling the ADC to exceed the raw accuracy of the analog components.",
+        "inputs": [
+          {"name": "dac-topology-and-sizing", "desc": "DAC design with expected mismatch"},
+          {"name": "selected-architecture", "desc": "ADC architecture"}
+        ],
+        "outputs": [
+          {"name": "calibration-scheme", "desc": "Calibration algorithm with convergence analysis and overhead estimate"},
+          {"name": "expected-improvement", "desc": "Pre-calibration vs post-calibration ENOB and INL/DNL"}
+        ],
+        "process": [
+          "Foreground calibration measures and corrects errors with the ADC offline (not converting signals). Inject known reference voltages and measure the ADC output code. Compute correction coefficients for offset (additive) and gain (multiplicative) for each sub-ADC or pipeline stage.",
+          "Background calibration corrects errors while the ADC continues normal operation. Split the ADC into redundant paths and compare them. Correlation-based algorithms (e.g., random chopping of DAC elements, pseudo-random perturbation injection) converge slowly but do not interrupt signal conversion.",
+          "For SAR ADC capacitor mismatch: use a foreground calibration where each MSB capacitor is measured against the sum of smaller capacitors. The error is stored in a digital lookup table. This corrects INL from capacitor mismatch. Split-capacitor SAR ADCs need bridge capacitor calibration as well.",
+          "For time-interleaved ADCs: calibrate offset, gain, and timing skew between sub-ADCs. Offset and gain use simple averaging and ratio computation. Timing skew is harder: use adaptive digital equalization, correlation-based detection (inject a known signal and measure the interleaving spur), or analog delay adjustment via varactor tuning.",
+          "For pipeline ADCs: calibrate the MDAC gain error (op-amp finite gain, capacitor ratio error) using digital correction. The redundancy bits in each stage allow the digital backend to correct residue amplification errors up to the redundancy range.",
+          "Estimate calibration overhead: coefficient storage (N_bits per coefficient * number of coefficients), calibration convergence time (number of samples for the LMS/RLS algorithm to converge), and the ENOB improvement. Typical improvements are 2-4 bits from calibration, enabling a 10-bit raw ADC to deliver 12-14 effective bits."
+        ],
+        "tags": ["adc", "calibration", "digital-correction"]
+      }
+    ]
+  },
+  {
+    "chain_name": "ic-layout-methodology",
+    "description": "Layout an integrated circuit for optimal matching, latch-up immunity, ESD protection, and signal integrity using systematic techniques for both analog and digital blocks.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "layout", "vlsi", "physical-design"],
+    "steps": [
+      {
+        "flow_name": "analog-matching-layout",
+        "description": "Apply common-centroid, interdigitation, and dummy device techniques to lay out matched transistor pairs and capacitor arrays for minimum mismatch.",
+        "inputs": [
+          {"name": "matched-device-pairs", "desc": "List of device pairs requiring matching (differential pairs, current mirrors, capacitor arrays) with matching specs"},
+          {"name": "process-design-rules", "desc": "Layout DRC rules, minimum spacings, and matching-critical rules"}
+        ],
+        "outputs": [
+          {"name": "matched-layout", "desc": "Layout for all matched structures with estimated residual mismatch"},
+          {"name": "matching-verification", "desc": "Extraction results confirming parasitic symmetry"}
+        ],
+        "process": [
+          "For differential pair transistors: use common-centroid layout. Split each transistor into multiple fingers and interleave: ABBA pattern for 2 devices. This cancels first-order gradients across the die (Vt gradient, oxide thickness gradient, stress gradient).",
+          "Orientation: place all matched transistors with the same gate orientation (either all horizontal or all vertical). Gate stress from shallow trench isolation (STI) depends on distance to the STI edge and transistor orientation. Inconsistent orientation causes systematic offset.",
+          "Add dummy devices at the ends of the array. Edge transistors have different etching and stress environments than interior transistors. Dummy devices absorb these edge effects. Connect dummy gates to VDD or VSS to avoid floating gates.",
+          "For capacitor arrays (SAR DAC): use a common-centroid arrangement for the MSB capacitors. Binary-weighted capacitors are split into unit capacitors and arranged with maximum symmetry. The unit capacitor must be large enough that edge effects (fringing capacitance) are a small fraction of total capacitance.",
+          "Route all matched signal paths with equal length and equal parasitic capacitance. Use symmetric routing: if signal A runs over metal-3, signal B must also run over metal-3 at the same distance. Guard rings around sensitive analog devices provide isolation from digital noise (substrate coupling).",
+          "Extract the layout and verify parasitic matching. Check that the parasitic capacitance mismatch on the drain nodes of a differential pair is less than the threshold set by the offset specification. Even 1 fF of asymmetric capacitance can cause measurable offset at high gm."
+        ],
+        "tags": ["layout", "matching", "common-centroid"]
+      },
+      {
+        "flow_name": "guard-ring-and-isolation-design",
+        "description": "Design guard rings, deep n-well isolation, and substrate contacts to prevent latch-up and minimize substrate noise coupling between analog and digital blocks.",
+        "inputs": [
+          {"name": "floor-plan", "desc": "Die floor plan with analog, digital, and I/O block locations"},
+          {"name": "process-design-rules", "desc": "Guard ring rules and well spacing requirements"}
+        ],
+        "outputs": [
+          {"name": "isolation-layout", "desc": "Guard ring and well isolation structures placed on the floor plan"},
+          {"name": "latchup-analysis", "desc": "Holding current and trigger current analysis for each I/O and power domain boundary"}
+        ],
+        "process": [
+          "Latch-up occurs when the parasitic PNPN thyristor (formed by PMOS source, n-well, p-substrate, NMOS source) turns on. Triggering: current injection exceeding the holding current of the parasitic thyristor, voltage transients on I/O pads, or ESD events.",
+          "Place n-well guard rings (connected to VDD) around PMOS devices and p+ substrate guard rings (connected to VSS) around NMOS devices. The guard ring intercepts minority carriers before they reach the parasitic bipolar base, increasing the trigger current by 10-100x.",
+          "At power domain boundaries (where VDD of one domain can be off while another is on), place double guard rings: both n-well and p+ rings between the domains. This prevents forward-biasing the well-substrate junction when one supply is off.",
+          "Deep n-well isolation: for sensitive analog NMOS transistors, place them in a deep n-well. This creates a fully isolated p-well that can be biased independently, blocking substrate noise from the shared p-type substrate. The noise rejection is typically 20-40 dB better than without deep n-well.",
+          "Space analog and digital blocks apart. Digital switching noise couples through the substrate with attenuation that depends on distance, substrate resistivity, and frequency. Typical guideline: 50-100 um minimum spacing for 10-bit accuracy, with substrate contacts every 20-30 um in the analog region to provide a low-impedance path to the analog ground.",
+          "Verify with substrate resistance extraction: extract the substrate resistance network between digital aggressors and analog victims. Simulate the substrate noise at the analog devices when the digital block switches. If the coupled noise exceeds 0.5 LSB equivalent, increase spacing or add more guard rings."
+        ],
+        "tags": ["layout", "guard-ring", "latch-up", "isolation"]
+      },
+      {
+        "flow_name": "electromigration-and-density-rules",
+        "description": "Size metal interconnects for electromigration lifetime targets, apply metal density fill rules, and check antenna ratios for gate oxide protection.",
+        "inputs": [
+          {"name": "routed-layout", "desc": "Fully routed layout with current estimates per net"},
+          {"name": "process-design-rules", "desc": "Electromigration current density limits, metal density rules, antenna ratios"}
+        ],
+        "outputs": [
+          {"name": "em-verified-layout", "desc": "Layout with wires sized to meet EM lifetime at operating temperature"},
+          {"name": "density-and-antenna-clean", "desc": "Layout passing metal density and antenna DRC checks"}
+        ],
+        "process": [
+          "Electromigration current density limit: J_max depends on metal layer (thicker metals carry more), temperature, and target lifetime. From Black's equation: MTTF = A * (J^-n) * exp(Ea / (k*T)), where n is approximately 2 and Ea is 0.7-0.9 eV for Cu. At 105C, typical limits are 1-2 mA/um for thin metals, 5-10 mA/um for thick top metals.",
+          "For DC current paths (power, bias): wire width must satisfy I_dc / W < J_max_dc. For AC/signal paths with average and RMS currents: use the RMS current density limit (typically 2-3x higher than DC). Clock lines need special attention: high RMS current from driving large loads.",
+          "Via electromigration: each via has a maximum current. Multiple vias in parallel share current. Use redundant vias on all high-current connections. The recommended via count is I_total / I_max_per_via with at least 2x margin.",
+          "Metal density rules: each metal layer must have density between the minimum (typically 20-30%) and maximum (typically 70-80%) within each density check window (typically 50-100 um). Insert metal fill patterns (floating or grounded) to meet density. Grounded fill near sensitive analog nets must be carefully placed to avoid additional parasitic capacitance.",
+          "Antenna rule: during fabrication, metal acts as an antenna collecting charge from plasma etch. The charge-to-gate-area ratio (antenna ratio = metal area / gate oxide area) must not exceed the process limit (typically 200-1000). If exceeded, add antenna diodes at the gate or break the metal connection across layers (jump to a higher metal and back down).",
+          "Run the full DRC suite: geometry checks, density checks, antenna checks, well proximity effect checks (for advanced nodes). Fix violations iteratively, re-extracting after significant changes to verify that fixes do not create new parasitic issues."
+        ],
+        "tags": ["layout", "electromigration", "metal-density", "antenna-rule"]
+      },
+      {
+        "flow_name": "analog-digital-floorplan-methodology",
+        "description": "Create the die floor plan that minimizes analog-digital interference, optimizes I/O placement, and manages power distribution for a mixed-signal IC.",
+        "inputs": [
+          {"name": "block-list", "desc": "All functional blocks with area estimates, I/O counts, and sensitivity classification (analog, digital, I/O)"},
+          {"name": "package-pinout", "desc": "Package pin assignment and bonding diagram"}
+        ],
+        "outputs": [
+          {"name": "die-floorplan", "desc": "Placed blocks with power domains, I/O ring, and routing channel allocation"},
+          {"name": "power-distribution-plan", "desc": "Power ring and stripe layout with IR drop estimate"}
+        ],
+        "process": [
+          "Separate analog and digital power domains completely: AVDD/AVSS and DVDD/DVSS with independent package pins and bonding wires. Connect AVSS and DVSS at one point only (star ground), at the package level, not on the die.",
+          "Place analog blocks in one corner or edge of the die, as far as possible from the digital core. Place the most sensitive analog (ADC input, VCO, reference) furthest from digital. High-speed I/O drivers generate the most substrate noise and should be placed on the opposite side of the die.",
+          "The I/O ring surrounds the core. Assign pins so that analog I/O pins are adjacent to analog blocks and digital I/O pins are adjacent to digital blocks. Do not interleave analog and digital I/O pads, as ESD clamp firing on digital pads injects current into the substrate near analog pads.",
+          "Power distribution: use a top-metal power grid (mesh) across the core. Calculate the required stripe width and spacing from the total current draw and the metal sheet resistance to keep IR drop below 5% of VDD. For analog blocks, use dedicated power stripes from the I/O ring with minimal sharing.",
+          "Allocate routing channels between blocks. Estimate the number of wires between each pair of blocks from the netlist. Ensure adequate channel width (each wire needs approximately 2x minimum pitch for comfortable routing). Reserve channels for clock and critical timing signals.",
+          "Verify the floorplan: run a quick place-and-route with the block placement fixed to check routability. Run a coarse IR drop analysis with estimated current maps. Iterate the floorplan until timing, routability, and power integrity are satisfactory before committing to detailed design."
+        ],
+        "tags": ["layout", "floorplan", "mixed-signal", "power-distribution"]
+      }
+    ]
+  },
+  {
+    "chain_name": "esd-protection-design",
+    "description": "Design electrostatic discharge protection circuits for an IC, from test model specifications through device selection, design window analysis, and verification for each I/O and power domain.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "esd", "reliability", "io-design"],
+    "steps": [
+      {
+        "flow_name": "esd-specification-and-model-selection",
+        "description": "Define ESD protection targets from the applicable test standards and translate to device-level requirements using the ESD design window.",
+        "inputs": [
+          {"name": "product-esd-requirements", "desc": "Customer or standard ESD withstand levels (HBM, CDM, system-level IEC 61000-4-2)"},
+          {"name": "io-voltage-domains", "desc": "List of I/O types with their voltage levels and speed requirements"}
+        ],
+        "outputs": [
+          {"name": "esd-design-window", "desc": "For each I/O type: trigger voltage, holding voltage, on-resistance, and maximum clamping voltage"},
+          {"name": "test-current-waveforms", "desc": "HBM and CDM current waveforms with peak currents for the target withstand levels"}
+        ],
+        "process": [
+          "HBM (Human Body Model): 100 pF capacitor through 1.5 kOhm resistor. 2 kV HBM produces 1.33 A peak current with approximately 150 ns pulse. 4 kV doubles the peak. This tests I/O to I/O and I/O to supply combinations.",
+          "CDM (Charged Device Model): models the IC itself accumulating charge, then discharging through a single pin to ground. 500 V CDM produces approximately 10 A peak current in a sub-nanosecond pulse. CDM is the dominant failure mode in automated manufacturing.",
+          "The ESD design window: the protection device must trigger (turn on) below the gate oxide breakdown voltage of the protected circuit (BVox, typically 6-8 V for thin oxide). It must clamp the voltage during the ESD event below BVox with margin (at least 20%). It must not trigger during normal operation (trigger voltage > VDD + 10% guard band).",
+          "For each I/O type, define the window: trigger voltage (V_t1 > VDD_max), holding voltage (V_hold > VDD_max to prevent latch-up during normal power-up), clamping voltage at peak ESD current (V_clamp < BVox * 0.8), and the on-resistance (Ron = (V_clamp - V_hold) / I_peak).",
+          "For power domain clamps: must sink the full ESD current from any I/O to any supply rail. The trigger mechanism is typically RC-triggered (transient detection) since there is no voltage above VDD during ESD to trigger a simple diode."
+        ],
+        "tags": ["esd", "design-window", "hbm", "cdm"]
+      },
+      {
+        "flow_name": "esd-device-selection-and-design",
+        "description": "Select and size ESD protection devices (diodes, ggNMOS, SCR, DTSCR) for each I/O based on the design window and parasitic capacitance budget.",
+        "inputs": [
+          {"name": "esd-design-window", "desc": "Design window for each I/O type"},
+          {"name": "io-voltage-domains", "desc": "I/O types with speed and capacitance constraints"}
+        ],
+        "outputs": [
+          {"name": "esd-device-designs", "desc": "Sized ESD protection devices for each I/O with estimated parasitic capacitance"},
+          {"name": "esd-current-paths", "desc": "Current path diagram for each ESD stress combination (pin-to-pin, pin-to-VDD, pin-to-VSS)"}
+        ],
+        "process": [
+          "Dual-diode protection: the simplest scheme. A diode from pad to VDD (forward-biased during positive ESD) and a diode from VSS to pad (forward-biased during negative ESD). Requires a VDD-to-VSS power clamp to provide the return path. Diode capacitance is approximately 1-2 fF per um of perimeter.",
+          "Grounded-gate NMOS (ggNMOS): used as the primary ESD device on pads with dedicated ground. Triggers via avalanche breakdown of the drain junction (typically 7-10 V in thin oxide processes). Snapback reduces the holding voltage to 3-5V. Width must be large enough that the current per unit width does not exceed the safe operating current (It2), typically 5-10 mA/um.",
+          "Silicon-controlled rectifier (SCR): highest ESD protection per unit area due to regenerative PNPN action. Very low on-resistance (0.5-1 Ohm). However, trigger voltage is high (>15V for a basic SCR) and holding voltage is very low (1-2V, latch-up risk). Diode-triggered SCR (DTSCR) uses a trigger diode string to lower the trigger voltage to within the design window.",
+          "For high-speed I/O (multi-GHz): parasitic capacitance of ESD devices degrades signal integrity. Target < 200 fF for multi-Gbps interfaces. Use smaller devices with lower capacitance and rely on distributed ESD (multiple small devices along the I/O path) or T-coil bandwidth extension.",
+          "Size each device: calculate the required width from It2 * W > I_peak_esd. Add 50% margin. Calculate parasitic capacitance from the device width and per-unit-width capacitance. Verify that the total I/O capacitance (ESD + pad + package) does not exceed the signal integrity budget.",
+          "Draw the complete current path for each stress combination. For example, positive ESD on pin A relative to VSS: current flows through the pad diode to VDD, through the VDD-VSS power clamp to VSS. Every segment of this path must be sized to carry the ESD current without metal fusing."
+        ],
+        "tags": ["esd", "ggNMOS", "scr", "device-design"]
+      },
+      {
+        "flow_name": "power-clamp-design",
+        "description": "Design the VDD-to-VSS power clamp that provides the ESD current return path between supply domains, using RC-triggered transient detection.",
+        "inputs": [
+          {"name": "esd-current-paths", "desc": "Current paths showing which supply domains need clamping"},
+          {"name": "test-current-waveforms", "desc": "Peak ESD current and pulse duration"}
+        ],
+        "outputs": [
+          {"name": "power-clamp-circuit", "desc": "Sized RC-triggered clamp with transient detector and big FET"},
+          {"name": "power-clamp-verification", "desc": "Simulated clamping voltage and false triggering immunity"}
+        ],
+        "process": [
+          "The power clamp must turn on during ESD events (fast transients, 5-100 ns rise time) but remain off during normal power-up (millisecond rise time). An RC network with time constant of 100 ns to 1 us provides this discrimination.",
+          "RC trigger circuit: R*C time constant must be longer than the ESD pulse duration (approximately 150 ns for HBM) but much shorter than power supply ramp time (typically 1-10 ms). Typical values: R = 10-100 kOhm, C = 1-10 pF. The RC output drives a chain of inverters that turn on the big clamp MOSFET.",
+          "Size the big MOSFET (N-channel from VDD to VSS): it must carry the full ESD peak current with clamping voltage below the design window limit. Calculate: W_clamp = I_peak / (J_safe * (V_clamp - Vt) / 2), where J_safe is the safe current density per unit width for the ESD pulse duration.",
+          "Add a feedback path to ensure the clamp stays on for the full ESD pulse duration, even after the RC voltage decays. A self-biasing latch or a sized feedback inverter chain provides this. But ensure the latch releases before VDD ramps up during normal power-on.",
+          "For multi-domain ICs: place clamps between every supply domain pair that can see ESD current. If domains share a substrate, substrate diodes may provide some path, but dedicated clamps are more reliable and lower impedance.",
+          "Simulate with a SPICE transient analysis: inject the HBM current waveform (1.33A peak, 10ns rise, 150ns decay) into the VDD rail with VSS grounded. Measure the clamping voltage. Then simulate normal power-up (1V ramp in 1ms) and verify the clamp does not falsely trigger (no supply sag or current spike)."
+        ],
+        "tags": ["esd", "power-clamp", "transient-detection"]
+      },
+      {
+        "flow_name": "cdm-protection-methodology",
+        "description": "Address CDM protection for sensitive internal nodes, particularly thin-oxide gates directly connected to I/O through pass transistors or transmission gates.",
+        "inputs": [
+          {"name": "esd-device-designs", "desc": "I/O level ESD protection already designed"},
+          {"name": "internal-circuit-topology", "desc": "Schematic showing sensitive gates connected near I/O paths"}
+        ],
+        "outputs": [
+          {"name": "cdm-protection-additions", "desc": "Additional protection structures for CDM-sensitive nodes"},
+          {"name": "cdm-simulation-results", "desc": "Voltage at sensitive gates during CDM event"}
+        ],
+        "process": [
+          "CDM is fundamentally different from HBM: the energy is stored on the IC package capacitance (1-20 pF), and the discharge is extremely fast (sub-nanosecond rise time, total duration 1-3 ns). Peak currents reach 5-15 A but for very short duration.",
+          "The fast rise time means wire inductance matters. A 1 nH bond wire carries 15 A gives V = L*di/dt = 1e-9 * 15 / 0.5e-9 = 30 V. This voltage appears across the internal circuit before the I/O ESD clamp has time to turn on. Even if the clamp triggers, the inductance holds voltage at the internal node.",
+          "Identify CDM-vulnerable nodes: any thin-oxide gate that connects to a pad through a low-impedance path (MOS switch, transmission gate, ESD diode). The gate oxide of a 5nm-thick gate fails at approximately 5-6V, well below the CDM-induced voltage.",
+          "Add local clamp diodes at each vulnerable gate node. These small diodes (50-100 um wide) clamp the local voltage before it reaches oxide breakdown. Place them physically close to the protected gate (within 20 um) to minimize wire inductance between the clamp and the gate.",
+          "For capacitive DAC inputs in ADCs: the CDM current flows through the sampling switch directly to the capacitor array. Add reverse-biased protection diodes at the switch output that turn on before the oxide reaches breakdown. Size to carry the CDM peak current for the sub-nanosecond pulse.",
+          "Simulate CDM using a VFTLP (Very Fast TLP) model: 1 ns pulse with 100 ps rise time. Include package parasitics (bond wire inductance, pad capacitance). Measure the voltage at each sensitive gate. All gates must stay below 80% of oxide breakdown voltage during the CDM event."
+        ],
+        "tags": ["esd", "cdm", "gate-oxide", "local-clamp"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-variation-methodology",
+    "description": "Analyze and design for semiconductor process variation using corner models, Monte Carlo simulation, statistical design centering, and post-silicon trim to achieve target yield.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "process-variation", "yield", "design-centering"],
+    "steps": [
+      {
+        "flow_name": "variation-source-identification",
+        "description": "Catalog the sources of process variation affecting circuit performance, distinguish global from local effects, and quantify their magnitudes from process documentation.",
+        "inputs": [
+          {"name": "process-documentation", "desc": "PDK documentation, process control monitor data, and foundry-provided variation statistics"},
+          {"name": "circuit-schematic", "desc": "The circuit under analysis"}
+        ],
+        "outputs": [
+          {"name": "variation-catalog", "desc": "Each variation source with its magnitude, spatial correlation, and which circuit parameters it affects"},
+          {"name": "sensitivity-ranking", "desc": "Circuit parameters ranked by sensitivity to process variation"}
+        ],
+        "process": [
+          "Global (inter-die) variations affect all devices on a die identically: Vt shift, tox variation, Leff variation, metal thickness. These cause all NMOS on a die to be simultaneously fast or slow. Magnitude: Vt variation is typically 30-60 mV (3-sigma) for standard devices.",
+          "Local (intra-die) mismatch: random dopant fluctuation, line edge roughness, oxide thickness granularity. These are independent between neighboring devices. Mismatch scales inversely with sqrt(W*L): sigma_Vt = Avt / sqrt(W*L), where Avt is 3-8 mV*um for modern processes.",
+          "Systematic variation: depend on layout context. STI stress changes mobility by 5-20% depending on distance to STI edge. Well proximity effect shifts Vt by 10-30 mV near well boundaries. Metal density affects CMP uniformity, changing wire thickness and resistance by 5-10%.",
+          "For each circuit performance parameter (gain, offset, bandwidth, delay), compute the sensitivity to each variation source. Use small-signal perturbation: delta_performance / delta_parameter * sigma_parameter gives the performance variation contribution from that source.",
+          "Rank the variation sources by their impact on the yield-limiting parameter. Typically for analog: Vt mismatch dominates offset, global Vt shift dominates speed, and systematic stress variations dominate gain asymmetry.",
+          "Document the complete variation catalog with magnitudes and correlations. This becomes the input to corner model selection and Monte Carlo simulation setup."
+        ],
+        "tags": ["process-variation", "mismatch", "sensitivity"]
+      },
+      {
+        "flow_name": "corner-model-simulation",
+        "description": "Set up and run process corner simulations to verify that the circuit meets specifications across the full global PVT (process, voltage, temperature) space.",
+        "inputs": [
+          {"name": "variation-catalog", "desc": "Process variation sources and magnitudes"},
+          {"name": "circuit-schematic", "desc": "Sized circuit to simulate"}
+        ],
+        "outputs": [
+          {"name": "corner-simulation-results", "desc": "Performance at each PVT corner with pass/fail against specifications"},
+          {"name": "worst-case-corners", "desc": "The specific corners that limit each performance parameter"}
+        ],
+        "process": [
+          "Standard corners: TT (typical-typical), SS (slow NMOS, slow PMOS), FF (fast-fast), SF (slow NMOS, fast PMOS), FS (fast NMOS, slow PMOS). SS and FF capture the global shift extremes. SF and FS capture the skew between NMOS and PMOS.",
+          "Voltage corners: VDD +/- 10% (or as specified). Low VDD degrades speed and headroom. High VDD increases power and may cause reliability issues (hot carrier degradation, oxide stress).",
+          "Temperature corners: typically -40C to 125C (or junction temperature up to 150C). Cold temperature increases Vt (slower digital, better subthreshold leakage) but improves mobility (faster analog transconductance). Hot temperature decreases Vt, increases leakage, and degrades mobility.",
+          "Cross all corners: the full matrix is 5 process * 3 voltage * 3 temperature = 45 combinations. Not all are physically meaningful (SS at hot is typically worst for speed; FF at cold may be worst for hold timing). Run the full matrix for signoff, but focus debug effort on the known worst cases.",
+          "For each performance parameter, identify the worst-case corner. Speed: SS, low VDD, hot. Power: FF, high VDD, hot. Setup timing: SS, low VDD, hot. Hold timing: FF, high VDD, cold. Offset: SF or FS (skew-limited). Noise: SS, low VDD (lower gm).",
+          "If any corner fails specification, determine the root cause (which variation source) and redesign: increase headroom margin (larger Vdsat), add tracking bias circuits (bandgap-referenced), or widen transistors to reduce sensitivity."
+        ],
+        "tags": ["process-variation", "corner-simulation", "pvt"]
+      },
+      {
+        "flow_name": "monte-carlo-statistical-analysis",
+        "description": "Configure and run Monte Carlo simulation to capture the combined effect of global and local variation, estimate yield, and identify the parametric yield limiter.",
+        "inputs": [
+          {"name": "corner-simulation-results", "desc": "Corner results confirming the design passes at all fixed corners"},
+          {"name": "variation-catalog", "desc": "Variation sources with statistical parameters"}
+        ],
+        "outputs": [
+          {"name": "statistical-distributions", "desc": "Distribution of each performance parameter from Monte Carlo"},
+          {"name": "yield-estimate", "desc": "Parametric yield with the yield-limiting parameter identified"},
+          {"name": "correlation-data", "desc": "Which performance parameters are correlated (fail together) vs independent"}
+        ],
+        "process": [
+          "Configure Monte Carlo with both global and local variation enabled. Global variation: one random draw per die applied to all devices. Local variation: independent random draw per device. Ensure the SPICE models support both (typically separate model cards or flags).",
+          "Run at least 1000 points for initial yield estimation. For high-yield targets (>99.9%), use 10,000+ points or importance sampling to capture tail events. Each Monte Carlo point simulates the full circuit with a unique set of random parameters.",
+          "For each point, measure all performance parameters. Create histograms and fit distributions. Most parameters are approximately Gaussian. Check for bimodal distributions (indicating a design with two distinct operating modes under variation).",
+          "Calculate parametric yield: the fraction of Monte Carlo points where ALL parameters simultaneously meet specification. The yield-limiting parameter is the one whose specification boundary has the most failures nearby. Plot the cumulative distribution of each parameter against its specification to visualize margin.",
+          "Check for correlated failures: do points that fail one spec also tend to fail another? If so, fixing one failure mode automatically fixes the other. Use scatter plots of pairs of parameters to identify correlations. Strong correlations reduce the effective dimensionality of the yield optimization problem.",
+          "If yield is below target, perform a sensitivity analysis: which variation source contributes most to the yield-limiting parameter's spread? Address that source first (increase device size for mismatch, add tracking bias for global variation, add symmetry for systematic variation)."
+        ],
+        "tags": ["process-variation", "monte-carlo", "yield-estimation"]
+      },
+      {
+        "flow_name": "design-centering-optimization",
+        "description": "Adjust design parameters to maximize yield by centering the design within the feasible region of the specification space using statistical optimization techniques.",
+        "inputs": [
+          {"name": "statistical-distributions", "desc": "Monte Carlo distributions of performance parameters"},
+          {"name": "yield-estimate", "desc": "Current yield and yield limiter"},
+          {"name": "circuit-schematic", "desc": "Sized circuit with adjustable parameters"}
+        ],
+        "outputs": [
+          {"name": "centered-design", "desc": "Optimized transistor sizes and bias points for maximum yield"},
+          {"name": "improved-yield", "desc": "New yield estimate after centering"}
+        ],
+        "process": [
+          "Identify the adjustable design parameters: transistor W/L ratios, bias currents, compensation values. These are the optimization variables. Each has a physical minimum and maximum.",
+          "Define the feasible region: the set of design parameters where all specifications are simultaneously met at the typical corner. The Monte Carlo results show the spread around each design point. Yield is maximized when the nominal design point is centered within the feasible region.",
+          "Use the Simplicial approximation or ellipsoidal methods: compute the distance from the nominal design point to each specification boundary in the parameter space (normalized by the standard deviation in that direction). The design is centered when these distances are equalized.",
+          "For practical optimization: use an iterative approach. Take the yield-limiting parameter, adjust the design to improve its mean or reduce its variance (increase relevant device sizes), re-run Monte Carlo, check if a different parameter became the new limiter, and repeat.",
+          "Trade-offs: increasing device sizes for better matching increases area and capacitance (slower). Increasing bias current for wider bandwidth costs power. The optimization finds the Pareto frontier: the minimum area (or power) design that meets the yield target.",
+          "After centering, re-run the full Monte Carlo to confirm the yield improvement. Compare the yield-limiting parameter before and after. Typical improvements are 5-15% absolute yield increase from design centering alone."
+        ],
+        "tags": ["process-variation", "design-centering", "optimization"]
+      },
+      {
+        "flow_name": "post-silicon-trimming-design",
+        "description": "Design on-chip trim and calibration circuits that correct process variation after fabrication, enabling precision beyond what the untrimmed design can achieve.",
+        "inputs": [
+          {"name": "yield-estimate", "desc": "Current yield showing which parameters still fail after centering"},
+          {"name": "centered-design", "desc": "Optimized design"}
+        ],
+        "outputs": [
+          {"name": "trim-circuit-design", "desc": "Trimming circuits with resolution, range, and storage mechanism"},
+          {"name": "trim-augmented-yield", "desc": "Yield after trimming, with test time estimate"}
+        ],
+        "process": [
+          "Identify parameters that benefit from trimming: offset voltage, reference voltage, oscillator frequency, and bias current are the most common. Trimming corrects the residual variation that design centering cannot eliminate without excessive area.",
+          "Trim resolution: the trim step must be smaller than the required accuracy. For a 1 mV offset specification, the trim step must be < 0.5 mV. Trim range: must cover the 3-sigma (or target sigma) variation range. Number of trim bits = ceil(log2(range / step)).",
+          "Trim implementation: switched current sources (binary-weighted MOSFET array) for bias current trim, switched capacitors for frequency or offset trim, resistor trim (laser or e-fuse). E-fuses (electrically programmable) are preferred for post-package trim: program by forcing high current (10-20 mA) through a thin metal link.",
+          "One-time programmable (OTP) storage: e-fuses or anti-fuses for permanent trim. MTP (multi-time programmable): floating-gate or charge-trap cells allow re-trimming. SRAM-based trim loads from external memory at power-up (no permanent storage, but unlimited adjustability).",
+          "Trim algorithm: for each die on the wafer, the ATE (automated test equipment) measures the parameter, calculates the optimal trim code, and programs it. Test time per trim = measurement time + programming time + verification time. For production, total trim time must be under 100 ms per parameter to keep test costs acceptable.",
+          "Calculate the trim-augmented yield: untrimmed yield is the fraction within spec before trimming. Trimmed yield is the fraction within spec after applying the optimal trim code. If the trim range covers +/- 3 sigma and the resolution is < 0.5 sigma, trimmed yield exceeds 99.9% for that parameter."
+        ],
+        "tags": ["process-variation", "trimming", "calibration", "yield"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-integrity-ic-design",
+    "description": "Design the on-chip power distribution network for an integrated circuit, analyzing IR drop, electromigration, decoupling, and substrate noise to meet supply integrity targets.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "power-integrity", "ir-drop", "vlsi"],
+    "steps": [
+      {
+        "flow_name": "power-grid-topology-design",
+        "description": "Select and size the on-chip power grid topology (mesh, tree, or hybrid) to meet the IR drop target across the die at peak current demand.",
+        "inputs": [
+          {"name": "current-map", "desc": "Peak and average current demand by die region, from gate-level power analysis"},
+          {"name": "metal-stack", "desc": "Available metal layers, sheet resistance per layer, via resistance"}
+        ],
+        "outputs": [
+          {"name": "power-grid-layout", "desc": "Power stripe widths, spacings, and routing layers with mesh topology"},
+          {"name": "static-ir-drop-map", "desc": "IR drop at each point on the die under peak DC current"}
+        ],
+        "process": [
+          "The IR drop target is typically 5-10% of VDD. At VDD = 0.8V, this is 40-80 mV. This budget covers the entire path from package pin to the transistor's virtual VDD: bond wire (5-20 mV), package trace (5-15 mV), C4 bump (1-5 mV), and on-chip grid (the remainder).",
+          "Power grid topology: a mesh (orthogonal stripes on alternating metal layers) is the standard approach. Top-level metals (thickest, lowest resistance) carry the bulk current from the C4 bumps. Lower metals distribute locally. Via arrays connect the layers.",
+          "Size the top-metal stripes: sheet resistance of top metal is typically 10-20 mOhm/sq. For a stripe of width W carrying current I over length L, IR drop = R_sheet * L / W * I. Set W so that the drop for the longest stripe is within budget.",
+          "Via arrays between power stripes: each via has resistance of 1-5 Ohm. For high-current connections, use arrays of hundreds of vias. The via array resistance = R_via / N_vias. Ensure sufficient vias that the total via resistance is negligible compared to the stripe resistance.",
+          "Run a static IR drop analysis: apply the peak current map to the power grid RC model. Solve for voltage at every node. Identify hot spots where IR drop exceeds the target. Add wider stripes or additional stripes in those regions.",
+          "For multi-supply domains: each domain gets its own grid. At domain boundaries, use isolation cells (level shifters) that tolerate the IR-drop-induced voltage difference between domains. Cross-domain coupling through shared substrate requires guard rings at boundaries."
+        ],
+        "tags": ["power-integrity", "ir-drop", "power-grid"]
+      },
+      {
+        "flow_name": "dynamic-ir-drop-analysis",
+        "description": "Analyze the transient voltage droop during high-activity events (clock edges, burst computation) and design the decoupling capacitor network to limit dynamic IR drop.",
+        "inputs": [
+          {"name": "power-grid-layout", "desc": "Power grid from static analysis"},
+          {"name": "switching-activity", "desc": "Time-domain current waveform showing current spikes during switching events"}
+        ],
+        "outputs": [
+          {"name": "dynamic-drop-profile", "desc": "Worst-case voltage droop magnitude and duration during switching events"},
+          {"name": "decoupling-capacitor-plan", "desc": "Placement and sizing of on-chip decoupling capacitors"}
+        ],
+        "process": [
+          "Dynamic IR drop occurs when current demand changes faster than the power grid plus package can respond. The voltage droops by delta_V = L_pkg * di/dt + R_grid * delta_I, where L_pkg is the package inductance (typically 100 pH to 1 nH per bump).",
+          "The worst case is typically the first clock edge after a period of inactivity, when all gates switch simultaneously. The current step can be 10-100x the average current, lasting for one clock period. This creates a voltage droop that can cause timing failures.",
+          "On-chip decoupling capacitors provide local charge storage to supply the transient current before the package can respond. The required decoupling: C_decap > I_transient * dt / delta_V_allowed, where dt is the response time of the package inductance.",
+          "MOS decoupling capacitors: thin-oxide NMOS in accumulation mode provides approximately 10 fF/um^2. Place in unused spaces (white space) throughout the digital core. For a 10 mm^2 die with 10% white space, available decap is approximately 10 nF. Compare to the requirement.",
+          "Placement matters: decoupling capacitors must be physically close to the current consumers. A decap 500 um away is connected through grid resistance and inductance that limits its effectiveness at high frequencies. Distribute decaps evenly, with extra concentration near high-activity blocks (clock buffers, wide bus drivers).",
+          "Simulate the dynamic IR drop: apply the time-domain current waveform to the power grid RLC model (including package model). Check the voltage at each node versus time. The worst droop must stay within the dynamic IR drop budget (typically 10-15% of VDD for digital, 2-5% for analog)."
+        ],
+        "tags": ["power-integrity", "dynamic-ir-drop", "decoupling"]
+      },
+      {
+        "flow_name": "em-aware-grid-verification",
+        "description": "Verify that all power grid wires and vias meet electromigration lifetime requirements under the actual current distribution from the power analysis.",
+        "inputs": [
+          {"name": "power-grid-layout", "desc": "Sized power grid"},
+          {"name": "current-map", "desc": "Current distribution across the grid from dynamic simulation"}
+        ],
+        "outputs": [
+          {"name": "em-analysis-results", "desc": "Current density map with EM violations highlighted"},
+          {"name": "em-fixes", "desc": "Wire widening and via additions needed to resolve violations"}
+        ],
+        "process": [
+          "Extract the current through every segment of the power grid from the IR drop simulation. For each segment, calculate the current density J = I / (W * T), where W is the wire width and T is the metal thickness.",
+          "Compare J to the EM limit for that metal layer. DC (unidirectional) current has the strictest limit. AC (bidirectional) current has a higher limit (typically 2-3x) because the atomic migration partially reverses each half-cycle. Clock networks carry AC current; power grids carry predominantly DC.",
+          "For vias: each via has a maximum current. If the current through a via array exceeds N * I_max_via, add more vias. For reliability, design for 50% utilization (each via carries at most half its maximum).",
+          "The EM lifetime depends exponentially on temperature (Black's equation): doubling temperature typically reduces lifetime by 4-8x. Use the worst-case junction temperature for the EM check, not the typical temperature.",
+          "Fix EM violations by widening the offending wire segment, adding parallel stripes, or increasing the via array size. Re-run the IR drop analysis after changes to ensure the fixes do not create new IR drop hot spots.",
+          "Sign off: the EM check must pass at the maximum specified junction temperature (typically 125C) for the product lifetime (typically 10 years for consumer, 15-20 years for automotive). Apply appropriate acceleration factors from the EM model."
+        ],
+        "tags": ["power-integrity", "electromigration", "reliability"]
+      },
+      {
+        "flow_name": "substrate-noise-coupling-analysis",
+        "description": "Analyze noise injection into the substrate from digital switching and assess its impact on sensitive analog circuits sharing the die.",
+        "inputs": [
+          {"name": "die-floorplan", "desc": "Block placement with analog and digital locations"},
+          {"name": "switching-activity", "desc": "Digital switching current waveforms"}
+        ],
+        "outputs": [
+          {"name": "substrate-noise-map", "desc": "Noise voltage at each analog block location from digital switching"},
+          {"name": "mitigation-recommendations", "desc": "Guard ring, spacing, and biasing changes to reduce coupling below threshold"}
+        ],
+        "process": [
+          "Digital circuits inject noise into the substrate through two mechanisms: (1) capacitive coupling from switching drains through the drain-substrate junction capacitance, (2) resistive coupling through substrate contacts carrying bounce current from simultaneous switching output (SSO).",
+          "Model the substrate as a 3D resistive network. Substrate resistivity in bulk CMOS is typically 10-20 Ohm*cm for p-type. For high-resistivity substrates (used in RF), 1000+ Ohm*cm. Higher resistivity provides better isolation at DC but worse at high frequency (less capacitive bypassing).",
+          "Calculate the coupling: noise voltage at the analog location = substrate noise current * mutual impedance between digital injector and analog sensor. The mutual impedance decreases with distance approximately as 1/r for a point source in a conductive half-plane.",
+          "Sensitive nodes in analog circuits: the bulk terminal of NMOS transistors sitting in the p-substrate. Substrate voltage variation modulates Vt through the body effect: delta_Vt = gamma * delta_Vsb / (2*sqrt(2*phi_F + Vsb)), where gamma is the body effect coefficient (typically 0.3-0.5 V^0.5).",
+          "Mitigation: (1) Deep n-well under sensitive analog NMOS (isolates from substrate noise by 20-40 dB), (2) Dense substrate contacts around analog blocks (reduce local substrate resistance), (3) Increase physical separation (each doubling of distance reduces coupling by approximately 6 dB), (4) Separate analog and digital VSS at the die level (connect at package only).",
+          "Simulate with a substrate extraction tool: extract the substrate RC network between identified aggressor and victim locations. Inject the digital switching current waveform and measure the voltage at analog nodes. Compare to the analog sensitivity threshold (e.g., 1 mV for a 10-bit ADC with 1V reference)."
+        ],
+        "tags": ["power-integrity", "substrate-noise", "mixed-signal"]
+      }
+    ]
+  },
+  {
+    "chain_name": "digital-physical-design-flow",
+    "description": "Execute the digital physical design flow from synthesis through placement, clock tree synthesis, routing, and sign-off extraction and timing analysis for an ASIC.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "physical-design", "asic", "digital-backend"],
+    "steps": [
+      {
+        "flow_name": "synthesis-constraint-setup",
+        "description": "Translate RTL timing requirements into synthesis constraints (SDC) and configure the synthesis tool for the target PPA (performance, power, area).",
+        "inputs": [
+          {"name": "rtl-design", "desc": "Verified RTL code (Verilog/VHDL)"},
+          {"name": "timing-requirements", "desc": "Clock frequency, I/O timing, multicycle paths, false paths"},
+          {"name": "target-library", "desc": "Standard cell library for the target process and voltage corner"}
+        ],
+        "outputs": [
+          {"name": "synthesis-constraints-sdc", "desc": "SDC file with clocks, I/O delays, exceptions, and design rule constraints"},
+          {"name": "synthesized-netlist", "desc": "Gate-level netlist meeting timing constraints"}
+        ],
+        "process": [
+          "Define clocks in SDC: create_clock with period, waveform edges, and uncertainty. Clock uncertainty at synthesis should include estimated post-layout skew plus jitter. Typical pre-layout uncertainty: 200-500 ps depending on clock frequency and methodology.",
+          "Set input and output delays: set_input_delay and set_output_delay define when data arrives at input ports and when it must be stable at output ports relative to the clock. These come from the interface timing budget (board-level or chip-to-chip).",
+          "Define timing exceptions: set_false_path for paths that never propagate functionally (e.g., between asynchronous clock domains, test-only paths). set_multicycle_path for paths allowed more than one clock cycle (gray-code logic, pipelined buses with valid signals).",
+          "Set area and power constraints: set_max_area as a target (synthesis will optimize to meet timing first, then area). Power intent through UPF: define power domains, isolation cells, level shifters, retention registers if the design has multiple power states.",
+          "Run synthesis: the tool maps RTL to standard cells, optimizes for timing (meet setup at worst corner), applies design rule fixes (max fanout, max transition, max capacitance). Use multi-corner multi-mode (MCMM): optimize simultaneously for setup at slow corner and hold at fast corner.",
+          "Review synthesis results: check timing slack at all corners (positive slack means timing met), area utilization (target 70-80% for routability), power estimate (toggle-rate-based), and cell count. If timing is negative, review the critical path and consider micro-architectural changes."
+        ],
+        "tags": ["synthesis", "sdc", "timing-constraints"]
+      },
+      {
+        "flow_name": "floorplanning-and-power-planning",
+        "description": "Create the physical floorplan with macro placement, blockage definition, I/O placement, and power ring/stripe design to meet IR drop and routability targets.",
+        "inputs": [
+          {"name": "synthesized-netlist", "desc": "Gate-level netlist with area and pin information"},
+          {"name": "die-size-target", "desc": "Target die dimensions and I/O ring configuration"}
+        ],
+        "outputs": [
+          {"name": "floorplan", "desc": "Placed macros, I/O pads, and blockage definitions"},
+          {"name": "power-plan", "desc": "Power rings and stripes with estimated IR drop"}
+        ],
+        "process": [
+          "Place hard macros (SRAMs, analog blocks, PLLs): locate close to their I/O connections to minimize wire length. Maintain minimum spacing between macros for routing channels. Add placement and routing blockages around macros to prevent standard cells from being placed too close (cell-to-macro spacing rule).",
+          "Create power rings around the core and around each macro. Ring width is set by the EM current limit and the current draw of the enclosed region. Typical top-metal ring width: 5-20 um. Add power stripes across the core connecting the rings, spaced to meet the IR drop target.",
+          "Via down from the power stripes to the standard cell power rails (typically on metal-1). Each via stack must be sized to carry the local current demand. Use via arrays, not single vias, for power connections.",
+          "Define placement regions: group related logic (clock domain, pipeline stage, data-path slice) into soft regions to guide placement for better timing and lower wire length. Do not over-constrain: leave the placer freedom to optimize globally.",
+          "Run trial placement (coarse): check congestion (regions where routing demand exceeds available tracks), timing (are macro placements creating long wire detours?), and power grid IR drop with estimated switching activity. Iterate the floorplan to resolve congestion hot spots.",
+          "Finalize I/O pad placement: pads are typically placed on a fixed pitch on the die perimeter. Assign signal pins to minimize wirelength to their internal logic. Place power and ground pads at regular intervals (every 5-10 signal pads) to maintain low supply impedance."
+        ],
+        "tags": ["floorplan", "power-planning", "macro-placement"]
+      },
+      {
+        "flow_name": "clock-tree-synthesis-method",
+        "description": "Build the clock distribution network to meet skew, insertion delay, and OCV derating targets while minimizing clock power.",
+        "inputs": [
+          {"name": "floorplan", "desc": "Placed design with clock source and sink locations"},
+          {"name": "timing-requirements", "desc": "Clock uncertainty budget, skew target, and insertion delay limit"}
+        ],
+        "outputs": [
+          {"name": "clock-tree", "desc": "Synthesized clock tree with buffer placement and routing"},
+          {"name": "clock-tree-report", "desc": "Skew, insertion delay, transition time, and power of the clock network"}
+        ],
+        "process": [
+          "Define CTS constraints: target skew (typically 50-200 ps), maximum insertion delay (to control clock latency for I/O timing), maximum transition time at sinks (fast transitions reduce short-circuit power and improve hold margin), and buffer cell list (which clock buffer cells the tool may use).",
+          "The CTS algorithm: starting from the clock source, recursively partition the clock sinks into balanced groups. Insert buffers to drive each group, balancing the capacitive load and wire delay at each level. The result is a balanced tree with equalized path lengths.",
+          "CTS with OCV (on-chip variation) derating: at each tree level, the delay can vary by +/- the OCV factor (typically 5-10%). To ensure hold timing, the early path must not arrive too early: this constrains the minimum skew between any two sinks. Apply CRPR (clock reconvergence pessimism removal) to avoid double-counting variation on shared tree segments.",
+          "For useful skew: intentionally adding skew can help timing. If path A to B has negative slack but the clock to B is late relative to A, adding positive skew (delivering the clock earlier to the launching flip-flop or later to the capturing flip-flop) recovers slack. CTS tools support useful-skew optimization.",
+          "Clock gating: insert clock gate cells (ICG) before the tree fans out to blocks that can be disabled. The ICG cell AND-gates the clock with an enable signal, stopping the clock to idle blocks. This reduces dynamic power by 20-50% in typical designs. Place ICGs close to the block they gate to maximize power savings.",
+          "Post-CTS timing: run timing analysis with the actual clock tree delays (not the estimated uncertainty). Setup and hold timing should both pass. If hold violations exist, insert delay buffers on the data path (hold fixing). Verify that clock tree power is within budget (clock typically consumes 30-50% of dynamic power)."
+        ],
+        "tags": ["cts", "clock-tree", "skew", "clock-gating"]
+      },
+      {
+        "flow_name": "placement-and-routing-optimization",
+        "description": "Optimize standard cell placement for timing and congestion, then route the design, resolving DRC violations and timing degradation from routing parasitics.",
+        "inputs": [
+          {"name": "clock-tree", "desc": "Design with CTS completed"},
+          {"name": "floorplan", "desc": "Macro placement and power plan"}
+        ],
+        "outputs": [
+          {"name": "routed-design", "desc": "Fully routed layout passing DRC"},
+          {"name": "routing-report", "desc": "Wire length, via count, congestion, and timing after routing"}
+        ],
+        "process": [
+          "Placement optimization: the placer positions standard cells to minimize wirelength (half-perimeter bounding box), meet timing (place connected cells closer together on critical paths), and reduce congestion (spread cells in dense regions). Run incremental placement after CTS to refine.",
+          "Timing-driven placement: cells on critical paths are pulled together. Cells with high fanout are placed centrally relative to their loads. The placer uses estimated wire delays (based on wire length and layer assignment) to optimize timing before routing.",
+          "Global routing: assigns each net to routing channels (gcells) across the chip without specifying exact tracks. This determines the routing congestion map. If any gcell is over-capacity (more nets than available tracks), the placer must spread cells or the router will detour wires (adding delay).",
+          "Detailed routing: assigns each wire to a specific metal track and layer, inserts vias for layer transitions, and resolves DRC violations (minimum spacing, minimum width, via enclosure). The router optimizes for minimum wirelength and via count while meeting DRC.",
+          "Post-route optimization: after initial routing, some timing paths degrade due to routing detours or coupling capacitance. Run post-route optimization: the tool can upsize drivers, insert buffers, and reroute critical nets on preferred (less congested, lower-resistance) layers.",
+          "DRC cleanup: after routing, run a full DRC check. Common violations: metal spacing (fix by jog or reroute), via enclosure (fix by shifting via placement), antenna ratio (fix by adding jumper to higher metal or antenna diode). Iterate until zero DRC violations."
+        ],
+        "tags": ["placement", "routing", "drc", "optimization"]
+      },
+      {
+        "flow_name": "extraction-and-timing-signoff",
+        "description": "Extract parasitic RC from the routed layout, run multi-corner static timing analysis for signoff, and verify timing closure with OCV and CRPR.",
+        "inputs": [
+          {"name": "routed-design", "desc": "DRC-clean routed layout"},
+          {"name": "synthesis-constraints-sdc", "desc": "Timing constraints"}
+        ],
+        "outputs": [
+          {"name": "parasitic-extraction-spef", "desc": "SPEF files for each extraction corner"},
+          {"name": "timing-signoff-report", "desc": "Setup and hold slack at all corners with worst negative slack and total negative slack"}
+        ],
+        "process": [
+          "Parasitic extraction: the extraction tool reads the GDSII layout and the process technology file (ITF/QRC tech file). It builds an RC network model for each net: resistance from wire length, width, and sheet resistance; capacitance from wire-to-wire coupling and wire-to-ground. Output is SPEF (Standard Parasitic Exchange Format).",
+          "Extract at multiple RC corners: typical (Ctyp), minimum (Cmin: best-case capacitance, worst for hold), maximum (Cmax: worst-case capacitance, worst for setup). The RC corners capture manufacturing variation in metal thickness and dielectric properties.",
+          "Static timing analysis (STA): read the gate-level netlist, SDC constraints, cell library timing models (.lib), and SPEF. The STA tool computes arrival times and required times at every pin in the design. Slack = required_time - arrival_time (positive is good).",
+          "Multi-corner multi-mode (MCMM) signoff: run STA at all PVT corners simultaneously. Setup check: slow process, high temperature, Cmax, low voltage. Hold check: fast process, low temperature, Cmin, high voltage. Apply OCV derating to launch and capture paths.",
+          "CRPR (Clock Reconvergence Pessimism Removal): when the launch and capture clocks share common tree segments, OCV is applied to both, creating artificial pessimism. CRPR removes the extra derating on the shared portion. Always enable CRPR for signoff to avoid over-design.",
+          "Signoff criteria: zero negative slack on setup and hold at all signoff corners. Report worst negative slack (WNS) and total negative slack (TNS). If violations remain, fix with ECO (engineering change order): resize cells, insert buffers, swap cells to different Vt flavors, or reroute critical nets. Re-extract and re-time after each ECO."
+        ],
+        "tags": ["extraction", "sta", "timing-signoff", "spef"]
+      }
+    ]
+  },
+  {
+    "chain_name": "test-and-testability-design",
+    "description": "Design the test infrastructure for an IC including scan chains, ATPG, memory BIST, JTAG boundary scan, and test compression to achieve target fault coverage at acceptable test cost.",
+    "domain": "hardware",
+    "tags": ["semiconductor", "dft", "testing", "atpg", "bist"],
+    "steps": [
+      {
+        "flow_name": "scan-chain-architecture",
+        "description": "Insert scan chains into the design, converting flip-flops to scan flip-flops and partitioning into chains for controllability and observability during manufacturing test.",
+        "inputs": [
+          {"name": "gate-level-netlist", "desc": "Synthesized netlist with flip-flop instances"},
+          {"name": "test-requirements", "desc": "Fault coverage target, number of scan chains, test clock frequency"}
+        ],
+        "outputs": [
+          {"name": "scan-inserted-netlist", "desc": "Netlist with scan flip-flops connected into chains"},
+          {"name": "scan-chain-report", "desc": "Number of chains, chain lengths, scan-in/scan-out pin assignments"}
+        ],
+        "process": [
+          "Replace all non-scan flip-flops with scan equivalents: the scan flip-flop adds a multiplexer at the data input, selecting between functional data (in normal mode) and scan-in data (in test mode). Area overhead is approximately 10-15% for the mux addition.",
+          "Determine the number of scan chains: more chains means shorter shift time (parallel loading) but more I/O pins. If pins are limited, use test compression (handled in a later step) to reduce the number of physical scan-in/scan-out pins. Typical: 4-32 physical chains without compression, 200-2000 internal chains with compression.",
+          "Chain balancing: distribute flip-flops evenly across chains so all chains have approximately the same length. Unbalanced chains waste shift cycles (the longest chain determines the shift count). Also consider physical proximity: chain flip-flops near each other to minimize routing congestion of the scan chain wiring.",
+          "Handle special flip-flops: clock gating cells (ICGs) need special scan treatment (test mode bypasses the gate). Multi-bit flip-flops are stitched as a group. Reset flip-flops need their reset controlled during scan mode to prevent corruption.",
+          "Lockup latches: if a scan chain crosses clock domains or has timing issues between stages (the scan shift path does not meet hold timing), insert lockup latches (transparent latches) at the domain boundary to prevent race conditions during shift.",
+          "Verify scan connectivity: run a scan chain trace to confirm all flip-flops are in chains, no flip-flops are missing, and the chains shift correctly (shift-in a known pattern, shift-out and compare). This is done in simulation before ATPG."
+        ],
+        "tags": ["dft", "scan-chain", "scan-insertion"]
+      },
+      {
+        "flow_name": "atpg-pattern-generation",
+        "description": "Generate automatic test patterns to detect stuck-at, transition, and bridging faults, measuring fault coverage and diagnosing untestable faults.",
+        "inputs": [
+          {"name": "scan-inserted-netlist", "desc": "Scan-inserted design"},
+          {"name": "test-requirements", "desc": "Target fault coverage (typically 95-99%)"}
+        ],
+        "outputs": [
+          {"name": "test-patterns", "desc": "ATPG pattern set in STIL or WGL format"},
+          {"name": "fault-coverage-report", "desc": "Fault coverage breakdown: detected, possibly detected, untestable, not detected"}
+        ],
+        "process": [
+          "Stuck-at fault model: each net is assumed stuck at 0 or stuck at 1. For N nets, there are 2N faults. ATPG generates patterns that sensitize each fault (create a condition where the faulty value propagates to an observable output). Target: >98% stuck-at coverage.",
+          "Transition (delay) fault model: each net has a slow-to-rise and slow-to-fall fault. The pattern must launch a transition at the fault site and capture the result one clock cycle later at-speed. Two launch methods: launch-off-shift (last shift clock launches the transition, capture clock captures) and launch-off-capture (a functional clock edge launches, next edge captures).",
+          "Launch-off-capture is preferred for delay testing because it exercises functional timing paths. Launch-off-shift may create false paths (the shift data does not represent a functional state). However, launch-off-capture requires two-cycle patterns and may have lower coverage for combinational paths.",
+          "Run ATPG: the tool generates patterns, reports fault coverage, and classifies undetected faults. Untestable faults include: redundant logic (the fault cannot be observed because the logic is redundant by design), blocked faults (no path to an observable point), and faults on test-mode-only logic.",
+          "For undetected non-untestable faults: analyze why ATPG could not find a pattern. Common causes: insufficient controllability (add test points: control points inject values, observe points add output paths), incomplete scan (some flip-flops not in scan), or ATPG tool limits (increase effort level).",
+          "Pattern count vs test time: each pattern requires shifting all scan chains (shift_count = chain_length cycles) plus one or two capture cycles. Total test time = N_patterns * (shift_count + capture_cycles) / test_clock_frequency. If test time exceeds the ATE budget, reduce patterns (accept slightly lower coverage) or use compression."
+        ],
+        "tags": ["dft", "atpg", "fault-coverage", "stuck-at"]
+      },
+      {
+        "flow_name": "memory-bist-design",
+        "description": "Design built-in self-test for embedded memories using March algorithms, with repair analysis for redundancy allocation.",
+        "inputs": [
+          {"name": "memory-instances", "desc": "List of embedded SRAMs/ROMs with sizes, types, and locations"},
+          {"name": "test-requirements", "desc": "Memory fault coverage targets and test time constraints"}
+        ],
+        "outputs": [
+          {"name": "bist-controller-design", "desc": "MBIST controller with selected March algorithm and configuration"},
+          {"name": "repair-analysis", "desc": "Redundancy allocation (spare rows/columns) and expected repair yield improvement"}
+        ],
+        "process": [
+          "Embedded SRAM faults: stuck-at faults in cells, address decoder faults, coupling faults between adjacent cells (a write to cell A flips cell B), transition faults (cell cannot transition from 0 to 1 or vice versa), and data retention faults.",
+          "March algorithm selection: March C- detects all stuck-at and transition faults with 10N operations (where N is the number of cells). March SS adds coupling fault detection with 22N operations. For most production testing, March C- is sufficient. March algorithms apply a sequence of read/write operations in ascending and descending address order.",
+          "MBIST controller design: the controller generates the address sequence, data patterns (all-0, all-1, checkerboard, inverse checkerboard), and the march element sequence. It compares read data against expected data and flags failures with the failing address and data bit. One controller can test multiple memories by multiplexing.",
+          "For large SoCs with hundreds of memory instances: use a hierarchical BIST architecture. A top-level controller manages multiple local BIST controllers. Memories are grouped by type and size for efficient testing. Test scheduling runs independent memories in parallel to reduce total test time.",
+          "Redundancy and repair: SRAM compilers include spare rows and spare columns. If a cell fails, the row or column containing it is replaced by the spare. The MBIST controller logs failing addresses, and a repair analysis algorithm determines the optimal spare allocation. Typical repair: 1-4 spare rows and 1-4 spare columns per memory block.",
+          "Calculate the yield improvement from redundancy: without repair, yield = (1 - p_fail)^N_cells. With repair, yield improves by the probability that all failures can be covered by the available spares. For a 256KB SRAM with 4 spare rows and 4 spare columns, yield improvement is typically 5-15% absolute."
+        ],
+        "tags": ["dft", "mbist", "memory-test", "march-algorithm"]
+      },
+      {
+        "flow_name": "test-compression-design",
+        "description": "Implement test compression (LBIST or codec-based) to reduce scan test data volume and test time while maintaining fault coverage.",
+        "inputs": [
+          {"name": "scan-inserted-netlist", "desc": "Design with internal scan chains"},
+          {"name": "test-patterns", "desc": "Uncompressed ATPG patterns with pattern count and data volume"}
+        ],
+        "outputs": [
+          {"name": "compressed-test-architecture", "desc": "Decompressor and compactor design with compression ratio"},
+          {"name": "compressed-patterns", "desc": "Compressed test patterns with updated fault coverage"}
+        ],
+        "process": [
+          "Without compression: for 1000 internal scan chains of 500 flip-flops each, test data volume = 1000 * 500 * N_patterns bits. At 500 MHz ATE speed with 32 physical channels, test time = data_volume / (32 * 500M). For 5000 patterns, this is approximately 80 seconds per die, costing approximately $0.10/die on modern ATE.",
+          "Codec-based compression (e.g., Synopsys DFTMAX, Cadence Modus): a decompressor expands a small number of physical scan-in channels to many internal chains. The decompressor uses a linear-feedback shift register (LFSR) seeded by the ATE data to generate the internal chain inputs. Only the specified (care) bits need to match; do not care bits are filled by the LFSR.",
+          "Compression ratio: typical ATPG patterns have 1-5% specified (care) bits. A 100:1 compression ratio is achievable, mapping 32 physical channels to 3200 internal chains. This reduces test time by 100x. The compactor on the output side XOR-combines multiple chain outputs into fewer physical scan-out channels.",
+          "Compression vs coverage trade-off: higher compression may reduce fault coverage because the decompressor cannot set all arbitrary care-bit combinations (aliasing). Typically, coverage drop is < 0.5% for 100:1 compression. If coverage drops below target, reduce the compression ratio or add dedicated test points.",
+          "LBIST (Logic BIST): the LFSR generates pseudo-random patterns applied to the scan chains. No external ATE data needed during test. Coverage is limited by random-pattern-resistant faults (faults requiring specific input combinations that pseudo-random patterns rarely generate). Typical stuck-at coverage from LBIST: 85-95%. Supplement with stored test points or weighted random patterns to improve.",
+          "Hybrid approach: use LBIST for initial high-coverage testing (fast, low cost), then apply a small set of compressed deterministic patterns for the remaining hard-to-detect faults. This minimizes total test cost while achieving >99% fault coverage."
+        ],
+        "tags": ["dft", "test-compression", "lbist", "atpg"]
+      },
+      {
+        "flow_name": "yield-learning-from-test-data",
+        "description": "Analyze manufacturing test results to identify systematic defects, correlate failures to process excursions, and feed learnings back to design and process for yield improvement.",
+        "inputs": [
+          {"name": "test-results", "desc": "Pass/fail data, failing patterns, and failing scan chains from production testing"},
+          {"name": "wafer-map-data", "desc": "Pass/fail by die position on the wafer"}
+        ],
+        "outputs": [
+          {"name": "defect-analysis", "desc": "Identified systematic defect types, locations, and root causes"},
+          {"name": "yield-improvement-actions", "desc": "Design or process changes to eliminate identified defects"}
+        ],
+        "process": [
+          "Wafer map analysis: plot pass/fail by die position. Random defects scatter uniformly. Systematic defects form spatial patterns: edge failures (lithography or CMP edge effects), cluster defects (particle contamination), ring patterns (spin-on process), or quadrant patterns (reticle defects).",
+          "Shmoo plotting: vary test conditions (voltage, frequency, temperature) and map the pass/fail boundary. The shmoo plot reveals how much margin the design has. A design that fails at the nominal corner but passes at relaxed conditions indicates a borderline timing or noise margin issue.",
+          "Fail bitmap analysis for memories: map failing bit addresses to physical locations on the memory array. Random single-bit failures indicate particle defects. Row or column failures indicate decoder or word-line/bit-line defects. Adjacent-cell failures indicate coupling or lithography issues.",
+          "Scan diagnosis: from the failing test pattern and the failing scan chain output, the diagnosis tool traces back through the circuit to identify candidate defect locations. It narrows down to a small region of the layout where the defect likely resides. Physical failure analysis (SEM, FIB cross-section) at that location confirms the defect.",
+          "Volume diagnosis: aggregate diagnosis results from thousands of failing dies. The most frequently diagnosed defect locations indicate systematic design weaknesses (layout sensitivities, marginal timing paths). These are candidates for targeted design fixes (ECO).",
+          "Feedback loop: provide the defect data to the process team (for process excursion control) and to the design team (for design rule improvement or circuit redesign). Track yield over time: a rising yield curve confirms that corrective actions are working. A sudden yield drop triggers immediate investigation for new defect sources."
+        ],
+        "tags": ["dft", "yield-learning", "defect-analysis", "failure-analysis"]
+      }
+    ]
+  }
+]

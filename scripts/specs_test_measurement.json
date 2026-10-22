@@ -1,0 +1,845 @@
+[
+  {
+    "chain_name": "oscilloscope-measurement-methodology",
+    "description": "Select, configure, and execute oscilloscope measurements with proper bandwidth, sample rate, probing technique, and artifact avoidance for accurate signal capture.",
+    "domain": "hardware",
+    "tags": ["test", "measurement", "oscilloscope", "signal-capture", "hardware"],
+    "steps": [
+      {
+        "flow_name": "scope-bandwidth-and-sample-rate-selection",
+        "description": "Determine the required oscilloscope bandwidth from the signal's rise time and the sample rate from Nyquist criteria, accounting for Gaussian vs flat-top response roll-off differences.",
+        "inputs": [
+          {"name": "signal-specification", "desc": "Signal characteristics: frequency, rise time, amplitude, expected waveform shape"},
+          {"name": "measurement-objective", "desc": "What parameter is being measured: timing, amplitude, rise time, jitter, or protocol decode"}
+        ],
+        "outputs": [
+          {"name": "required-bandwidth", "desc": "Minimum oscilloscope bandwidth calculated from signal knee frequency (0.35/rise_time for Gaussian, 0.45/rise_time for flat-top)"},
+          {"name": "required-sample-rate", "desc": "Minimum sample rate (at least 4x bandwidth for sin(x)/x interpolation, 2.5x for linear interpolation)"},
+          {"name": "measurement-bandwidth-budget", "desc": "Cascaded bandwidth from probe and scope (BW_system = 1/sqrt(1/BW_probe^2 + 1/BW_scope^2))"}
+        ],
+        "process": [
+          "Calculate the signal knee frequency from the fastest edge: f_knee = 0.35 / t_rise for 10-90% rise time, or 0.40 / t_rise for 20-80% definition.",
+          "Apply the 5x rule: select a scope bandwidth at least 5x the fundamental frequency, or at least 3x f_knee for rise time measurements with less than 3% error.",
+          "Determine if Gaussian or flat-top response matters. Gaussian rolls off gradually so a signal near the bandwidth limit sees amplitude attenuation. Flat-top holds amplitude to the cutoff but rings on fast edges.",
+          "Calculate required sample rate. For accurate waveform reconstruction with sin(x)/x interpolation, 4x bandwidth minimum. For rise time and amplitude-only measurements, 2.5x bandwidth suffices.",
+          "Compute the cascaded system bandwidth from probe and scope bandwidth specifications. The system bandwidth is always less than either component alone."
+        ],
+        "tags": ["oscilloscope", "bandwidth", "sampling"]
+      },
+      {
+        "flow_name": "probe-selection-and-loading-analysis",
+        "description": "Select the correct probe type and quantify its loading effect on the circuit under test to avoid measurement artifacts from probe capacitance, resistance, and ground inductance.",
+        "inputs": [
+          {"name": "required-bandwidth", "desc": "System bandwidth needed for the measurement"},
+          {"name": "measurement-bandwidth-budget", "desc": "Cascaded bandwidth budget from scope and probe"},
+          {"name": "signal-specification", "desc": "Signal characteristics including source impedance and voltage level"}
+        ],
+        "outputs": [
+          {"name": "probe-selection", "desc": "Selected probe type (passive 10:1, active, differential, current) with rationale"},
+          {"name": "loading-analysis", "desc": "Calculated circuit loading from probe input capacitance (typically 8-12pF passive, less than 1pF active) and input resistance"},
+          {"name": "ground-lead-artifact-assessment", "desc": "Expected ringing frequency from ground lead inductance (f_ring = 1/(2*pi*sqrt(L_lead * C_probe)))"}
+        ],
+        "process": [
+          "Identify the measurement type: single-ended (passive or active probe), differential (isolated or non-isolated), or current (AC current transformer or Hall effect).",
+          "For passive 10:1 probes, calculate the input impedance at the signal frequency. At DC it is 10M ohm, but at 100MHz the 10-12pF input capacitance drops impedance to roughly 130 ohm. If source impedance is above 50 ohm, this loads the circuit.",
+          "For signals above 500MHz or source impedance above 1k ohm, select an active probe (less than 1pF, greater than 100k ohm input) to avoid loading artifacts.",
+          "Calculate ground lead ringing frequency: a 3-inch ground lead has roughly 60nH inductance. With 12pF probe capacitance, resonance is at approximately 188MHz. Any signal edge faster than about 2ns will excite this resonance.",
+          "For differential signals (LVDS, CAN, RS-485), select a differential probe rated for the common-mode voltage range. Verify that CMRR at the signal frequency is adequate for the measurement accuracy needed."
+        ],
+        "tags": ["probe", "loading", "measurement-artifact"]
+      },
+      {
+        "flow_name": "scope-trigger-and-acquisition-setup",
+        "description": "Configure trigger conditions, acquisition mode, and memory depth for reliable capture of the target signal event including rare or intermittent occurrences.",
+        "inputs": [
+          {"name": "probe-selection", "desc": "Selected probe type and its characteristics"},
+          {"name": "measurement-objective", "desc": "What is being measured and what events to capture"},
+          {"name": "signal-specification", "desc": "Signal characteristics and expected behavior"}
+        ],
+        "outputs": [
+          {"name": "trigger-configuration", "desc": "Trigger type, level, slope, holdoff, and coupling settings"},
+          {"name": "acquisition-settings", "desc": "Acquisition mode (sample, peak detect, average, envelope), memory depth, and time/div"},
+          {"name": "segmented-memory-plan", "desc": "If capturing rare events: segment count, segment length, and total capture time coverage"}
+        ],
+        "process": [
+          "Set trigger level at the 50% crossing point of the signal for stable triggering. For noisy signals, use hysteresis (trigger coupling = HF reject or set trigger holdoff).",
+          "Select trigger type: edge trigger for periodic signals, pulse width trigger for glitch capture, pattern trigger for bus analysis, sequence trigger for state-dependent events.",
+          "Configure acquisition mode. Use sample mode for single-shot captures. Use averaging (16 to 64 averages) to reduce random noise for repetitive signals. Use peak detect mode to catch narrow glitches that fall between samples.",
+          "Calculate memory depth needed: memory_depth = sample_rate * time_window. For a 1GS/s scope capturing 1ms of data, 1M points are needed. Verify the scope maintains full sample rate at this memory depth (many scopes reduce sample rate as memory fills).",
+          "For rare events (power supply glitches, protocol errors), configure segmented memory. Each segment captures a short window around the trigger. With 1000 segments of 1000 points each, capture 1000 events over hours while using only 1M points of memory."
+        ],
+        "tags": ["trigger", "acquisition", "memory"]
+      },
+      {
+        "flow_name": "differential-and-deskew-measurement",
+        "description": "Set up differential measurements and perform channel-to-channel deskew to eliminate timing errors when measuring propagation delay, skew, or phase relationships between signals.",
+        "inputs": [
+          {"name": "trigger-configuration", "desc": "Trigger setup from prior step"},
+          {"name": "acquisition-settings", "desc": "Acquisition mode and memory configuration"},
+          {"name": "probe-selection", "desc": "Probes in use and their characteristics"}
+        ],
+        "outputs": [
+          {"name": "deskew-calibration-result", "desc": "Measured and corrected channel-to-channel skew values"},
+          {"name": "differential-measurement-setup", "desc": "Math channel configuration for differential (Ch1-Ch2) or common-mode ((Ch1+Ch2)/2) measurements"},
+          {"name": "timing-accuracy-budget", "desc": "Total timing measurement uncertainty from deskew residual, trigger jitter, sample interval, and interpolation"}
+        ],
+        "process": [
+          "Connect both probes to the same fast-edge calibration signal (scope's built-in cal output or a dedicated deskew fixture with matched outputs).",
+          "Measure the apparent delay between channels at the 50% crossing. This is the combined deskew error from cable length mismatch and scope channel path differences.",
+          "Apply deskew correction in the scope's channel setup menu. Verify by re-measuring: residual skew should be under 100ps for sub-nanosecond timing measurements.",
+          "For differential measurements, configure a math channel as Ch1-Ch2 (differential) or (Ch1+Ch2)/2 (common mode). Verify common-mode rejection by applying the same signal to both probes and confirming the math channel shows near zero.",
+          "Calculate total timing uncertainty: u_timing = sqrt(u_deskew^2 + u_trigger_jitter^2 + (sample_interval)^2 + u_interpolation^2). For a 5GS/s scope with 50ps deskew residual and 10ps trigger jitter, total uncertainty is roughly 210ps."
+        ],
+        "tags": ["differential", "deskew", "timing"]
+      },
+      {
+        "flow_name": "scope-measurement-execution-and-analysis",
+        "description": "Execute the measurement, use math channels and cursors for derived parameters, apply protocol decode for bus analysis, and export data for post-processing.",
+        "inputs": [
+          {"name": "deskew-calibration-result", "desc": "Channel skew corrections applied"},
+          {"name": "differential-measurement-setup", "desc": "Math channel configuration"},
+          {"name": "timing-accuracy-budget", "desc": "Known measurement uncertainty"}
+        ],
+        "outputs": [
+          {"name": "measurement-results", "desc": "Captured measurement data with uncertainty bounds and statistical summary (mean, std dev, min, max over population)"},
+          {"name": "artifact-assessment", "desc": "Identified measurement artifacts vs real signal features, with rationale for each classification"},
+          {"name": "protocol-decode-results", "desc": "If applicable: decoded bus transactions with timing, errors flagged, and compliance mask test results"}
+        ],
+        "process": [
+          "Capture the signal and use the scope's automatic measurement functions for frequency, period, rise time, fall time, overshoot, and duty cycle. Record the statistical distribution (min/max/mean/stddev) over at least 1000 acquisitions for each parameter.",
+          "Use cursors to measure specific intervals that automatic measurements do not cover. For amplitude, use voltage cursors at stable portions of the waveform to avoid measuring overshoot as signal level.",
+          "Apply math channels for derived measurements: FFT for frequency domain analysis (select Hanning window for spectral leakage reduction, rectangular window only for transients), differentiation for edge rate (dV/dt), and integration for charge or energy.",
+          "For digital bus analysis, configure protocol decode (I2C, SPI, UART, CAN, USB). Verify the decode matches known good traffic before trusting it on unknown traffic. Use protocol-aware triggers to capture specific transaction types.",
+          "Distinguish measurement artifacts from real signal behavior. Ringing at the probe's ground-lead resonant frequency is a probe artifact. Ringing at a frequency matching the trace's quarter-wave resonance is real. If in doubt, change the ground lead length: artifact frequencies shift, real signal frequencies do not."
+        ],
+        "tags": ["measurement", "analysis", "protocol-decode"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-supply-characterization",
+    "description": "Characterize a power supply's static and dynamic performance including load/line regulation, transient response, ripple, efficiency, and protection circuit verification.",
+    "domain": "hardware",
+    "tags": ["test", "measurement", "power-supply", "characterization", "hardware"],
+    "steps": [
+      {
+        "flow_name": "power-supply-static-characterization",
+        "description": "Measure load regulation, line regulation, and steady-state output accuracy across operating conditions using proper electronic load configuration and measurement technique.",
+        "inputs": [
+          {"name": "supply-specification", "desc": "Power supply rated output voltage, current range, input voltage range, and accuracy specifications"},
+          {"name": "test-conditions", "desc": "Ambient temperature, input voltage set points (nominal, min, max), load current set points (no-load, 25%, 50%, 75%, 100%, and overload)"}
+        ],
+        "outputs": [
+          {"name": "load-regulation-data", "desc": "Output voltage vs load current at each input voltage, calculated load regulation percentage ((V_no_load - V_full_load)/V_nominal * 100)"},
+          {"name": "line-regulation-data", "desc": "Output voltage vs input voltage at each load point, calculated line regulation percentage ((V_out_max - V_out_min)/V_nominal * 100)"},
+          {"name": "steady-state-accuracy", "desc": "Output voltage set-point accuracy across all operating points with measurement uncertainty"}
+        ],
+        "process": [
+          "Configure the electronic load in constant-current mode. Set the load sense leads at the supply output terminals (Kelvin connection) to eliminate cable drop from the measurement.",
+          "Allow the supply to reach thermal equilibrium at each operating point (minimum 5 minutes for initial warm-up, 2 minutes per subsequent point). Measure output voltage with a calibrated DMM at 6.5-digit resolution.",
+          "Sweep load current in steps: 0%, 10%, 25%, 50%, 75%, 90%, 100% of rated current. At each point, record input voltage, input current, output voltage, and output current. Repeat at minimum, nominal, and maximum input voltage.",
+          "Calculate load regulation at each input voltage: (V_no_load - V_full_load) / V_nominal * 100%. Calculate line regulation at each load point: (V_out_high_line - V_out_low_line) / V_nominal * 100%.",
+          "Record ambient temperature. For supplies with thermal derating, repeat key points at the maximum rated ambient to verify derating curve compliance."
+        ],
+        "tags": ["power-supply", "regulation", "static-test"]
+      },
+      {
+        "flow_name": "transient-response-measurement",
+        "description": "Measure power supply dynamic response to load steps including voltage deviation, recovery time, and overshoot/undershoot using proper oscilloscope technique with bandwidth limiting.",
+        "inputs": [
+          {"name": "supply-specification", "desc": "Power supply transient response specification (deviation, recovery time, step current)"},
+          {"name": "load-regulation-data", "desc": "Steady-state regulation data to establish baseline output voltage at each load point"}
+        ],
+        "outputs": [
+          {"name": "transient-response-data", "desc": "Voltage deviation (peak undershoot/overshoot), recovery time to within regulation band, and settling behavior for each load step"},
+          {"name": "load-step-waveforms", "desc": "Captured oscilloscope traces showing output voltage and load current during each transient event"},
+          {"name": "dynamic-performance-assessment", "desc": "Comparison of measured transient performance to specification limits with margin analysis"}
+        ],
+        "process": [
+          "Configure the electronic load for current-step transient mode. Set the low and high current levels, slew rate (typically 1A/us or as specified), and duty cycle (50% at a rate slow enough for full recovery between steps, typically 100Hz to 1kHz).",
+          "Measure output voltage with an oscilloscope using a short ground connection (spring-tip ground or solder-in ground point) directly at the supply output capacitor terminals. A 6-inch ground lead adds enough inductance to ring at the transient edge and corrupt the measurement.",
+          "Set oscilloscope bandwidth limit to 20MHz for ripple and noise measurements per standard practice. This filters high-frequency probe artifacts while passing the supply's actual transient response. For supplies specified to higher bandwidth, use the spec value.",
+          "Capture both the load-on (undershoot) and load-off (overshoot) transients. Measure peak voltage deviation from the pre-transient baseline, time to recovery within the steady-state regulation band, and any secondary ringing.",
+          "Test at the worst-case operating point: typically maximum load step at minimum input voltage for undershoot, and at maximum input voltage for overshoot. Verify that the output capacitor ESR/ESL does not dominate the transient (calculate: V_esr = I_step * ESR, V_esl = L_esl * dI/dt)."
+        ],
+        "tags": ["transient-response", "load-step", "dynamic"]
+      },
+      {
+        "flow_name": "ripple-and-noise-measurement",
+        "description": "Measure output ripple and noise with proper bandwidth limiting, probe technique, and measurement point selection to avoid false readings from probe artifacts.",
+        "inputs": [
+          {"name": "supply-specification", "desc": "Ripple and noise specification (peak-to-peak, RMS, bandwidth)"},
+          {"name": "transient-response-data", "desc": "Dynamic performance data to correlate with ripple behavior under load"}
+        ],
+        "outputs": [
+          {"name": "ripple-noise-data", "desc": "Measured peak-to-peak and RMS ripple at each load point, with fundamental switching frequency and harmonics identified"},
+          {"name": "spectral-content", "desc": "FFT showing ripple frequency components, switching frequency, and any spurious emissions"},
+          {"name": "measurement-technique-record", "desc": "Documentation of probe type, ground method, bandwidth limit, and measurement point for reproducibility"}
+        ],
+        "process": [
+          "Use a tip-and-barrel probe technique: solder a short wire (less than 1cm) across the output capacitor and probe directly with the scope tip on one end and ground barrel on the other. This minimizes the ground loop area and eliminates ground lead inductance artifacts.",
+          "Set oscilloscope bandwidth limit to 20MHz (industry standard for ripple measurement, per JESD22-A106 and most supply specifications). Without the bandwidth limit, high-frequency noise from the scope and probe dominates the reading.",
+          "Measure at no-load, 25%, 50%, and 100% load. Record both peak-to-peak (from single acquisitions, or envelope mode over 10 seconds) and RMS (from at least 1000 acquisitions). The peak-to-peak value catches intermittent spikes; the RMS value represents the thermal noise contribution.",
+          "Run an FFT on the captured waveform to identify frequency components. The switching frequency fundamental and its harmonics reveal the converter's ripple. Broadband noise indicates component noise or insufficient output filtering. Spurs at unexpected frequencies suggest EMI coupling from other board circuits.",
+          "If the measured ripple exceeds the specification, differentiate between capacitor ESR ripple (triangular waveform at switching frequency, amplitude = ripple_current * ESR) and capacitance ripple (parabolic waveform, amplitude = ripple_current / (8 * f_sw * C)). The waveform shape tells you which dominates and therefore which to fix."
+        ],
+        "tags": ["ripple", "noise", "measurement"]
+      },
+      {
+        "flow_name": "efficiency-and-thermal-measurement",
+        "description": "Measure power supply conversion efficiency across the load range and correlate with component thermal performance to identify loss-dominant components.",
+        "inputs": [
+          {"name": "supply-specification", "desc": "Efficiency specification and thermal limits"},
+          {"name": "ripple-noise-data", "desc": "Ripple and switching frequency data for loss correlation"}
+        ],
+        "outputs": [
+          {"name": "efficiency-curve", "desc": "Efficiency vs load current at each input voltage, with power loss breakdown at key operating points"},
+          {"name": "thermal-map", "desc": "Component temperatures at each load point from thermal camera or thermocouple measurements, identifying the hottest components"},
+          {"name": "loss-analysis", "desc": "Estimated loss breakdown: conduction loss, switching loss, magnetic core loss, copper loss, quiescent current, gate drive loss"}
+        ],
+        "process": [
+          "Measure input power and output power simultaneously using a power analyzer or calibrated DMMs. For accuracy, use a shunt resistor with 4-wire Kelvin connection for current measurement, or a power analyzer with at least 0.1% basic accuracy.",
+          "Calculate efficiency at each load point: eta = P_out / P_in * 100%. Plot efficiency vs load current. Identify the peak efficiency point (typically 50-70% load for most switching converters) and the light-load efficiency (often poor due to fixed quiescent and switching losses).",
+          "Measure component temperatures using a thermal camera (correct emissivity for each material: PCB laminate ~0.90, IC package ~0.85, exposed copper ~0.05 to 0.10) or thermocouples attached with thermal adhesive. Record temperatures at 25%, 50%, 75%, and 100% load after thermal equilibrium.",
+          "Identify the loss-dominant components. The MOSFET dissipates conduction loss (I_rms^2 * Rds_on) and switching loss (0.5 * V_in * I_out * (t_rise + t_fall) * f_sw). The inductor dissipates core loss (from Steinmetz equation) and copper loss (I_rms^2 * DCR plus AC winding loss from proximity effect).",
+          "Correlate thermal data with calculated losses. If a component runs hotter than the loss calculation predicts, investigate thermal path issues (poor solder connection, inadequate copper area, missing thermal pad connection). If calculated total loss does not match measured input-output difference, look for unmeasured loss paths (snubber dissipation, gate drive loss, control IC quiescent current)."
+        ],
+        "tags": ["efficiency", "thermal", "loss-analysis"]
+      },
+      {
+        "flow_name": "protection-circuit-verification",
+        "description": "Verify power supply protection circuits (OVP, UVP, OCP, SCP, OTP) by measuring trip points, response times, recovery behavior, and fault handling under controlled fault conditions.",
+        "inputs": [
+          {"name": "supply-specification", "desc": "Protection circuit specifications: trip points, response times, recovery mode (auto-restart, latch-off, hiccup)"},
+          {"name": "efficiency-curve", "desc": "Efficiency and thermal data to understand thermal protection context"}
+        ],
+        "outputs": [
+          {"name": "protection-test-results", "desc": "Measured trip points, response times, and recovery behavior for each protection circuit"},
+          {"name": "startup-shutdown-sequence", "desc": "Captured output voltage, input current, and enable signal during startup, shutdown, and power cycling"},
+          {"name": "psrr-measurement", "desc": "Power supply rejection ratio vs frequency from modulated input voltage to output voltage variation"}
+        ],
+        "process": [
+          "Test over-current protection: slowly increase load current while monitoring output voltage and input current. Record the current at which OCP triggers (should be within specification tolerance of the trip point). Measure the time from overcurrent to output shutdown using an oscilloscope. Verify recovery mode (auto-restart: output should cycle; latch-off: output stays off until input power cycle).",
+          "Test over-voltage protection: for supplies with adjustable output or external OVP, slowly increase the output voltage reference while monitoring the output. For fixed supplies, inject a fault condition that raises the output. Record the voltage at which OVP triggers and verify the crowbar or shutdown response. Verify that OVP does not false-trigger during startup overshoot.",
+          "Test short-circuit protection: with the supply running at nominal load, apply a dead short across the output through a low-inductance path. Measure the peak fault current and the time to current limiting. Verify the supply survives repeated short-circuit cycling (10 cycles minimum) and recovers cleanly each time.",
+          "Measure startup and shutdown sequence: capture output voltage from pre-bias through soft-start to regulation, and from shutdown command to output zero. Measure inrush current during startup. Verify monotonic startup (no dips or oscillations during soft-start). For sequenced multi-rail supplies, verify the voltage ordering and timing between rails.",
+          "Measure PSRR: inject a sinusoidal ripple on the input voltage (typically 100mVpp from an audio amplifier in series with the DC supply) and measure the output ripple at the same frequency. Sweep from 100Hz to 1MHz. PSRR = 20*log10(V_in_ripple / V_out_ripple). This reveals the supply's ability to reject input noise at each frequency."
+        ],
+        "tags": ["protection", "ovp", "ocp", "startup"]
+      }
+    ]
+  },
+  {
+    "chain_name": "jtag-boundary-scan-methodology",
+    "description": "Implement JTAG boundary scan testing from chain verification through interconnect testing, memory access, and flash programming for board-level manufacturing test and debug.",
+    "domain": "hardware",
+    "tags": ["test", "jtag", "boundary-scan", "manufacturing", "hardware"],
+    "steps": [
+      {
+        "flow_name": "jtag-chain-setup-and-verification",
+        "description": "Verify the JTAG scan chain by confirming BSDL files, testing chain integrity, and running infrastructure tests to ensure the test access port communicates correctly with all devices.",
+        "inputs": [
+          {"name": "board-netlist", "desc": "Board schematic netlist with JTAG chain order and device identification"},
+          {"name": "bsdl-file-set", "desc": "BSDL (Boundary Scan Description Language) files for each device in the chain, sourced from component manufacturers"}
+        ],
+        "outputs": [
+          {"name": "chain-verification-result", "desc": "Pass/fail for each device: IDCODE match, instruction register length, bypass register functionality"},
+          {"name": "chain-topology", "desc": "Verified chain order with device names, instruction register lengths, and total scan chain length"},
+          {"name": "infrastructure-test-result", "desc": "Results from testing internal JTAG infrastructure of each device (instruction decode, data register selection)"}
+        ],
+        "process": [
+          "Verify each BSDL file matches the target device revision. Check the IDCODE in the BSDL against the device datasheet. Load all BSDL files into the boundary scan test tool and configure the chain order to match the board schematic.",
+          "Run chain integrity test: shift a known pattern through the combined instruction registers of all devices and verify the output matches. If the chain fails, isolate by testing each device individually: check TDI-TDO continuity, verify TCK and TMS reach each device, and confirm each device's TRST pin is not held active.",
+          "Run infrastructure test: shift each device to BYPASS mode and verify its single-bit bypass register passes data with one clock delay. Then shift each device to IDCODE and verify the 32-bit IDCODE matches the BSDL. This confirms that instruction decoding works in each device.",
+          "Document the scan chain timing: measure the TCK frequency limit (typically 10-33MHz for boundary scan, limited by the slowest device in the chain). Calculate the total scan chain length in bits (sum of all boundary register cell counts) to estimate test time per pattern.",
+          "If any device uses JTAG for both boundary scan and in-system debug (ARM CoreSight, for example), verify that debug mode and boundary scan mode do not interfere. Some devices require specific initialization sequences before boundary scan works correctly."
+        ],
+        "tags": ["jtag", "bsdl", "chain-integrity"]
+      },
+      {
+        "flow_name": "interconnect-test-pattern-generation",
+        "description": "Generate and execute boundary scan interconnect tests to detect opens, shorts, and stuck-at faults on nets connecting JTAG-accessible pins.",
+        "inputs": [
+          {"name": "chain-topology", "desc": "Verified chain configuration with all devices recognized"},
+          {"name": "board-netlist", "desc": "Net connectivity for all testable nets"}
+        ],
+        "outputs": [
+          {"name": "interconnect-test-results", "desc": "Net-by-net pass/fail with fault type (open, short-to-net, short-to-power, short-to-ground, stuck-at-0, stuck-at-1)"},
+          {"name": "test-coverage-report", "desc": "Percentage of nets tested, untestable nets with reasons (non-JTAG devices, bidirectional buses requiring external stimulus)"},
+          {"name": "fault-diagnosis", "desc": "For each failure: suspected physical location (component pin, via, trace segment) based on netlist analysis"}
+        ],
+        "process": [
+          "Extract the testable net list from the netlist: a net is testable if at least one pin is a JTAG-controllable output (driver) and at least one pin is a JTAG-observable input (sensor). Nets with only non-JTAG devices on them are not testable by boundary scan alone.",
+          "Generate walking-ones test patterns: for each group of driver cells, drive one high while all others are low, then observe all sensor cells. This detects shorts between any two nets in the group. Follow with walking-zeros (one low, all others high) to detect shorts to power.",
+          "For each net, test for stuck-at faults: drive the net high and observe, then drive low and observe. A stuck-at-0 fault shows low regardless of driver state. A stuck-at-1 shows high regardless. An open net may float to an indeterminate state that reads inconsistently.",
+          "Handle bidirectional and tristate buses: for buses with multiple drivers, test each driver individually while tristating all others. Verify the bus pull-up or pull-down resistor holds the correct default state when all drivers are tristated.",
+          "Analyze failures to isolate the physical fault. A short between two nets suggests a solder bridge between adjacent pins or traces. An open on a BGA pin suggests a non-wetted solder ball. Cross-reference failure patterns: if multiple pins on the same BGA row fail open, suspect a reflow profile issue on that side of the package."
+        ],
+        "tags": ["interconnect", "fault-detection", "manufacturing-test"]
+      },
+      {
+        "flow_name": "jtag-flash-programming-and-debug",
+        "description": "Use JTAG for in-system flash programming, memory access for debug, and custom test instructions for board-level DFT beyond standard boundary scan.",
+        "inputs": [
+          {"name": "interconnect-test-results", "desc": "Verified board connectivity before programming"},
+          {"name": "chain-topology", "desc": "JTAG chain configuration"}
+        ],
+        "outputs": [
+          {"name": "programming-result", "desc": "Flash programming status: verify, program, verify cycle with bit-error count if any"},
+          {"name": "memory-test-result", "desc": "Memory cluster test results for SRAM and SDRAM accessible through JTAG"},
+          {"name": "test-coverage-summary", "desc": "Total board test coverage combining boundary scan interconnect, memory test, and flash programming verification"}
+        ],
+        "process": [
+          "Program flash memory through JTAG: use the processor's debug interface (not boundary scan EXTEST) to access the flash controller. Write the flash algorithm to SRAM, then stream the firmware image through JTAG. Verify by reading back and comparing. For large images (greater than 1MB), measure programming time and optimize the JTAG clock speed and data transfer block size.",
+          "Test memory clusters: for SRAM directly accessible through the processor bus, run a walking-ones pattern followed by an address-uniqueness test through the JTAG debug interface. For SDRAM, initialize the memory controller first (timing parameters must match the board's SDRAM chip), then run the pattern tests. These tests catch solder faults on address and data lines that boundary scan alone might miss if the memory chip has no JTAG.",
+          "Implement custom JTAG test access for board-specific DFT. If the FPGA or ASIC on the board has custom JTAG instructions (user-defined registers mapped to internal test points), configure these in the test tool. Use them to access voltage monitors, temperature sensors, or loopback test modes not reachable through standard boundary scan.",
+          "Calculate total test coverage: start with the interconnect test coverage (testable nets / total nets). Add memory test coverage (tested address and data bits / total bits). Add flash programming verification as a functional test of the processor, flash, and boot path. Report untestable areas and recommend supplementary test methods (functional test, flying probe, ICT) for those areas.",
+          "For production, optimize the test sequence: run the chain integrity test first (fast, catches catastrophic faults), then interconnect test (medium, catches solder faults), then memory test and flash programming (slow but highest value). Calculate total test time and verify it fits the production takt time."
+        ],
+        "tags": ["flash-programming", "memory-test", "debug"]
+      }
+    ]
+  },
+  {
+    "chain_name": "environmental-stress-screening",
+    "description": "Design and execute environmental stress screening profiles that precipitate latent defects without consuming product life, using HALT results to establish screen parameters.",
+    "domain": "hardware",
+    "tags": ["test", "reliability", "environmental", "screening", "hardware"],
+    "steps": [
+      {
+        "flow_name": "halt-margin-characterization",
+        "description": "Run Highly Accelerated Life Testing to find the product's operating and destruct limits for temperature and vibration, establishing the margins that define the ESS design space.",
+        "inputs": [
+          {"name": "product-specification", "desc": "Operating temperature range, vibration specification, and reliability targets"},
+          {"name": "product-samples", "desc": "Number of samples available for HALT (typically 3-10 units, these will be stressed to failure and are consumed)"}
+        ],
+        "outputs": [
+          {"name": "operating-limits", "desc": "Measured upper and lower operating temperature limits and operating vibration limit where first functional failure occurs (recoverable)"},
+          {"name": "destruct-limits", "desc": "Measured upper and lower destruct temperature limits and destruct vibration limit where permanent damage occurs"},
+          {"name": "failure-mode-catalog", "desc": "Each failure mode found during HALT with its stress level, failure mechanism, and design fix recommendation"}
+        ],
+        "process": [
+          "Begin cold step stress: start at +20C and decrease in 10C steps with 10-minute dwell at each step. At each step, run the product functional test. Record the temperature at first functional failure (lower operating limit) and the temperature at permanent failure (lower destruct limit).",
+          "Run hot step stress: start at +20C and increase in 10C steps with 10-minute dwell at each step. Record upper operating and destruct limits the same way. Typical findings: crystal oscillator frequency shift, LCD contrast failure, electrolytic capacitor impedance rise, solder joint cracking.",
+          "Run vibration step stress: start at 5 Grms broadband random vibration (6 degrees of freedom) and increase in 5 Grms steps with 10 minutes at each step. Record the vibration level at first failure. Common findings: connector intermittence, crystal oscillator failure, board flexure cracking BGA solder joints.",
+          "Run combined environment stress: set temperature to the midpoint of hot and cold operating limits, apply vibration at 50% of the vibration operating limit, and rapid thermal cycling (60C/minute rate of change if the chamber supports it). Run for 3 to 5 cycles. This catches interaction failures not found in single-stress testing.",
+          "For each failure found, perform root cause analysis and implement a design fix. Re-run HALT on the fixed design to verify the margin increased. The goal is not zero failures in HALT (that means you did not stress hard enough) but to find and fix design weaknesses before production."
+        ],
+        "tags": ["halt", "margin", "reliability"]
+      },
+      {
+        "flow_name": "ess-profile-design",
+        "description": "Design the ESS thermal cycling and vibration profiles using HALT margins to set screen parameters that precipitate manufacturing defects without consuming product life.",
+        "inputs": [
+          {"name": "operating-limits", "desc": "HALT operating limits for temperature and vibration"},
+          {"name": "destruct-limits", "desc": "HALT destruct limits"},
+          {"name": "product-specification", "desc": "Operating specification and production volume"}
+        ],
+        "outputs": [
+          {"name": "thermal-profile", "desc": "ESS thermal cycling profile: temperature range, rate of change, number of cycles, dwell time at extremes, functional test insertion points"},
+          {"name": "vibration-profile", "desc": "ESS vibration profile: Grms level, frequency range, axis configuration, duration"},
+          {"name": "screening-strength-estimate", "desc": "Calculated defect detection probability for each defect type based on the profile parameters"}
+        ],
+        "process": [
+          "Set the ESS temperature range between the operating specification limits and the HALT operating limits. A common approach: ESS high temperature = spec max + 0.4 * (HALT operating limit - spec max), ESS low temperature = spec min - 0.4 * (spec min - HALT operating limit). This stresses beyond spec without approaching the operating limit.",
+          "Set the thermal rate of change as high as the chamber and product allow. Faster rates generate higher thermal gradients within the product, which precipitate solder joint and connector defects more effectively. Target at least 15C/minute; 40C/minute or higher if the product and chamber support it.",
+          "Set the number of thermal cycles. Use the Nelson model to calculate screening strength: S = 1 - exp(-N * f(delta_T, ramp_rate)). For typical electronics, 20 cycles at 40C/minute over a 100C range gives roughly 95% screening strength for solder joint defects. Fewer cycles are needed if the temperature range and rate are aggressive.",
+          "Set vibration level at 20-50% of the HALT vibration operating limit. Use broadband random vibration covering 20Hz to 2000Hz. Duration of 5-10 minutes per axis (or all axes simultaneously with a repetitive shock table). Vibration catches mechanical defects (loose fasteners, connector retention, solder joint micro-cracks) that thermal cycling alone misses.",
+          "Insert functional tests at the temperature extremes (hot dwell and cold dwell) and after vibration. A defect precipitated by thermal stress may only be detectable while the product is still at temperature. Testing at room temperature after the screen misses intermittent failures that manifest only at the extreme."
+        ],
+        "tags": ["ess-profile", "thermal-cycling", "screening-strength"]
+      },
+      {
+        "flow_name": "ess-effectiveness-monitoring",
+        "description": "Monitor ESS effectiveness in production by tracking fallout rates, failure modes, and screening strength over time, adjusting the profile as the product matures.",
+        "inputs": [
+          {"name": "thermal-profile", "desc": "ESS thermal cycling profile in production use"},
+          {"name": "vibration-profile", "desc": "ESS vibration profile in production use"},
+          {"name": "screening-strength-estimate", "desc": "Initial screening strength calculation"}
+        ],
+        "outputs": [
+          {"name": "ess-fallout-trend", "desc": "Weekly/monthly ESS fallout rate trend with failure mode Pareto, plotted against production volume"},
+          {"name": "screen-optimization-recommendation", "desc": "Recommendations to reduce screen intensity as the product matures (fewer cycles, narrower range) or increase if new failure modes emerge"},
+          {"name": "cost-benefit-analysis", "desc": "ESS cost per unit (chamber time, test time, energy, handling) vs estimated warranty cost avoidance from defects caught"}
+        ],
+        "process": [
+          "Track every ESS failure: record the failure mode, the stress condition at detection (which cycle, temperature at failure, during vibration or thermal), and the root cause from failure analysis. Maintain a Pareto chart of failure modes by frequency.",
+          "Plot ESS fallout rate over time (failures per 100 units screened). A healthy trend shows decreasing fallout as manufacturing process improvements address the root causes found in screening. A flat or increasing trend means the process is not improving and ESS is acting as a perpetual sort rather than a stimulus for improvement.",
+          "When the fallout rate drops below a threshold (typically less than 0.5% for 3 consecutive months), evaluate reducing the screen. Options: reduce the number of thermal cycles (from 20 to 12 to 8), narrow the temperature range, or reduce vibration duration. Each reduction saves production time and cost but accepts slightly lower screening strength.",
+          "Transition from ESS to HASS (Highly Accelerated Stress Screen) as the product matures. HASS uses higher stress levels for fewer cycles, relying on the HALT-established margins. A HASS proof-of-screen run (8 units through 20x the HASS profile with no failures) validates that HASS does not consume product life.",
+          "Calculate the cost-benefit ratio quarterly. ESS cost includes: chamber depreciation and energy, operator time, test equipment, handling damage (units damaged by the screen itself), and cycle time impact on production throughput. Benefit includes: warranty returns avoided (estimated from the failure modes caught, at the warranty repair cost per unit), customer satisfaction, and brand protection. When cost exceeds benefit, the screen has served its purpose and can be retired."
+        ],
+        "tags": ["effectiveness", "monitoring", "hass"]
+      }
+    ]
+  },
+  {
+    "chain_name": "emc-pre-compliance-testing",
+    "description": "Conduct in-house EMC pre-compliance testing using near-field probes, LISN, and current probes to identify and fix emission and immunity issues before formal compliance testing.",
+    "domain": "hardware",
+    "tags": ["test", "emc", "pre-compliance", "emissions", "hardware"],
+    "steps": [
+      {
+        "flow_name": "conducted-emissions-pre-test",
+        "description": "Measure conducted emissions on power lines using a LISN and spectrum analyzer to identify emissions that would fail CISPR/FCC limits before visiting a compliance lab.",
+        "inputs": [
+          {"name": "applicable-standard", "desc": "EMC standard to test against (CISPR 32, FCC Part 15, EN 55032) with class (A or B) and frequency range (typically 150kHz to 30MHz)"},
+          {"name": "test-setup-description", "desc": "Equipment under test configuration, operating mode, cable lengths, and grounding arrangement"}
+        ],
+        "outputs": [
+          {"name": "conducted-emissions-scan", "desc": "Measured emissions vs frequency with quasi-peak and average detector results overlaid on the applicable limit line"},
+          {"name": "margin-analysis", "desc": "Margin to limit at each emission peak, identifying frequencies with less than 6dB margin as at-risk"},
+          {"name": "emission-source-identification", "desc": "For each significant emission: identified source (switching frequency harmonics, clock harmonics, processor activity) and current path"}
+        ],
+        "process": [
+          "Set up the LISN on each power line (L, N for AC; +V, GND for DC). The LISN provides a defined 50-ohm impedance to the equipment at RF frequencies while passing the power. Connect the LISN RF output to the spectrum analyzer 50-ohm input.",
+          "Configure the spectrum analyzer: frequency range 150kHz to 30MHz, resolution bandwidth 9kHz (for quasi-peak per CISPR), reference level 80dBuV or higher to avoid overloading the input, attenuation 10dB. First run a peak detector scan to find the worst-case frequencies quickly.",
+          "At each significant emission peak, switch to quasi-peak detector and measure for sufficient dwell time (1 second per frequency point for quasi-peak). For frequencies where quasi-peak passes but is close to the limit, also measure with average detector since many standards have both quasi-peak and average limits.",
+          "Identify the source of each emission. Switching converter fundamentals and harmonics appear at integer multiples of the switching frequency. Clock harmonics appear at integer multiples of the oscillator frequency. Compare the emission frequencies to the known clock and switching frequencies on the board.",
+          "Apply the pre-compliance correlation factor. In-house measurements typically read 3-6dB different from a compliance lab due to differences in ground plane, cable routing, ambient noise, and LISN calibration. Target 6dB margin to the limit in pre-compliance to have confidence in a compliance lab pass."
+        ],
+        "tags": ["conducted-emissions", "lisn", "pre-compliance"]
+      },
+      {
+        "flow_name": "radiated-emissions-estimation",
+        "description": "Estimate radiated emissions using near-field probes and current probes to predict whether the product will pass radiated emissions limits, without an anechoic chamber.",
+        "inputs": [
+          {"name": "conducted-emissions-scan", "desc": "Conducted emissions data showing switching and clock harmonics"},
+          {"name": "applicable-standard", "desc": "Radiated emissions limits (typically 30MHz to 1GHz or higher)"}
+        ],
+        "outputs": [
+          {"name": "near-field-scan-results", "desc": "H-field and E-field probe measurements at key locations on the board, identifying the highest-emission areas"},
+          {"name": "cable-radiation-estimate", "desc": "Common-mode current on cables measured with a current probe, converted to estimated far-field emission level"},
+          {"name": "radiated-risk-assessment", "desc": "Predicted radiated emission levels vs limit with estimated margin, flagging frequencies likely to fail"}
+        ],
+        "process": [
+          "Use an H-field near-field probe (small loop, typically 10-20mm diameter) close to the board surface (less than 5mm gap) and scan across the board while monitoring the spectrum analyzer. Map the locations of highest emissions. H-field probes are good for identifying current loops (switching converter loops, clock distribution).",
+          "Use an E-field near-field probe (monopole or dipole, typically 5-10mm) to find locations of high voltage radiation. E-field hot spots indicate traces or components with fast voltage transitions driving parasitic capacitance to the ground plane.",
+          "Measure common-mode current on each cable using a current probe (clamp-on ferrite with a secondary winding, or a Fischer F-33 style probe). Common-mode cable current is the dominant source of radiated emissions for most products. Convert current to estimated field strength: E = 60 * I_cm * f * L / (r * c) where L is cable length, r is measurement distance, and c is speed of light.",
+          "For the highest-risk frequencies, calculate the estimated far-field emission from the near-field measurements using the maximum field strength and an empirical near-to-far-field correlation factor. This is approximate (typically plus or minus 10dB) but sufficient to identify pass/fail risk.",
+          "For immunity pre-testing, use a bulk current injection probe on cables and an ESD simulator on enclosure seams and connector shields. While these do not replicate the formal test setup exactly, they identify the weakest points before the compliance lab visit. Focus on the interfaces that face outside the product boundary."
+        ],
+        "tags": ["radiated-emissions", "near-field", "current-probe"]
+      },
+      {
+        "flow_name": "emc-fix-verification-cycle",
+        "description": "Implement EMC fixes identified during pre-compliance testing, verify their effectiveness with before/after measurements, and document the changes for the compliance test plan.",
+        "inputs": [
+          {"name": "emission-source-identification", "desc": "Identified emission sources and their radiation mechanisms"},
+          {"name": "radiated-risk-assessment", "desc": "Frequencies and margins requiring improvement"}
+        ],
+        "outputs": [
+          {"name": "fix-verification-data", "desc": "Before and after measurements for each fix, showing the emission reduction achieved at each frequency"},
+          {"name": "compliance-test-plan", "desc": "Test configuration, operating modes, cable routing, and ground arrangement documented for reproducibility at the compliance lab"},
+          {"name": "remaining-risk-register", "desc": "Any frequencies still at risk after fixes, with contingency plans (additional filtering, shielding, or design changes for next revision)"}
+        ],
+        "process": [
+          "For conducted emissions fixes: add or modify the input EMI filter. Start with differential mode filtering (series inductor, X-capacitors across the line) for switching frequency harmonics. Add common mode filtering (common mode choke, Y-capacitors to ground) for common mode noise. Measure after each component change to quantify the improvement.",
+          "For radiated emissions from cables: reduce common-mode current by adding a common mode choke on the cable at the product enclosure exit. For USB and HDMI cables, verify the shield is bonded to the chassis ground (not through a signal connector pin). Add ferrite cores to cables as a quick fix; design proper common mode filtering into the connector interface for the production solution.",
+          "For radiated emissions from the PCB: reduce the current loop area of the identified source. For switching converters, shorten the hot loop (input capacitor to switch to inductor to output capacitor). For clocks, add series resistance to slow the edge rate if timing margin allows, or route the clock on an inner layer between ground planes.",
+          "Verify each fix by repeating the pre-compliance measurement with the exact same setup (cable routing, orientation, ground connection). Compare before and after traces at the same spectrum analyzer settings. Record the delta in dB at each problematic frequency.",
+          "Document the test configuration exactly as it will be set up in the compliance lab: operating mode (typically worst-case from the pre-compliance scan), cable types and lengths, cable routing, accessory connections, ground plane material and size (if table-top equipment), and turntable angle (if known from prior tests). This documentation prevents compliance lab surprises from different test setups."
+        ],
+        "tags": ["emc-fix", "verification", "compliance-plan"]
+      }
+    ]
+  },
+  {
+    "chain_name": "signal-integrity-measurement",
+    "description": "Measure signal integrity parameters including impedance, eye diagrams, S-parameters, crosstalk, and jitter using TDR, VNA, and BERT instrumentation with proper calibration.",
+    "domain": "hardware",
+    "tags": ["test", "signal-integrity", "measurement", "high-speed", "hardware"],
+    "steps": [
+      {
+        "flow_name": "tdr-impedance-measurement",
+        "description": "Use time-domain reflectometry to measure transmission line impedance, locate discontinuities, and characterize connectors and vias on PCBs and cables.",
+        "inputs": [
+          {"name": "target-impedance-spec", "desc": "Expected impedance (e.g., 50 ohm single-ended, 100 ohm differential) and tolerance"},
+          {"name": "measurement-point-list", "desc": "List of nets/traces to measure with access point locations"}
+        ],
+        "outputs": [
+          {"name": "impedance-profile", "desc": "Impedance vs distance along each trace, with discontinuities identified and located"},
+          {"name": "discontinuity-analysis", "desc": "For each impedance excursion beyond tolerance: location, magnitude, and probable cause (via transition, connector, layer change, trace width change)"},
+          {"name": "differential-pair-balance", "desc": "Intra-pair skew and impedance balance for differential pairs"}
+        ],
+        "process": [
+          "Calibrate the TDR by running the open, short, and load calibration at the probe tips (not at the cable end). The calibration reference plane defines where the measurement starts. For PCB measurements, use a microprobe (GS or GSG) calibrated on an impedance standard substrate (ISS).",
+          "For single-ended measurements, connect the TDR to one end of the trace. The TDR sends a fast step (typical rise time 35-150ps) and measures the reflected voltage vs time. Convert time to distance using the propagation velocity of the PCB material (typically 6 inches/ns for FR-4 stripline, 7.5 inches/ns for microstrip).",
+          "Read the impedance profile: a flat line at 50 ohm means controlled impedance. An upward bump indicates higher impedance (trace narrowing, void in reference plane, via transition adding inductance). A downward dip indicates lower impedance (trace widening, excessive via pad capacitance, connector).",
+          "For differential pairs, run TDR on both the differential mode (odd mode: drive both lines in opposite polarity) and common mode (even mode: drive both lines in same polarity). Differential impedance = 2 * odd-mode impedance. Intra-pair skew appears as a common-mode artifact in the differential measurement.",
+          "Spatial resolution is limited by the TDR step rise time: resolution approximately equals rise_time * propagation_velocity / 2. A 35ps rise time TDR resolves features about 3mm apart in FR-4. For higher resolution, use a faster TDR or switch to VNA-based frequency-domain measurement and transform to time domain."
+        ],
+        "tags": ["tdr", "impedance", "discontinuity"]
+      },
+      {
+        "flow_name": "s-parameter-measurement-vna",
+        "description": "Measure S-parameters of PCB traces, connectors, and cables using a vector network analyzer with proper calibration and de-embedding to isolate the device under test.",
+        "inputs": [
+          {"name": "impedance-profile", "desc": "TDR data identifying features to characterize in frequency domain"},
+          {"name": "target-impedance-spec", "desc": "Impedance and loss specifications"}
+        ],
+        "outputs": [
+          {"name": "s-parameter-data", "desc": "Full 2-port (or 4-port for differential) S-parameter data in Touchstone format: S11 (return loss), S21 (insertion loss), S12 (reverse isolation), S22 (far-end return loss)"},
+          {"name": "channel-loss-budget", "desc": "Insertion loss vs frequency with identified loss contributors (dielectric loss, conductor loss, connector loss, via transitions)"},
+          {"name": "impedance-match-quality", "desc": "Return loss vs frequency showing bandwidth of acceptable impedance match"}
+        ],
+        "process": [
+          "Select VNA calibration method. For coaxial fixtures, use SOLT (Short-Open-Load-Thru) with characterized calibration standards. For PCB fixtures, use TRL (Thru-Reflect-Line) which is more accurate because it uses the PCB transmission line itself as the calibration standard, eliminating fixture de-embedding errors.",
+          "For TRL calibration, fabricate three calibration structures on the same PCB as the DUT: a Thru (direct connection between ports), a Reflect (open or short at each port), and a Line (a transmission line longer than the Thru by a quarter wavelength at the center frequency). The Line length sets the calibration bandwidth: one Line covers about 8:1 frequency range.",
+          "Measure S21 (insertion loss): a smooth downward slope with frequency indicates dielectric and conductor loss (normal). Sharp dips or resonances indicate impedance discontinuities causing reflections. Compare measured insertion loss to the PCB material specification (Dk and Df at frequency).",
+          "Measure S11 (return loss): should be below -10dB (preferably below -15dB) across the signal bandwidth. Peaks in S11 correspond to impedance discontinuities. Correlate S11 peaks with TDR discontinuity locations to identify which physical feature causes each reflection.",
+          "For differential channels, measure full 4-port S-parameters (SDD11, SDD21, SCC11, SCC21, SDC21, SCD21). Mixed-mode S-parameters separate differential and common mode behavior. SDC21 (differential-to-common mode conversion) indicates impedance imbalance between the two traces of a differential pair."
+        ],
+        "tags": ["s-parameters", "vna", "calibration"]
+      },
+      {
+        "flow_name": "eye-diagram-and-jitter-measurement",
+        "description": "Measure eye diagrams and decompose jitter into its components using a bit error rate tester or real-time oscilloscope to assess high-speed serial link quality.",
+        "inputs": [
+          {"name": "s-parameter-data", "desc": "Channel S-parameters for loss and reflection context"},
+          {"name": "channel-loss-budget", "desc": "Insertion loss characterization of the channel"}
+        ],
+        "outputs": [
+          {"name": "eye-diagram-data", "desc": "Measured eye diagram with eye height, eye width, and compliance mask overlay"},
+          {"name": "jitter-decomposition", "desc": "Total jitter (Tj) decomposed into random jitter (Rj, RMS), deterministic jitter (Dj, peak-to-peak), with Dj further split into data-dependent (DDj), duty-cycle distortion (DCD), bounded uncorrelated (BUj), and periodic (Pj)"},
+          {"name": "ber-estimate", "desc": "Estimated bit error rate at the target BER from jitter components: Tj(BER) = Dj + 2*N*Rj where N is the number of sigma for the target BER (e.g., 14.07 sigma for BER=1e-12)"}
+        ],
+        "process": [
+          "For BERT-based measurement: configure the pattern generator to transmit PRBS-31 (longest standard PRBS, stresses the channel with the widest range of bit sequences). Set the data rate to match the link specification. Connect through the channel under test to the BERT receiver. Lock the receiver CDR and measure the bathtub curve (BER vs sampling point).",
+          "For oscilloscope-based measurement: capture at least 1 million unit intervals (UIs) of data with the oscilloscope sampling at or above the Nyquist rate. Apply software CDR recovery. Overlay all captured bits to form the eye diagram. The eye opening at the center gives the eye height (voltage margin) and eye width (timing margin).",
+          "Decompose jitter: separate random jitter (Rj) from deterministic jitter (Dj) using a dual-Dirac model fit to the jitter histogram tails. Rj is Gaussian with unbounded tails; Dj is bounded. The total jitter at a target BER is: Tj(BER) = Dj_pp + 2 * N(BER) * Rj_rms, where N(1e-12) = 14.07, N(1e-15) = 15.88.",
+          "Further decompose Dj into its components: DDj (data-dependent jitter from ISI, correlates with bit pattern, caused by channel bandwidth limitation), DCD (duty-cycle distortion, systematic offset between rising and falling edge crossings), BUj (bounded uncorrelated, typically from crosstalk), and Pj (periodic, from power supply coupling or clock modulation).",
+          "Compare the measured eye to the compliance mask for the interface standard (PCIe, USB, Ethernet, etc.). The mask defines the minimum eye opening at the specified BER. If the eye fails the mask, use the jitter decomposition to identify the dominant contributor and target the fix: DDj suggests channel equalization needed, Rj suggests noise reduction, Pj suggests power supply or clock cleanup."
+        ],
+        "tags": ["eye-diagram", "jitter", "ber"]
+      },
+      {
+        "flow_name": "crosstalk-and-skew-measurement",
+        "description": "Measure near-end and far-end crosstalk between adjacent signal pairs and intra-pair skew for differential signals to verify signal isolation and balance.",
+        "inputs": [
+          {"name": "eye-diagram-data", "desc": "Eye quality data to correlate with crosstalk effects"},
+          {"name": "s-parameter-data", "desc": "S-parameter data that may already contain crosstalk information in off-diagonal terms"}
+        ],
+        "outputs": [
+          {"name": "crosstalk-measurement", "desc": "NEXT (near-end crosstalk) and FEXT (far-end crosstalk) levels vs frequency between adjacent signal pairs"},
+          {"name": "skew-measurement", "desc": "Intra-pair skew for each differential pair measured by TDR or by crossing-time comparison"},
+          {"name": "coupling-assessment", "desc": "Assessment of whether measured crosstalk and skew are within budget for the target BER, with recommended routing rule changes if not"}
+        ],
+        "process": [
+          "Measure NEXT: drive the aggressor line with a fast edge or broadband signal while the victim line is terminated at both ends. Measure the coupled signal at the near end (same end as the aggressor source). NEXT is caused by capacitive and inductive coupling between adjacent traces. The coupled pulse arrives at the same time as the driving edge.",
+          "Measure FEXT: same setup as NEXT but measure the coupled signal at the far end (opposite end from the aggressor source). FEXT increases with trace length (longer parallel run = more coupling). For most PCB geometries, FEXT is the dominant crosstalk mechanism for long parallel runs.",
+          "For 4-port VNA measurements, NEXT and FEXT appear directly in the S-parameter matrix. For a 4-port measurement on two coupled differential pairs, SDD31 is the far-end differential crosstalk. Convert to time domain to see the crosstalk impulse response and identify which physical region along the trace contributes the most coupling.",
+          "Measure intra-pair skew for differential pairs using TDR: drive the pair in common mode (both lines, same polarity) and look for asymmetry in the reflected waveform. Or, measure the crossing time difference between the positive and negative transitions of a differential signal on an oscilloscope. Skew converts differential signal to common mode, degrading the eye and increasing EMI.",
+          "Calculate the crosstalk contribution to the eye diagram: FEXT-induced jitter is approximately FEXT_amplitude / signal_slope at the crossing point. Add this to the bounded uncorrelated jitter (BUj) component of the jitter budget. If crosstalk closes the eye below the compliance mask, increase trace spacing (3x dielectric height for less than -40dB FEXT) or add a ground guard trace between aggressors."
+        ],
+        "tags": ["crosstalk", "skew", "coupling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "calibration-methodology",
+    "description": "Establish and maintain a measurement calibration program including uncertainty analysis, interval determination, traceability, and guard-banding for pass/fail decisions.",
+    "domain": "hardware",
+    "tags": ["test", "calibration", "uncertainty", "metrology", "hardware"],
+    "steps": [
+      {
+        "flow_name": "measurement-uncertainty-analysis",
+        "description": "Evaluate measurement uncertainty using the GUM (Guide to the Expression of Uncertainty in Measurement) framework with Type A (statistical) and Type B (non-statistical) components.",
+        "inputs": [
+          {"name": "measurement-process", "desc": "Description of the measurement: parameter, instrument, method, environmental conditions"},
+          {"name": "accuracy-requirement", "desc": "Required measurement accuracy for the parameter (from product specification or test tolerance)"}
+        ],
+        "outputs": [
+          {"name": "uncertainty-budget", "desc": "Table of all uncertainty contributors with their type (A or B), distribution, standard uncertainty, sensitivity coefficient, and contribution to combined uncertainty"},
+          {"name": "expanded-uncertainty", "desc": "Combined standard uncertainty multiplied by coverage factor k (typically k=2 for 95% confidence)"},
+          {"name": "test-uncertainty-ratio", "desc": "TUR = tolerance / expanded_uncertainty. Minimum acceptable TUR is 4:1 per ANSI/NCSL Z540.3; values below this require guard-banding"}
+        ],
+        "process": [
+          "Identify all sources of uncertainty in the measurement. Common sources: instrument accuracy (from calibration certificate), resolution (half the least significant digit), repeatability (from repeated measurements), reproducibility (operator and environment variation), temperature coefficient, stability since last calibration, and reference standard uncertainty.",
+          "For Type A evaluation (statistical): take at least 10 repeated measurements under repeatability conditions. Calculate the standard deviation. The standard uncertainty is s/sqrt(n) where s is the standard deviation and n is the number of measurements.",
+          "For Type B evaluation (non-statistical): use manufacturer specifications, calibration certificates, or engineering judgment. For a rectangular distribution (specification limit with no additional information), the standard uncertainty is specification_limit / sqrt(3). For a normal distribution (calibration certificate with stated uncertainty), divide the expanded uncertainty by the coverage factor.",
+          "Combine all uncertainty sources using root-sum-of-squares: u_combined = sqrt(sum of (sensitivity_coefficient_i * u_i)^2). Multiply by coverage factor k to get expanded uncertainty U. For k=2, the measurement result lies within plus or minus U with approximately 95% confidence.",
+          "Calculate the test uncertainty ratio: TUR = product_tolerance / (2 * U). If TUR is 4:1 or better, simple pass/fail decisions at the tolerance limits are adequate. If TUR is below 4:1, either improve the measurement (lower uncertainty) or apply guard-banding to maintain the specified consumer risk."
+        ],
+        "tags": ["uncertainty", "gum", "metrology"]
+      },
+      {
+        "flow_name": "calibration-interval-and-traceability",
+        "description": "Determine optimal calibration intervals based on instrument drift and reliability data, and establish metrological traceability to national standards through an unbroken chain.",
+        "inputs": [
+          {"name": "uncertainty-budget", "desc": "Measurement uncertainty analysis showing which instruments contribute most to uncertainty"},
+          {"name": "expanded-uncertainty", "desc": "Required measurement uncertainty to maintain"}
+        ],
+        "outputs": [
+          {"name": "calibration-intervals", "desc": "Recommended calibration interval for each instrument with the method used to determine it (manufacturer, reliability-based, or drift-based)"},
+          {"name": "traceability-chain", "desc": "Documented chain from each working instrument to a national measurement institute through accredited calibration laboratories"},
+          {"name": "interval-adjustment-criteria", "desc": "Rules for extending or shortening calibration intervals based on historical calibration results"}
+        ],
+        "process": [
+          "Start with the manufacturer's recommended calibration interval (typically 1 year). This is conservative and suitable when no historical data exists. Track the out-of-tolerance rate at each calibration: the percentage of parameters that have drifted outside their specification since the last calibration.",
+          "Apply reliability-based interval adjustment (per NCSL RP-1): if the out-of-tolerance rate at calibration is below 2%, extend the interval by a step (e.g., 12 months to 15 months). If above 5%, shorten the interval. If between 2% and 5%, keep the current interval. This converges on the optimal interval that maintains instrument reliability target (typically 95% in-tolerance probability).",
+          "For drift-based interval determination: plot the measured drift at each calibration over time. Fit a linear or quadratic drift model. Extrapolate to find when the drift would reach the specification limit. Set the calibration interval at 75% of that time to provide margin.",
+          "Establish traceability: each working instrument must be calibrated against a reference standard, which is itself calibrated against a higher-level standard, up to a national measurement institute (NIST, PTB, NPL). Each link in the chain must be performed by an accredited laboratory (ISO/IEC 17025) with a stated measurement uncertainty. The uncertainty grows at each level, so the working instrument's uncertainty includes the accumulated chain uncertainty.",
+          "Document the traceability chain for each measurement parameter, not just each instrument. A DMM measures voltage, current, and resistance, each with its own traceability path. The calibration certificate must state the measurement uncertainty for each parameter at each range, traceable to the specific reference standard and national institute."
+        ],
+        "tags": ["calibration-interval", "traceability", "drift"]
+      },
+      {
+        "flow_name": "guard-banding-and-decision-rules",
+        "description": "Apply guard-banding to pass/fail decisions when measurement uncertainty is significant relative to the product tolerance, controlling both consumer risk and producer risk.",
+        "inputs": [
+          {"name": "test-uncertainty-ratio", "desc": "TUR for each measurement, identifying those needing guard-banding"},
+          {"name": "calibration-intervals", "desc": "Established calibration program ensuring instruments are within specification"}
+        ],
+        "outputs": [
+          {"name": "guard-band-limits", "desc": "Adjusted acceptance limits for each measurement: guard-banded acceptance limit = specification limit - (guard band offset), with the offset method and values documented"},
+          {"name": "risk-analysis", "desc": "Calculated consumer risk (probability of accepting an out-of-spec unit) and producer risk (probability of rejecting an in-spec unit) for each guard-banded measurement"},
+          {"name": "calibration-program-summary", "desc": "Complete calibration program documentation: instruments, intervals, traceability, guard-bands, environmental requirements, and procedures"}
+        ],
+        "process": [
+          "For TUR 4:1 or better: no guard-banding needed. Simple acceptance at the specification limits gives consumer risk below 2.5% (per ANSI/NCSL Z540.3 default).",
+          "For TUR between 2:1 and 4:1: apply a simple guard-band by moving the acceptance limit inward by the expanded uncertainty. Acceptance limit = specification limit - U. This reduces consumer risk (chance of passing a bad unit) at the cost of increased producer risk (chance of failing a good unit).",
+          "For TUR below 2:1: the measurement is too uncertain for meaningful pass/fail decisions. Either improve the measurement (better instrument, more averaging, controlled environment) or accept the measurement as information-only and use it for process monitoring rather than product acceptance.",
+          "Consider asymmetric guard-banding when the consequences of consumer risk and producer risk are different. For safety-critical parameters, guard-band aggressively (low consumer risk, accept higher producer risk). For cosmetic or non-critical parameters, guard-band lightly (balanced risks).",
+          "Document the complete calibration program: instrument inventory with serial numbers, calibration intervals and next due dates, calibration procedures (or references to them), environmental requirements during calibration (temperature 23 plus or minus 2C, humidity below 70% is typical), guard-band policies by measurement type, and the process for handling out-of-tolerance findings (recall and re-test all product measured since the last good calibration)."
+        ],
+        "tags": ["guard-band", "decision-rules", "risk"]
+      }
+    ]
+  },
+  {
+    "chain_name": "functional-test-development",
+    "description": "Develop a board-level functional test from circuit analysis through test strategy, fixture design, test sequencing, and limit setting for production manufacturing test.",
+    "domain": "hardware",
+    "tags": ["test", "functional-test", "manufacturing", "production", "hardware"],
+    "steps": [
+      {
+        "flow_name": "functional-test-strategy",
+        "description": "Analyze the board circuit to define the test strategy: which functions to test, what stimuli to apply, what responses to measure, and which test points to access.",
+        "inputs": [
+          {"name": "board-schematic", "desc": "Board schematic and bill of materials"},
+          {"name": "board-specification", "desc": "Board functional specification with performance parameters and tolerances"}
+        ],
+        "outputs": [
+          {"name": "test-strategy-document", "desc": "Test approach for each functional block: stimulus type, measurement point, expected response, pass/fail criteria"},
+          {"name": "test-point-list", "desc": "Required test point locations with signal name, expected voltage or current range, and measurement type (DC, AC, frequency, digital)"},
+          {"name": "coverage-analysis", "desc": "Estimated fault coverage by functional block, untestable areas identified with justification"}
+        ],
+        "process": [
+          "Decompose the board into functional blocks: power supply, digital processor, memory, analog front-end, communication interfaces, sensors, actuator drivers. For each block, identify the key performance parameters from the specification.",
+          "For each functional block, define the test approach. Power supplies: measure output voltage, current limit, ripple. Digital: write/read test patterns to verify data paths. Analog: apply known input and measure output accuracy, gain, offset, linearity. Communication: loopback test where possible, or protocol-level verification with external test equipment.",
+          "Identify test points needed for each measurement. Prefer existing component pads and connector pins. Where additional access is needed, request test points in the next board revision. For high-density boards (BGA-heavy), prioritize boundary scan for digital nets and limit physical test points to analog and power measurements.",
+          "Estimate fault coverage: for each component on the BOM, assess whether the functional test would detect a solder fault (open or short) on each pin. Components in the signal path of a tested function are typically covered. Components in untested functions (unused I/O, unloaded configuration options) may need supplementary testing (boundary scan, visual inspection, or flying probe).",
+          "Define the test priority: test power first (if power is wrong, nothing else works), then digital communication (verify the processor boots and communicates), then analog performance, then peripheral functions. This sequence isolates failures quickly and prevents damage from testing a board with a power fault."
+        ],
+        "tags": ["test-strategy", "coverage", "circuit-analysis"]
+      },
+      {
+        "flow_name": "test-fixture-design",
+        "description": "Design the test fixture (bed-of-nails or guided probe) including probe selection, actuation mechanism, and signal routing for reliable contact with production throughput.",
+        "inputs": [
+          {"name": "test-point-list", "desc": "Required test point locations and measurement types"},
+          {"name": "test-strategy-document", "desc": "Test approach defining stimulus and measurement routing requirements"}
+        ],
+        "outputs": [
+          {"name": "fixture-design", "desc": "Mechanical design: probe positions from board Gerber data, actuation method, guide pin locations, vacuum hold-down if needed"},
+          {"name": "probe-selection", "desc": "Probe type for each test point (spring-loaded pogo pin, crown tip for solder pads, chisel tip for vias, Kelvin probe for low-resistance measurements)"},
+          {"name": "wiring-diagram", "desc": "Signal routing from probes to test instrument interface, with shielding for sensitive analog measurements and separation of power and signal paths"}
+        ],
+        "process": [
+          "Extract test point coordinates from the board Gerber files. Align to the fixture plate coordinate system using board tooling holes as alignment references. Verify that no probe falls on a component body, solder mask, or silkscreen.",
+          "Select probe type for each test point. For standard test pads (1mm or larger), use a crown-tip pogo pin (good contact on flat pads). For vias, use a chisel-tip that fits the via annular ring. For fine-pitch pads (less than 0.5mm), use a pointed or serrated tip with higher spring force. For power connections carrying current, use double-ended probes (two springs in parallel) or Kelvin (4-wire) probes.",
+          "Design the probe plate from the probe layout. Minimum probe-to-probe spacing is limited by the probe housing diameter (typically 0.95mm for miniature probes, 1.27mm for standard). If test points are closer than the minimum probe spacing, use staggered-height probes or a multi-level probe plate.",
+          "Design the actuation mechanism. For manual fixtures (low volume): lever-actuated with an over-center lock. For semi-automatic (medium volume): pneumatic cylinder press with safety interlocks. For inline automation (high volume): vacuum-actuated fixture with conveyor integration. Include guide pins (2 minimum, 3 preferred) for board alignment with less than 0.1mm positioning error.",
+          "Route signals from probes to the test instrument interface. Keep analog measurement lines shielded (coaxial routing from probe to measurement instrument) and separate from digital stimulus lines. Route power supply probes with adequate wire gauge for the expected current. Include a bed-of-nails ground connection to the board ground plane for measurement reference."
+        ],
+        "tags": ["fixture", "probe", "bed-of-nails"]
+      },
+      {
+        "flow_name": "test-sequence-and-limits",
+        "description": "Develop the test program sequence, set pass/fail limits from design tolerance and measurement capability, and implement debug modes for failure diagnosis in production.",
+        "inputs": [
+          {"name": "fixture-design", "desc": "Completed fixture with known probe contact characteristics"},
+          {"name": "test-strategy-document", "desc": "Functional test approach and coverage goals"},
+          {"name": "board-specification", "desc": "Performance specifications with tolerances"}
+        ],
+        "outputs": [
+          {"name": "test-program", "desc": "Complete test sequence: power-up sequence, parametric tests, functional tests, power-down sequence, with timing and instrument configuration for each step"},
+          {"name": "pass-fail-limits", "desc": "Upper and lower limits for each measurement, derived from specification tolerance and measurement capability (Cpk-based)"},
+          {"name": "debug-mode-definition", "desc": "Diagnostic test routines that run on failed boards to isolate the failure to a specific functional block and provide repair guidance"}
+        ],
+        "process": [
+          "Sequence the tests in dependency order. Power-up: apply input power through current-limited supply, verify supply current is within expected range (catches dead shorts before damage), then measure each power rail voltage. Digital initialization: verify processor boot (check a status register or communication handshake). Analog calibration: if the board has trimming, execute the calibration sequence. Functional tests: test each function in order of criticality.",
+          "Set pass/fail limits using the 4:1 guard-band rule. If the specification is 3.3V plus or minus 5% (3.135V to 3.465V) and the measurement uncertainty is plus or minus 5mV, set test limits at 3.140V to 3.460V (specification limit plus uncertainty on the inward side). For parameters where the specification tolerance is tight relative to measurement uncertainty, calculate limits from the Cpk requirement: test limit = nominal plus or minus tolerance * (1 - 1/(3*Cpk)).",
+          "Optimize test time vs coverage trade-off. Measure the time for each test step. For high-volume production, total test time must fit within the line takt time (production rate requirement). Eliminate redundant tests (if boundary scan already tested digital connectivity, skip pin-level digital probing). Parallelize independent measurements (measure multiple analog channels simultaneously).",
+          "Implement a debug mode for failed boards. When a test fails, branch to a diagnostic routine that performs additional measurements to isolate the failure. For example, if a voltage rail fails, measure the rail at multiple points to distinguish between a regulator fault, excessive load current (short on the rail), and a measurement contact issue. Provide the technician with a repair action code mapping each failure signature to a likely repair.",
+          "Validate the test program using known-good and known-bad boards. Run 30 known-good boards to verify the false-fail rate is below 0.5% (gauge R&R study). Introduce known faults (lifted pins, wrong-value resistors, missing components) to verify detection. Calculate the actual fault coverage from the known-fault study and compare to the estimated coverage from the test strategy."
+        ],
+        "tags": ["test-program", "limits", "debug"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-measurement-methodology",
+    "description": "Measure component and system temperatures accurately using thermocouples, thermal cameras, and thermal transient methods with proper calibration and error correction.",
+    "domain": "hardware",
+    "tags": ["test", "thermal", "measurement", "temperature", "hardware"],
+    "steps": [
+      {
+        "flow_name": "thermocouple-measurement-setup",
+        "description": "Select, attach, and calibrate thermocouples for accurate temperature measurement of electronic components with minimal thermal disturbance to the circuit.",
+        "inputs": [
+          {"name": "measurement-targets", "desc": "Components and locations to measure temperature, with expected temperature range and required accuracy"},
+          {"name": "operating-conditions", "desc": "Board operating conditions: power dissipation, airflow, ambient temperature"}
+        ],
+        "outputs": [
+          {"name": "thermocouple-configuration", "desc": "Thermocouple type, wire gauge, attachment method, and routing for each measurement point"},
+          {"name": "thermal-disturbance-estimate", "desc": "Estimated temperature measurement error from thermocouple thermal mass and heat conduction along the wire"},
+          {"name": "measurement-accuracy-budget", "desc": "Total measurement uncertainty including thermocouple accuracy, cold junction compensation, data acquisition resolution, and attachment thermal resistance"}
+        ],
+        "process": [
+          "Select thermocouple type. Type K (Chromel-Alumel) for general electronics use: range -200C to +1250C, accuracy plus or minus 2.2C or 0.75% (standard), or plus or minus 1.1C (special grade). Type T (Copper-Constantan) for high accuracy at lower temperatures: range -200C to +350C, accuracy plus or minus 1C (special grade). Type T has lower thermal EMF noise in magnetic fields.",
+          "Select the thinnest wire gauge that meets the temperature range. Thinner wire (36 AWG or 40 AWG) conducts less heat along the wire, reducing the measurement error from heat sinking through the thermocouple. For a component with a thermal resistance of 50C/W dissipating 1W, a 36 AWG thermocouple can sink 10-50mW and read 0.5-2.5C low.",
+          "Attach the thermocouple junction to the component case using thermally conductive adhesive (not electrically conductive to avoid ground loops). Press the junction flat against the case surface. For IC packages with exposed pads, attach to the case top surface directly above the die (hottest point). Secure the wire against the board surface for at least 10mm to thermalize the wire and reduce conduction error.",
+          "Route thermocouple wires away from heat-generating components and away from switching circuits that could inject noise into the thermocouple signal. Use shielded thermocouple extension cable for runs longer than 30cm. Connect to a thermocouple data acquisition system with cold junction compensation accuracy of plus or minus 0.5C or better.",
+          "Verify the installation by measuring a known condition: with the board powered off at room temperature, all thermocouples should read within their accuracy specification of the ambient temperature measured by a calibrated reference thermometer. This catches wiring errors, bad junctions, and cold junction compensation faults."
+        ],
+        "tags": ["thermocouple", "attachment", "accuracy"]
+      },
+      {
+        "flow_name": "thermal-camera-measurement",
+        "description": "Configure and use a thermal camera for non-contact temperature measurement with proper emissivity correction, reflected temperature compensation, and spatial resolution awareness.",
+        "inputs": [
+          {"name": "measurement-targets", "desc": "Components and areas to measure, including surface materials"},
+          {"name": "thermocouple-configuration", "desc": "Thermocouple locations for cross-calibration with the thermal camera"}
+        ],
+        "outputs": [
+          {"name": "thermal-images", "desc": "Calibrated thermal images of the board showing temperature distribution with correct emissivity settings for each material"},
+          {"name": "emissivity-correction-map", "desc": "Emissivity values used for each surface material, with the method of determination (lookup table, contact measurement comparison, or tape method)"},
+          {"name": "hotspot-identification", "desc": "Component temperatures from the thermal camera cross-referenced with thermocouple readings, identifying the hottest components and their operating margin"}
+        ],
+        "process": [
+          "Set the thermal camera parameters: focus at the working distance, temperature range matching expected board temperatures, frame averaging for noise reduction. For electronics, a camera with NETD (noise equivalent temperature difference) of 50mK or better and spatial resolution of 25um or better per pixel at the working distance is recommended.",
+          "Correct emissivity for each material. Emissivity values for common electronics materials: black IC package mold compound 0.85-0.95, white silkscreen 0.80-0.90, bare copper 0.03-0.10 (extremely low, unreliable for direct measurement), solder 0.40-0.60, FR-4 laminate 0.85-0.95, aluminum heat sink (anodized) 0.80-0.90, (bare) 0.05-0.10.",
+          "For surfaces with low or uncertain emissivity (exposed copper, bare metal heat sinks), apply a thin layer of high-emissivity tape or paint to a portion of the surface. Measure the taped area (known emissivity approximately 0.95) and adjust the camera emissivity for the untaped area until both read the same temperature. This gives the true emissivity for that surface.",
+          "Set the reflected temperature (background radiation) correctly. In an indoor environment, the reflected temperature is approximately equal to the ambient air temperature. For measurements near hot objects (soldering stations, other boards), the reflected temperature from those objects can raise the apparent temperature of low-emissivity surfaces. Measure reflected temperature using a crumpled aluminum foil target.",
+          "Cross-calibrate with thermocouple readings. Compare the thermal camera reading at each thermocouple location with the thermocouple measurement. Agreement within plus or minus 2C for high-emissivity surfaces confirms correct camera setup. For low-emissivity surfaces, the thermocouple is the reference and the camera emissivity must be adjusted until the camera matches the thermocouple."
+        ],
+        "tags": ["thermal-camera", "emissivity", "infrared"]
+      },
+      {
+        "flow_name": "junction-temperature-measurement",
+        "description": "Measure semiconductor junction temperature using electrical methods (forward voltage, thermal transient) that access the die temperature directly rather than measuring the package surface.",
+        "inputs": [
+          {"name": "hotspot-identification", "desc": "Components requiring junction temperature measurement (those running hottest or closest to thermal limits)"},
+          {"name": "thermal-images", "desc": "Surface temperature data for thermal resistance calculation"}
+        ],
+        "outputs": [
+          {"name": "junction-temperature-data", "desc": "Measured junction temperatures for each target device under operating conditions"},
+          {"name": "thermal-resistance-measurements", "desc": "Measured theta-JA (junction-to-ambient) and theta-JC (junction-to-case) for comparison with datasheet values and thermal model validation"},
+          {"name": "thermal-derating-assessment", "desc": "Operating junction temperature margin for each device relative to its maximum rated Tj, with recommended derating per reliability guidelines"}
+        ],
+        "process": [
+          "For diodes and MOSFETs with accessible body diodes, use the forward voltage method. First calibrate: sweep the device through a range of known temperatures (oven or thermal chamber) while measuring forward voltage at a low sense current (100uA to 1mA). Record the Vf vs temperature relationship (typically -1.5 to -2.5 mV/C for silicon). This is the temperature-sensitive electrical parameter (TSEP).",
+          "To measure junction temperature during operation: apply the operating power to heat the device to steady state. Then rapidly switch from operating power to the low sense current and measure Vf within microseconds (before the junction cools). The Vf reading, converted through the calibration curve, gives the junction temperature at the instant power was removed.",
+          "For thermal transient measurement (structure function analysis): heat the device to steady state, then switch off power and sample the cooling curve at high resolution (microsecond time steps for the first millisecond, then progressively longer intervals). The cooling curve shape reveals the thermal resistance structure from junction through die attach, package, and board to ambient.",
+          "Calculate thermal resistance: theta-JC = (Tj - Tcase) / Pdiss, where Tcase is measured by thermocouple on the package. theta-JA = (Tj - Tambient) / Pdiss. Compare measured values to the datasheet. If measured theta-JA is higher than the datasheet value, the board thermal design is worse than the datasheet test condition (usually a JEDEC standard test board with specific copper area).",
+          "Assess derating: most semiconductor reliability guidelines recommend operating at least 20-30C below the rated maximum junction temperature. For components running near the limit, calculate the temperature rise above ambient and identify the thermal path improvement needed (more copper, thermal vias, heat sink, improved airflow) to achieve adequate margin."
+        ],
+        "tags": ["junction-temperature", "thermal-resistance", "derating"]
+      }
+    ]
+  },
+  {
+    "chain_name": "failure-analysis-methodology",
+    "description": "Conduct systematic failure analysis of electronic assemblies from initial electrical characterization through non-destructive and destructive inspection to root cause determination and corrective action.",
+    "domain": "hardware",
+    "tags": ["test", "failure-analysis", "root-cause", "reliability", "hardware"],
+    "steps": [
+      {
+        "flow_name": "failure-triage-and-electrical-characterization",
+        "description": "Reproduce the reported failure, characterize the electrical symptoms, and narrow the fault to a specific circuit or component through systematic measurement before any physical inspection.",
+        "inputs": [
+          {"name": "failure-report", "desc": "Description of the failure: symptoms, conditions, intermittent vs permanent, field or manufacturing origin"},
+          {"name": "board-documentation", "desc": "Schematic, layout, BOM, and any available production test data for the failed unit"}
+        ],
+        "outputs": [
+          {"name": "failure-reproduction", "desc": "Confirmed failure mode with the conditions required to reproduce it (temperature, load, timing, sequence)"},
+          {"name": "electrical-characterization", "desc": "Measured electrical parameters that deviate from specification, with comparison to a known-good reference unit"},
+          {"name": "fault-localization", "desc": "Suspected component or circuit area based on electrical measurements, narrowed to the minimum ambiguity group"}
+        ],
+        "process": [
+          "Review the failure report for context: field return (usage conditions, age, environment) or manufacturing fallout (which test step caught it, what the test data shows). If production test data is available, analyze the parametric trend for this unit compared to the population (was it marginal at test or a sudden failure?).",
+          "Attempt to reproduce the failure under controlled conditions. If the failure is intermittent, systematically vary temperature (hot and cold), voltage (high and low line), mechanical stress (board flex, connector reseat), and timing (power sequencing, data rate) to find the conditions that trigger it. Document the exact conditions for reproducibility.",
+          "Compare the failed unit to a known-good reference unit. Measure power supply voltages, clock frequencies, signal amplitudes, and communication waveforms on both units under identical conditions. The difference between good and failed unit measurements points to the fault area.",
+          "Use divide-and-conquer to narrow the fault. For a signal chain failure, probe the signal at intermediate points between input and output. The last point where the signal is good and the first point where it is bad brackets the faulty component. For power supply failures, measure upstream to downstream until the fault is located.",
+          "For intermittent failures that cannot be reproduced on the bench, apply environmental stress (thermal chamber, vibration) while monitoring the symptomatic signal on an oscilloscope with a persistence or envelope capture mode. The intermittent event will eventually appear and the environmental condition at the moment of failure provides a clue to the mechanism."
+        ],
+        "tags": ["triage", "characterization", "reproduction"]
+      },
+      {
+        "flow_name": "non-destructive-physical-inspection",
+        "description": "Inspect the failed assembly using non-destructive methods including visual inspection, X-ray, acoustic microscopy, and dye penetrant to identify physical defects without altering the evidence.",
+        "inputs": [
+          {"name": "fault-localization", "desc": "Suspected component or area from electrical characterization"},
+          {"name": "electrical-characterization", "desc": "Measured deviations to correlate with physical findings"}
+        ],
+        "outputs": [
+          {"name": "visual-inspection-findings", "desc": "Optical and stereo microscope observations: solder joint appearance, component damage, PCB defects, contamination"},
+          {"name": "xray-inspection-results", "desc": "X-ray images of suspect solder joints showing voids, bridging, head-in-pillow, and other hidden defects under BGA and QFN packages"},
+          {"name": "non-destructive-diagnosis", "desc": "Preliminary failure mechanism hypothesis based on non-destructive evidence, with confidence assessment"}
+        ],
+        "process": [
+          "Start with unaided visual inspection: look for obvious physical damage, discoloration (burn marks, heat damage), cracked components, bent pins, contamination, or corrosion. Photograph everything before handling. Handle the board by the edges with ESD-safe gloves to preserve contamination evidence.",
+          "Move to stereo microscope inspection (10x to 45x magnification) of the suspect area. Examine solder joints for cold solder (grainy, dull finish), insufficient solder, excess solder, solder bridges, lifted pads, cracked joints, or tin whiskers. For through-hole components, check for solder fill (barrel fill should be 75% minimum per IPC-A-610).",
+          "For BGA, QFN, and other hidden-joint packages, use X-ray inspection. In 2D X-ray, look for: voids (dark circles in solder balls, acceptable up to 25% of ball area per IPC-7095), bridging (solder connecting adjacent balls), head-in-pillow (ball and pad solder did not fully merge, showing a distinct boundary), and missing or misaligned balls. If available, use 3D X-ray (CT) to see the joint profile in cross-section without cutting.",
+          "For suspected delamination or die-attach voids, use scanning acoustic microscopy (SAM/C-SAM). Acoustic imaging reveals voids and delamination at interfaces (die to die-attach, die-attach to leadframe, board layer delamination) that are invisible to X-ray. Voids appear as bright (high reflection) areas at the interface.",
+          "Correlate non-destructive findings with electrical symptoms. A void in a BGA solder ball correlates with an intermittent open. A solder bridge matches a short between two nets. Die-attach voiding correlates with thermal failure (hot spot on the die from poor heat conduction). If the non-destructive evidence is conclusive, document it and proceed to root cause. If inconclusive, proceed to destructive analysis."
+        ],
+        "tags": ["visual-inspection", "xray", "non-destructive"]
+      },
+      {
+        "flow_name": "destructive-analysis-and-root-cause",
+        "description": "Perform destructive physical analysis including cross-sectioning, SEM/EDS, and dye-and-pry to determine the failure mechanism at the microstructural level.",
+        "inputs": [
+          {"name": "non-destructive-diagnosis", "desc": "Hypothesis and evidence from non-destructive inspection"},
+          {"name": "fault-localization", "desc": "Specific component or joint to section"}
+        ],
+        "outputs": [
+          {"name": "cross-section-results", "desc": "Metallographic cross-section images showing solder joint microstructure, intermetallic thickness, crack path, and void morphology"},
+          {"name": "material-analysis", "desc": "EDS (Energy Dispersive X-ray Spectroscopy) composition analysis at failure site identifying contaminants, corrosion products, or unexpected materials"},
+          {"name": "failure-mechanism-determination", "desc": "Root cause identification: failure mechanism (fatigue, overstress, contamination, EOS/ESD, manufacturing defect) with supporting evidence from the physical analysis"}
+        ],
+        "process": [
+          "For solder joint analysis, use dye-and-pry first (for BGA/CSP). Apply fluorescent dye to the suspect area, allow it to wick into any cracks. Remove the component by heating above solder liquidus and lifting off. Examine the fracture surfaces under UV light: dye penetration marks the pre-existing crack; fresh fracture surfaces (from removal) are dye-free. This reveals the crack location (board side, component side, bulk solder, intermetallic) and extent.",
+          "Cross-section the suspect joint or component. Mount the sample in epoxy, grind and polish through the target plane using progressively finer abrasive (180 grit to 0.05um alumina). Etch the polished surface to reveal grain boundaries if needed (for solder: 5% HCl in methanol for 5 seconds). Examine under optical microscope at 50x to 500x.",
+          "Examine the cross-section for failure signatures. Thermal fatigue: intergranular crack propagating from the stress concentration point (package corner for BGA), with grain coarsening near the crack. Mechanical overstress: transgranular crack with little deformation. Solder void: smooth spherical cavity in the joint interior. Kirkendall voiding: line of voids at the Cu-Sn intermetallic interface from diffusion imbalance (indicates excessive thermal exposure).",
+          "Use SEM (Scanning Electron Microscopy) for high-magnification imaging of the fracture surface or cross-section. EDS (Energy Dispersive Spectroscopy) identifies elemental composition: detect tin whiskers (pure Sn), contamination (Cl, S for corrosion; Na, K for flux residue), intermetallic composition (Cu6Sn5 vs Cu3Sn), and foreign material.",
+          "Determine the root cause category: design (thermal stress exceeds joint fatigue life, inadequate pad size), component (internal defect, incoming quality issue), process (reflow profile, paste deposit volume, placement accuracy, cleanliness), or field stress (thermal cycling, mechanical shock, corrosion from environment). Document the evidence chain from symptom to mechanism to root cause."
+        ],
+        "tags": ["cross-section", "sem", "destructive"]
+      },
+      {
+        "flow_name": "corrective-action-and-reporting",
+        "description": "Define corrective actions from the root cause, verify their effectiveness, document the complete failure analysis, and analyze field return trends for systemic issues.",
+        "inputs": [
+          {"name": "failure-mechanism-determination", "desc": "Confirmed root cause with evidence"},
+          {"name": "failure-report", "desc": "Original failure context for trend analysis"}
+        ],
+        "outputs": [
+          {"name": "corrective-action-plan", "desc": "Specific corrective actions addressing the root cause: design change, process parameter adjustment, or component change, with owner and timeline"},
+          {"name": "failure-analysis-report", "desc": "Complete FA report: failure description, analysis sequence, evidence at each step, root cause, corrective action, and lessons learned"},
+          {"name": "trend-analysis", "desc": "Comparison of this failure mode to historical field returns and manufacturing fallout data, identifying if it is a new mode or a recurring pattern"}
+        ],
+        "process": [
+          "Define corrective actions matched to the root cause category. For design root cause: modify the design (pad size, trace routing, thermal relief, component selection) and verify with analysis or prototype. For process root cause: adjust the process parameter (reflow profile, stencil aperture, placement force) and run a process validation (DOE or first-article inspection). For component root cause: escalate to the component supplier with evidence and qualification data.",
+          "Verify corrective action effectiveness. For design changes, run accelerated life testing on the modified design. For process changes, monitor the affected measurement on the next production lot. Define the success criteria: zero recurrence of this failure mode for N units, or parametric shift below a threshold.",
+          "Write the failure analysis report. Structure: executive summary (one paragraph with root cause and action), failure description and context, analysis sequence (each step with images and data), root cause determination (evidence chain), corrective action and verification plan, and lessons learned. Include all images at sufficient resolution for peer review.",
+          "Analyze the failure against the historical database. Is this failure mode new or recurring? If recurring, the prior corrective action was ineffective and needs escalation. Calculate the failure rate for this mode: failures per million units per year (or per thousand power-on-hours). Compare to the reliability prediction for this failure mode to assess whether the actual failure rate exceeds the predicted rate.",
+          "Feed the findings back to design and manufacturing. Add this failure mode to the FMEA for the product family. Update the incoming inspection criteria if the root cause was a component defect. Update the functional test limits if the test missed a precursor signature that could have caught this failure at production test."
+        ],
+        "tags": ["corrective-action", "reporting", "trend-analysis"]
+      }
+    ]
+  }
+]

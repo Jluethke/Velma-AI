@@ -1,0 +1,903 @@
+[
+  {
+    "chain_name": "thermal-simulation-methodology",
+    "description": "Design and execute thermal simulations for electronic systems from boundary condition definition through mesh convergence, solver selection, and measurement correlation to produce validated thermal models with known accuracy margins.",
+    "domain": "hardware",
+    "tags": ["thermal", "simulation", "electronics", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "thermal-dissipation-inventory",
+        "description": "Catalog every heat source on the board or in the system with its power dissipation under each operating mode, building the thermal source map that drives all downstream analysis.",
+        "inputs": [
+          {"name": "system-description", "desc": "Physical description of the electronic system including PCB, components, and enclosure"},
+          {"name": "operating-modes", "desc": "List of operating modes (idle, typical, peak, fault) with duty cycles"}
+        ],
+        "outputs": [
+          {"name": "heat-source-map", "desc": "Table of every component with its power dissipation per operating mode, package thermal resistance, and physical location"},
+          {"name": "total-system-dissipation", "desc": "Aggregate power dissipation per mode with identification of dominant heat sources (top 20% producing 80% of heat)"}
+        ],
+        "process": [
+          "Extract power dissipation for each component from datasheets at worst-case supply voltage and maximum ambient temperature. Use Pdiss = Vcc_max * Icc_max for ICs, I^2 * Rds_on * duty for MOSFETs, I^2 * ESR for capacitors, and I^2 * R_dc for inductors.",
+          "Map each component to its physical location on the board using pick-and-place coordinates or assembly drawing.",
+          "Calculate power for each operating mode using mode-specific duty cycles. A processor at 3W active and 50mW sleep with 40% active duty dissipates 1.2W + 0.03W = 1.23W average.",
+          "Rank components by dissipation. Identify the top 20% of power dissipators. These set your thermal design challenge.",
+          "Record the package thermal resistance values from datasheets: theta_JA (junction to ambient), theta_JC (junction to case), and theta_JB (junction to board). Note which values are missing and will need estimation."
+        ],
+        "tags": ["thermal", "power-analysis"]
+      },
+      {
+        "flow_name": "thermal-boundary-condition-definition",
+        "description": "Define the thermal boundary conditions that represent how heat leaves the system, including ambient conditions, airflow, and mounting interfaces.",
+        "inputs": [
+          {"name": "heat-source-map", "desc": "Component heat sources with power and location"},
+          {"name": "total-system-dissipation", "desc": "Aggregate power per mode"}
+        ],
+        "outputs": [
+          {"name": "boundary-conditions", "desc": "Complete set of thermal boundary conditions: ambient temperature, airflow velocity profile, cold plate temperature, radiation surfaces, and conduction paths to chassis"},
+          {"name": "convection-coefficients", "desc": "Calculated or estimated convection coefficients for each surface and airflow condition"}
+        ],
+        "process": [
+          "Define the ambient temperature specification. Use the maximum rated ambient, not the typical. For outdoor electronics, account for solar loading by adding up to 20C to the air temperature for surfaces in direct sun.",
+          "For forced convection: calculate Reynolds number from airflow velocity, characteristic length, and air properties at the film temperature. Use Nusselt correlations (flat plate: Nu = 0.664 * Re^0.5 * Pr^(1/3) for laminar, Nu = 0.037 * Re^0.8 * Pr^(1/3) for turbulent) to get h in W/(m^2*K). Typical board-level h values: 5-25 W/(m^2*K) for natural convection, 25-100 for moderate forced air.",
+          "For natural convection: calculate Grashof number from temperature difference and characteristic length. Use the Rayleigh number (Ra = Gr * Pr) and appropriate correlation for the surface orientation. Vertical plate: Nu = 0.59 * Ra^0.25 for 10^4 < Ra < 10^9.",
+          "For conduction to chassis or cold plate: measure or estimate the thermal resistance of each mounting interface. A bolted joint typically has 0.5-5 C*cm^2/W depending on surface finish, contact pressure, and interface material.",
+          "For radiation: calculate the view factor between the board/enclosure surface and the surroundings. For a board inside a sealed box radiating to the enclosure walls, use the enclosed body approximation. Radiation becomes significant above 80C surface temperature or in vacuum."
+        ],
+        "tags": ["thermal", "boundary-conditions"]
+      },
+      {
+        "flow_name": "thermal-resistance-network-construction",
+        "description": "Build a lumped-parameter thermal resistance network from physical geometry before any simulation, to develop engineering intuition about heat flow paths and identify which paths dominate.",
+        "inputs": [
+          {"name": "boundary-conditions", "desc": "Thermal boundary conditions"},
+          {"name": "heat-source-map", "desc": "Component heat sources"},
+          {"name": "convection-coefficients", "desc": "Surface convection coefficients"}
+        ],
+        "outputs": [
+          {"name": "thermal-resistance-network", "desc": "Node-and-resistor network showing conduction, convection, and radiation resistances from each junction to ambient"},
+          {"name": "first-pass-temperatures", "desc": "Estimated junction temperatures from the resistance network, identifying which components are at risk before running any simulation"}
+        ],
+        "process": [
+          "For each critical component, trace the heat flow path from junction to ambient. A typical path: junction -> die attach -> lead frame -> solder joint -> PCB copper -> board surface -> air (convection) and board edge -> mounting screw -> chassis (conduction).",
+          "Calculate conduction resistances: R_cond = L / (k * A) where L is path length, k is thermal conductivity (copper 385 W/mK, FR4 through-plane 0.3 W/mK, FR4 in-plane 15-25 W/mK depending on copper percentage, aluminum 205 W/mK, solder 50 W/mK).",
+          "Calculate convection resistances: R_conv = 1 / (h * A) where h is from the boundary condition step and A is the exposed surface area. A 25mm x 25mm component top surface with h = 15 W/(m^2*K) has R_conv = 1/(15 * 0.000625) = 107 C/W.",
+          "Assemble the network as parallel and series resistances. Heat flows through all available parallel paths simultaneously. The effective resistance from junction to ambient is lower than any single path alone.",
+          "Solve the network: T_junction = T_ambient + P * R_total. Flag any component where the calculated junction temperature exceeds 80% of its rated maximum. These need detailed simulation or design changes."
+        ],
+        "tags": ["thermal", "resistance-network"]
+      },
+      {
+        "flow_name": "thermal-solver-selection",
+        "description": "Select the appropriate simulation tool and solver type (CFD vs FEA vs analytical) based on the dominant heat transfer mechanism and required accuracy.",
+        "inputs": [
+          {"name": "thermal-resistance-network", "desc": "Lumped network and dominant heat paths"},
+          {"name": "first-pass-temperatures", "desc": "Initial temperature estimates"}
+        ],
+        "outputs": [
+          {"name": "solver-selection", "desc": "Chosen simulation approach (CFD, FEA, or hybrid) with justification based on the physics"},
+          {"name": "model-simplification-plan", "desc": "List of geometry simplifications that are justified for the chosen solver and accuracy target"}
+        ],
+        "process": [
+          "Use CFD when forced or natural convection dominates the thermal resistance. CFD solves the Navier-Stokes equations for airflow and couples to the energy equation. Required when airflow patterns are not obvious: multiple heat sources creating thermal wakes, flow around obstructions, or recirculation zones.",
+          "Use FEA when conduction dominates: sealed systems, cold-plate-cooled assemblies, or components thermally connected to a heat spreader. FEA solves the heat equation in solids and applies convection as a boundary condition without solving for airflow.",
+          "Use a hybrid approach (CFD for flow, mapped to FEA for detailed component modeling) when both matter: forced-air-cooled systems where component-level detail is also needed.",
+          "Simplify geometry for the chosen solver. For CFD: replace small components with flat heat sources, model copper planes as anisotropic thermal conductivity blocks, omit features smaller than the boundary layer thickness. For FEA: represent PCB stackup as a single layer with effective in-plane and through-plane conductivity.",
+          "Define the accuracy target. For thermal design verification: plus or minus 5C correlation to measurement is good practice. For safety certification: must demonstrate margin with worst-case assumptions, no tuning allowed."
+        ],
+        "tags": ["thermal", "simulation", "solver"]
+      },
+      {
+        "flow_name": "mesh-convergence-study",
+        "description": "Perform a systematic mesh convergence study to ensure simulation results are independent of mesh density, distinguishing real physics from numerical artifacts.",
+        "inputs": [
+          {"name": "solver-selection", "desc": "Chosen solver and approach"},
+          {"name": "model-simplification-plan", "desc": "Geometry simplifications"}
+        ],
+        "outputs": [
+          {"name": "converged-mesh-settings", "desc": "Mesh density settings that produce results within 1% of the asymptotic value, with the convergence plot as evidence"},
+          {"name": "mesh-quality-metrics", "desc": "Element quality statistics (aspect ratio, skewness, orthogonal quality) confirming the mesh meets solver requirements"}
+        ],
+        "process": [
+          "Start with a coarse mesh and solve. Record the peak temperature at each critical component. Double the mesh density (halve element size) and solve again. Record temperatures at the same locations.",
+          "Continue doubling until the temperature change between successive meshes is less than 1% of the temperature rise above ambient. Typically 3-4 mesh levels are needed. Plot element count vs temperature to see the convergence curve.",
+          "Use Richardson extrapolation to estimate the grid-independent solution: T_exact is approximately (T_fine * r^p - T_coarse) / (r^p - 1) where r is the refinement ratio and p is the observed order of convergence from three mesh levels.",
+          "Check mesh quality metrics. For CFD: wall y+ should match your turbulence model requirements (y+ less than 1 for SST k-omega, 30-300 for standard wall functions). For FEA: element aspect ratio below 5:1, maximum skewness below 0.9.",
+          "Apply local mesh refinement at high-gradient regions (near heat sources, at material interfaces, in thermal boundary layers) rather than globally refining. This reduces solve time while maintaining accuracy where it matters."
+        ],
+        "tags": ["thermal", "mesh", "simulation"]
+      },
+      {
+        "flow_name": "thermal-measurement-correlation",
+        "description": "Correlate simulation results to physical measurements by placing thermocouples and IR cameras correctly, understanding measurement uncertainty, and adjusting model parameters within physically justified bounds.",
+        "inputs": [
+          {"name": "converged-mesh-settings", "desc": "Validated mesh settings"},
+          {"name": "mesh-quality-metrics", "desc": "Mesh quality confirmation"}
+        ],
+        "outputs": [
+          {"name": "measurement-plan", "desc": "Thermocouple placement locations, IR camera setup parameters, and measurement procedure with uncertainty estimates"},
+          {"name": "correlation-results", "desc": "Side-by-side comparison of simulation vs measurement at each point, with root cause analysis for any discrepancies exceeding the target"}
+        ],
+        "process": [
+          "Place thermocouples at simulation monitoring points. Use Type T (copper-constantan) for electronics temperature range (accuracy plus or minus 0.5C). Attach with thermally conductive epoxy or Kapton tape, ensuring the wire runs along an isotherm for at least 20 wire diameters to minimize conduction error along the leads.",
+          "For IR camera measurements: calibrate emissivity at each surface. Bare copper is 0.03-0.07 (nearly invisible to IR), black anodized aluminum is 0.85-0.95, PCB solder mask is 0.85-0.92. Apply a thin layer of known-emissivity paint (matte black, epsilon = 0.95) to critical measurement areas. Account for reflected IR from nearby hot surfaces.",
+          "Run the physical test under controlled conditions. Let the system reach steady state (monitor thermocouple readings until slope is less than 0.1C per minute for 10 minutes). Record ambient temperature at the system inlet, not just room temperature.",
+          "Compare simulation to measurement at each point. Accept discrepancies under 5C (or 10% of temperature rise, whichever is larger). For larger discrepancies: check contact resistances (most common source of error), verify power dissipation values with actual current and voltage measurements, and confirm airflow boundary conditions match reality.",
+          "Adjust model parameters within physically justified bounds only. Contact resistance is the typical tuning parameter (can vary 2x-5x from nominal). Never adjust material thermal conductivity or component power to force a match. Document every adjustment and its justification."
+        ],
+        "tags": ["thermal", "measurement", "correlation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "enclosure-design-method",
+    "description": "Design an electronics enclosure from requirements through IP rating, EMI shielding, thermal management, structural analysis, material selection, and DFM review to produce a manufacturable enclosure specification.",
+    "domain": "hardware",
+    "tags": ["mechanical", "enclosure", "EMI", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "enclosure-requirements-extraction",
+        "description": "Extract the complete set of enclosure requirements from the product specification, environment, and regulatory standards, catching requirements that are often missed until late in the design.",
+        "inputs": [
+          {"name": "product-specification", "desc": "Product-level requirements including operating environment, regulatory targets, and life expectancy"},
+          {"name": "electronics-definition", "desc": "PCB dimensions, connector count and type, total heat dissipation, and cable routing needs"}
+        ],
+        "outputs": [
+          {"name": "enclosure-requirements", "desc": "Prioritized list of enclosure requirements: IP rating, EMI class, structural loads, thermal limits, cosmetic requirements, and safety certifications"},
+          {"name": "environmental-profile", "desc": "Operating and storage temperature range, humidity, altitude, salt spray exposure, UV exposure, chemical exposure, and shock/vibration levels"}
+        ],
+        "process": [
+          "Start with the IP (Ingress Protection) rating requirement. IP65 means dust-tight and protected against water jets. IP67 adds temporary immersion. Each digit drives specific sealing requirements: the first digit (solids) from 0-6, the second (liquids) from 0-9K. Higher ratings cost more and constrain thermal management.",
+          "Identify the EMI/EMC requirement from the regulatory standard. FCC Part 15 Class B (residential), Class A (industrial), CISPR 32, or MIL-STD-461. Each defines conducted and radiated emission limits that the enclosure shielding must help meet. A metal enclosure provides 40-80 dB of shielding; a plastic enclosure provides zero without additional treatment.",
+          "Define structural loads: shipping drop height (IEC 60068-2-31), operating vibration profile (automotive: random vibration per ISO 16750, industrial: sinusoidal sweep), mounting loads (cantilevered weight, cable pull forces on connectors).",
+          "List every opening in the enclosure: connectors, displays, buttons, ventilation, cable glands, mounting holes. Each opening is a potential failure point for sealing, shielding, and structural integrity.",
+          "Document cosmetic and branding requirements: surface finish, color, logo placement, label areas. These constrain material and process selection. A high-gloss finish eliminates cast aluminum (too porous) and requires painting or molded plastic."
+        ],
+        "tags": ["mechanical", "requirements"]
+      },
+      {
+        "flow_name": "enclosure-sealing-design",
+        "description": "Design the sealing system to meet the IP rating requirement, selecting gasket materials, designing gasket grooves, and specifying fastener patterns for uniform compression.",
+        "inputs": [
+          {"name": "enclosure-requirements", "desc": "IP rating and environmental requirements"},
+          {"name": "environmental-profile", "desc": "Temperature, chemical, and UV exposure conditions"}
+        ],
+        "outputs": [
+          {"name": "sealing-design", "desc": "Gasket material, cross-section, groove dimensions, compression specification, and fastener pattern for each sealed interface"},
+          {"name": "connector-sealing-plan", "desc": "Sealing method for each connector and cable entry: gland, grommet, potting, or sealed connector specification"}
+        ],
+        "process": [
+          "Select gasket material based on the environmental profile. Silicone: -60C to +200C, good compression set resistance, poor chemical resistance. EPDM: -40C to +120C, excellent weathering and ozone resistance. Neoprene: -40C to +100C, good oil resistance. Viton: -20C to +200C, excellent chemical resistance, expensive.",
+          "Design the gasket groove. For an O-ring: groove depth should produce 15-25% compression of the cord diameter. Groove width should be 1.2-1.5 times the cord diameter to allow room for thermal expansion and compression set. Groove corners need a radius of at least 0.5mm to prevent stress concentration in the gasket.",
+          "Specify the fastener pattern for uniform gasket compression. Maximum fastener spacing depends on gasket stiffness and flange rigidity. For a 3mm silicone gasket on a 3mm aluminum flange, maximum spacing is approximately 80-100mm. Closer near corners where flange bowing is greatest.",
+          "Design connector sealing. For IP67: use connectors with integrated sealing (rated mated and unmated). For cable entries: cable glands sized to the cable OD range, with the correct thread standard (PG, metric, NPT). Each gland must be sealed to the enclosure with an O-ring or gasket.",
+          "Account for gasket compression set over product life. At elevated temperature, silicone loses 10-20% of its compression force over 10 years. Design the initial compression to maintain sealing force after the expected compression set. Test per ASTM D395 at the maximum operating temperature."
+        ],
+        "tags": ["mechanical", "sealing", "IP-rating"]
+      },
+      {
+        "flow_name": "emi-shielding-design",
+        "description": "Design EMI shielding into the enclosure to meet radiated emission and immunity requirements, treating every seam, aperture, and cable penetration as a potential leakage path.",
+        "inputs": [
+          {"name": "enclosure-requirements", "desc": "EMC class and shielding requirements"},
+          {"name": "sealing-design", "desc": "Gasket and sealing design from IP rating work"}
+        ],
+        "outputs": [
+          {"name": "shielding-design", "desc": "Shielding specification for enclosure walls, seams, apertures, and cable entries with estimated shielding effectiveness at critical frequencies"},
+          {"name": "aperture-treatment-plan", "desc": "Treatment for each opening: conductive gasket, waveguide-beyond-cutoff, mesh, conductive coating, or filtered connector"}
+        ],
+        "process": [
+          "Calculate the required shielding effectiveness (SE) from the emission measurements without enclosure minus the emission limit, plus a 6dB margin. SE = 20*log10(E_unshielded / E_limit) + 6 dB. This tells you how much attenuation the enclosure must provide.",
+          "Estimate the SE of the enclosure material. A continuous metal shell provides absorption loss = 131.4 * t * sqrt(f * sigma_r * mu_r) dB where t is thickness in meters. A 1.5mm aluminum wall provides over 200dB at 1 MHz. The material is never the weak point; the seams and apertures are.",
+          "Treat every seam as a slot antenna. The SE of a slot is approximately SE = 20*log10(lambda / (2*L)) dB where L is the longest dimension of the slot and lambda is the wavelength. A 300mm seam with no gasket resonates near 500 MHz and radiates efficiently. Conductive gaskets or frequent screw contact points reduce the effective slot length.",
+          "Treat ventilation openings. For each aperture, if its longest dimension exceeds lambda/20, it leaks. Use waveguide-beyond-cutoff (honeycomb panels: each cell must be deeper than its diameter for 30dB+ attenuation) or conductive mesh (wire spacing less than lambda/20 at the highest frequency of concern).",
+          "Specify conductive gaskets for EMI seams. Beryllium copper finger stock for frequently opened covers. Conductive elastomer (silver-filled silicone) for sealed joints requiring both IP and EMI. Ensure metal-to-gasket-to-metal contact resistance is below 10 milliohms across the full perimeter."
+        ],
+        "tags": ["EMI", "shielding", "EMC"]
+      },
+      {
+        "flow_name": "enclosure-thermal-strategy",
+        "description": "Design the thermal management approach within the enclosure constraints, reconciling the conflict between sealing (which traps heat) and cooling (which requires openings or conduction paths).",
+        "inputs": [
+          {"name": "shielding-design", "desc": "EMI shielding approach and aperture treatments"},
+          {"name": "sealing-design", "desc": "IP sealing design"}
+        ],
+        "outputs": [
+          {"name": "thermal-strategy", "desc": "Thermal management approach: natural convection, forced convection with filtered vents, conduction to chassis, heat pipe, or thermoelectric cooler, with thermal resistance budget"},
+          {"name": "thermal-interface-specification", "desc": "Interface materials and mounting methods for conducting heat from PCB to enclosure walls or heat sinks"}
+        ],
+        "process": [
+          "For sealed enclosures (IP65+), heat must leave by conduction through the walls or by radiation from the outer surface. Calculate the maximum internal temperature: T_internal = T_ambient + P_total * R_enclosure_to_ambient. For a 200mm x 150mm x 80mm aluminum enclosure dissipating 10W with natural convection on all outer surfaces (h = 8 W/m^2K), R is approximately 5 C/W, giving a 50C internal rise.",
+          "If internal temperature rise is too high, add conduction paths. Mount high-power components on metal standoffs or thermal bridges that conduct heat directly to the enclosure wall. A 10mm x 10mm copper bar 20mm long conducts heat at R = L/(k*A) = 0.02/(385*0.0001) = 0.52 C/W.",
+          "For ventilated enclosures, design the airflow path. Inlet at the bottom, outlet at the top for natural convection. For forced convection, place the fan pushing air in (positive pressure prevents dust ingress through gaps). Size the fan for the required airflow: Q = P / (rho * Cp * delta_T) where P is total power and delta_T is the allowed air temperature rise.",
+          "Size heat sinks for individual high-power components. The heat sink thermal resistance must satisfy: R_heatsink < (T_junction_max - T_ambient) / P_component - R_junction_to_case - R_interface. Use vendor thermal resistance curves at the actual airflow velocity, not the natural-convection rating.",
+          "Consider heat pipes for point-to-spread thermal problems. A heat pipe with 6mm diameter carries 15-25W and has an effective conductivity 100x that of solid copper. Use when you need to move heat from a concentrated source to a remote heat sink or enclosure surface."
+        ],
+        "tags": ["thermal", "enclosure", "cooling"]
+      },
+      {
+        "flow_name": "enclosure-structural-analysis",
+        "description": "Verify the enclosure structure survives shipping, installation, and operational loads through hand calculations and FEA, focusing on the failure modes that actually kill products.",
+        "inputs": [
+          {"name": "thermal-strategy", "desc": "Thermal management approach affecting enclosure geometry"},
+          {"name": "thermal-interface-specification", "desc": "Mounting methods creating structural loads"}
+        ],
+        "outputs": [
+          {"name": "structural-analysis-results", "desc": "Stress, deflection, and natural frequency results for each load case with factors of safety"},
+          {"name": "critical-features-list", "desc": "Features requiring attention in manufacturing: minimum wall thickness, boss dimensions, snap-fit geometry, and screw engagement length"}
+        ],
+        "process": [
+          "Analyze the drop test load case first. This is the most common field failure for portable products. The deceleration from a 1-meter drop onto concrete is approximately 1500g for a rigid product. Calculate the force on PCB mounting bosses: F = m_pcb * a. Check boss shear stress: tau = F / (pi * d * L) where d is boss diameter and L is engagement length.",
+          "Check wall deflection under internal pressure (sealed enclosures expand when heated) and external pressure (altitude changes for shipped products). A 200mm x 150mm panel of 2mm aluminum deflects approximately 0.15mm under 10kPa internal pressure. If deflection exceeds the gasket compression margin, the seal fails.",
+          "Calculate the PCB natural frequency. The PCB must not resonate at the excitation frequencies. For a simply-supported rectangular plate: fn = (pi/2) * sqrt(D/(rho*h)) * (1/a^2 + 1/b^2) where D is the flexural rigidity, a and b are the span dimensions. Target fn above 150Hz for automotive, above 50Hz for industrial.",
+          "Size screw bosses for plastic enclosures. Thread-forming screws in ABS: boss OD should be 2.0-2.5 times the screw OD. Boss depth should give engagement length of 2.0-2.5 times screw diameter. Wall section must be thick enough to resist hoop stress from screw insertion torque.",
+          "Run FEA for load cases where hand calculations are insufficient: complex geometry, combined loading, fatigue. Use the correct material model: elastic for metals under yield, elastic-plastic for limit load analysis, viscoelastic for plastics under sustained load (creep). Check von Mises stress against yield strength with a safety factor of at least 2.0 for ductile materials."
+        ],
+        "tags": ["mechanical", "structural", "FEA"]
+      },
+      {
+        "flow_name": "enclosure-material-and-manufacturing-selection",
+        "description": "Select the enclosure material and manufacturing process as a coupled decision, since material choice constrains process and process constrains material, with cost driven by production volume.",
+        "inputs": [
+          {"name": "structural-analysis-results", "desc": "Required material properties from structural analysis"},
+          {"name": "critical-features-list", "desc": "Manufacturing-critical features"}
+        ],
+        "outputs": [
+          {"name": "material-process-selection", "desc": "Selected material and manufacturing process with cost estimate at the target production volume, plus a runner-up option for different volumes"},
+          {"name": "dfm-specification", "desc": "Design-for-manufacturing rules for the selected process: wall thickness, draft angles, radius requirements, tolerance capabilities"}
+        ],
+        "process": [
+          "Map production volume to process. Under 100 units: machined from billet or sheet metal fabrication. 100-5000: die-cast aluminum or injection-molded plastic with prototype tooling. Over 5000: production injection molding or die casting with hardened steel tooling. Tooling cost for aluminum die casting: $15K-$50K. For plastic injection molding: $10K-$100K depending on complexity.",
+          "For metal enclosures: aluminum die casting (A380) gives good shielding, thermal conductivity, and strength. Minimum wall thickness 1.5mm. Draft angle 1-3 degrees per side. Surface porosity makes sealing gasket surfaces critical. Alternative: sheet metal (steel or aluminum) gives excellent flatness for sealing but limits geometry to bends and formed features.",
+          "For plastic enclosures: ABS for indoor products (good impact, easy to plate for EMI). Polycarbonate for outdoor products needing UV and impact resistance. Glass-filled nylon for high-temperature or structural applications. Minimum wall 1.2mm for ABS, 1.5mm for PC. Uniform wall thickness within 25% to prevent sink marks and warpage.",
+          "Address EMI for plastic enclosures. Options ranked by effectiveness: internal metal chassis (best, most expensive), vacuum metallization (40-60dB, moderate cost), conductive paint (20-40dB, low cost, poor adhesion over time), embedded wire mesh (30-50dB, molded in). Each adds cost and process steps.",
+          "Apply DFM rules for the selected process. Die casting: no undercuts without side pulls, parting line location drives cosmetic quality, ejector pin marks on non-cosmetic surfaces. Injection molding: uniform wall thickness, ribs at 60% of wall thickness to prevent sink, boss at wall intersections for screw retention, living hinges only in polypropylene or nylon."
+        ],
+        "tags": ["mechanical", "DFM", "materials"]
+      }
+    ]
+  },
+  {
+    "chain_name": "vibration-analysis-methodology",
+    "description": "Analyze electronic assemblies for survival under vibration loading from natural frequency estimation through random vibration response, fatigue life prediction, and test fixture design to produce a vibration qualification plan.",
+    "domain": "hardware",
+    "tags": ["vibration", "reliability", "mechanical", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "vibration-environment-characterization",
+        "description": "Define the vibration environment from the application standard or measured data, converting raw specifications into the inputs needed for structural analysis.",
+        "inputs": [
+          {"name": "application-environment", "desc": "Application type (automotive, aerospace, industrial, consumer portable) and any measured vibration data or referenced standards"},
+          {"name": "assembly-description", "desc": "Physical description of the electronic assembly: PCB dimensions, thickness, mounting method, total mass, and heavy component locations"}
+        ],
+        "outputs": [
+          {"name": "vibration-specification", "desc": "Random vibration PSD profile (g^2/Hz vs frequency) and sinusoidal sweep profile if applicable, for each axis"},
+          {"name": "test-duration", "desc": "Test duration per axis and number of axes, with acceleration factor justification if test is shorter than service life"}
+        ],
+        "process": [
+          "Identify the governing standard. Automotive: ISO 16750-3 or GMW3172 (random vibration, 10-2000 Hz, profile depends on mounting location). Aerospace: DO-160 or MIL-STD-810. Industrial: IEC 60068-2-64. Consumer: IEC 60068-2-6 (sine) or proprietary shipping profiles.",
+          "Extract the PSD profile. A typical automotive underhood random vibration profile is 0.001-0.01 g^2/Hz from 10 to 2000 Hz. Calculate the overall Grms: Grms = sqrt(integral of PSD over frequency). For a flat PSD of 0.01 g^2/Hz from 20-2000 Hz, Grms = sqrt(0.01 * 1980) = 4.45 Grms.",
+          "If measured data exists instead of a standard, process the raw accelerometer time history into a PSD using Welch's method. Choose window size and overlap to balance frequency resolution and statistical confidence. Average at least 100 windows for a stable PSD estimate.",
+          "Determine test duration. If the standard specifies duration, use it directly. If deriving from field life, use Miner's rule with the material's S-N slope (b). Equivalent time at elevated level: T_test = T_field * (G_field / G_test)^(2b) where b is typically 4-6 for solder joints and 6-8 for component leads.",
+          "Define the test axes. Most standards require testing in three mutually perpendicular axes. Identify which axis is most severe for the assembly based on mounting orientation and mass distribution. This axis should be tested first to catch early failures."
+        ],
+        "tags": ["vibration", "environment"]
+      },
+      {
+        "flow_name": "natural-frequency-estimation",
+        "description": "Estimate the natural frequencies of the PCB and critical components using analytical methods before FEA, to develop physical intuition about the dynamic behavior.",
+        "inputs": [
+          {"name": "vibration-specification", "desc": "Vibration PSD and frequency range"},
+          {"name": "assembly-description", "desc": "PCB and component physical details"}
+        ],
+        "outputs": [
+          {"name": "pcb-natural-frequencies", "desc": "First three natural frequencies of the PCB for each mounting configuration, calculated analytically"},
+          {"name": "component-risk-assessment", "desc": "Components at risk based on their location relative to maximum deflection zones and their mass contribution to local dynamics"}
+        ],
+        "process": [
+          "Calculate the PCB first natural frequency using the Steinberg formula: fn = pi/(2*a^2) * sqrt(D / (rho*h)) for a simply supported plate, where D = E*h^3 / (12*(1-v^2)) is the flexural rigidity, a is the longer span, h is the total thickness, rho is the density including component mass. For FR4: E is approximately 18 GPa in-plane, v = 0.15, rho = 1850 kg/m^3 for bare board.",
+          "Adjust for boundary conditions. Simply supported edges give the lowest frequency. Clamped (bolted) edges approximately double the frequency. Practical screw mounting is between these extremes. Use a factor of 1.5 times the simply-supported value for bolted card guides.",
+          "Account for added mass from components. For uniform mass addition: fn_loaded = fn_bare * sqrt(m_bare / (m_bare + m_components)). For heavy point masses (connectors, transformers): the local deflection increases and the natural frequency drops. A 50g component at the center of a board can reduce fn by 30-40%.",
+          "Identify the maximum deflection zones. For a simply-supported plate, maximum deflection is at the center. Components at maximum deflection experience the highest acceleration and stress. The 3-sigma deflection under random vibration is: delta_3sigma = 3 * sqrt(pi * fn * Q * PSD_at_fn / (2)) * (m * g / k) where Q is the quality factor (typically 10-25 for PCBs).",
+          "Flag any component whose natural frequency (on its leads, relative to the board) falls within the excitation bandwidth. A tall electrolytic capacitor on wire leads might have a lead resonance at 200-500 Hz. Staking, brackets, or lead shortening may be needed."
+        ],
+        "tags": ["vibration", "natural-frequency"]
+      },
+      {
+        "flow_name": "random-vibration-response-analysis",
+        "description": "Calculate the PCB and component response to random vibration, determining acceleration levels, displacements, and stresses at critical locations.",
+        "inputs": [
+          {"name": "pcb-natural-frequencies", "desc": "Board natural frequencies"},
+          {"name": "component-risk-assessment", "desc": "Risk-flagged components"}
+        ],
+        "outputs": [
+          {"name": "response-psd-at-components", "desc": "Acceleration PSD and Grms at each critical component location, showing amplification at resonance"},
+          {"name": "displacement-and-stress", "desc": "3-sigma board deflection and solder joint stress at each critical location"}
+        ],
+        "process": [
+          "Calculate the transmissibility at resonance. For a single-degree-of-freedom system: T_peak = Q = 1/(2*zeta) where zeta is the damping ratio. For a PCB in a card cage: Q typically ranges from 10 to 25. Higher Q means a sharper, taller resonance peak.",
+          "Calculate the response Grms at a component location using Miles' equation (valid when the PSD is approximately flat near resonance): Grms_response = sqrt(pi/2 * fn * Q * PSD_input_at_fn). For fn = 300Hz, Q = 15, PSD = 0.01 g^2/Hz: Grms = sqrt(1.571 * 300 * 15 * 0.01) = 8.4 Grms.",
+          "Convert acceleration to displacement at the board center: delta_rms = Grms * g / (2*pi*fn)^2. The 3-sigma displacement is 3 * delta_rms. Compare this to the allowable board deflection for solder joint survival.",
+          "Apply Steinberg's three-sigma criterion for solder joint fatigue. The allowable board deflection at a component location for 20 million cycles is: delta_allow = 0.00022 * B / (r * sqrt(L * C)) inches, where B is the shorter board edge, r is a component position factor (1.0 at center, 0.5 at edge), L is the component length, and C is a constant depending on package type (1.0 for leaded, 1.26 for BGA, 2.25 for leadless chip).",
+          "If the calculated 3-sigma deflection exceeds the allowable: add board stiffeners (ribs or metal backing plates), add support points (standoffs or staking posts), reduce component height with lower-profile alternatives, or relocate heavy components away from maximum deflection zones. Each change requires recalculating the natural frequency and response."
+        ],
+        "tags": ["vibration", "random", "response"]
+      },
+      {
+        "flow_name": "vibration-fatigue-life-prediction",
+        "description": "Predict the fatigue life of solder joints and component leads under the vibration environment, using Miner's rule to accumulate damage from the full vibration spectrum.",
+        "inputs": [
+          {"name": "response-psd-at-components", "desc": "Acceleration and stress at components"},
+          {"name": "displacement-and-stress", "desc": "Deflection and solder joint stress"}
+        ],
+        "outputs": [
+          {"name": "fatigue-life-predictions", "desc": "Predicted cycles to failure and equivalent hours for each critical solder joint and component lead under the specified vibration"},
+          {"name": "design-margin", "desc": "Ratio of predicted life to required life for each critical location, identifying the weakest links in the design"}
+        ],
+        "process": [
+          "Construct the S-N curve for the failure mode. For SnAgCu solder joint fatigue under vibration: use the Basquin equation sigma_a = sigma_f' * (2Nf)^b where sigma_f' is approximately 50 MPa and b is approximately -0.12 for SAC305 solder. For component lead fatigue: use the lead material properties (copper alloy, Kovar).",
+          "Calculate the stress amplitude at each critical solder joint from the board deflection. For a leadless chip component: sigma = E_solder * alpha * delta_board * h_solder / L_component^2 where delta_board is the local board curvature, h_solder is the standoff height, and L_component is the component length.",
+          "Apply Dirlik's method or the narrow-band approximation to convert the stress PSD into a rainflow cycle count distribution. Dirlik's method is preferred for broadband responses: it predicts the probability density of stress ranges from the spectral moments m0, m1, m2, m4 of the stress PSD.",
+          "Calculate cumulative damage using Miner's rule: D = sum(n_i / N_i) where n_i is the number of cycles at stress level i and N_i is the cycles to failure at that level from the S-N curve. Failure is predicted when D reaches 1.0. In practice, use D = 0.7 as the failure threshold to account for scatter.",
+          "Calculate the design margin: margin = (D_failure / D_service) where D_service is the accumulated damage over the required service life. A margin above 4.0 is comfortable. Between 2.0 and 4.0 is acceptable with test validation. Below 2.0 requires design changes or derating."
+        ],
+        "tags": ["vibration", "fatigue", "reliability"]
+      },
+      {
+        "flow_name": "vibration-test-fixture-design",
+        "description": "Design the vibration test fixture to faithfully transmit the shaker input to the test article without introducing fixture resonances that corrupt the test.",
+        "inputs": [
+          {"name": "fatigue-life-predictions", "desc": "Critical components and failure modes to test for"},
+          {"name": "design-margin", "desc": "Components with lowest margin are highest priority for test"}
+        ],
+        "outputs": [
+          {"name": "fixture-design", "desc": "Test fixture geometry, material, and mounting scheme with predicted fixture natural frequency above 5x the test bandwidth"},
+          {"name": "test-procedure", "desc": "Vibration test procedure including pre-test resonance search, test levels, axis sequence, and pass/fail criteria"}
+        ],
+        "process": [
+          "Set the fixture first natural frequency target at a minimum of 5 times the highest frequency in the test profile (preferably 10x). For a test profile extending to 2000 Hz, the fixture must resonate above 10,000 Hz. This requires a stiff, low-mass fixture.",
+          "Select fixture material. Magnesium alloy has the highest stiffness-to-density ratio (specific modulus E/rho = 25 GPa/(1740 kg/m^3) = 14.4 MNm/kg) and is the standard for vibration fixtures. Aluminum (E/rho = 26) is acceptable and easier to machine. Steel is too heavy.",
+          "Design the fixture as a thick, ribbed plate. Thickness drives natural frequency (fn proportional to h). Add ribs on the back side to increase stiffness without adding excessive mass. Mount the test article on the same surface as in the actual product to replicate boundary conditions.",
+          "Verify the fixture with a low-level resonance survey before running the full test. Sweep a sine wave at 0.5g from 20 Hz to the upper test frequency. Monitor the response with an accelerometer on the fixture near the test article. Any resonance that amplifies the input by more than 3 dB (factor of 1.4) within the test band corrupts the test data.",
+          "Write the test procedure: start with a low-level resonance survey, then ramp to full test level in each axis. Monitor control accelerometer (on the fixture, at the mounting point) and response accelerometer (on the test article). Abort criteria: control channel more than 3 dB from the reference profile, or obvious structural failure (noise, smoke, visual damage). Run post-test resonance survey and compare to pre-test to detect shifted resonances indicating fatigue damage."
+        ],
+        "tags": ["vibration", "testing", "fixture"]
+      }
+    ]
+  },
+  {
+    "chain_name": "tolerance-stackup-analysis",
+    "description": "Perform tolerance stackup analysis on a mechanical assembly from dimension extraction through worst-case, RSS, and Monte Carlo methods to produce tolerance allocations that balance manufacturability with functional requirements.",
+    "domain": "hardware",
+    "tags": ["tolerance", "mechanical", "GD&T", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "tolerance-chain-identification",
+        "description": "Identify the tolerance chain: the sequence of dimensions and gaps that connects one functional feature to another through the assembly.",
+        "inputs": [
+          {"name": "assembly-drawing", "desc": "Assembly drawing or CAD model showing the parts and their mating features"},
+          {"name": "functional-requirement", "desc": "The critical dimension or clearance that must be controlled, with its acceptable range"}
+        ],
+        "outputs": [
+          {"name": "dimension-chain", "desc": "Ordered list of every dimension in the chain from one functional datum to the other, with direction (+/-), nominal value, and tolerance"},
+          {"name": "chain-diagram", "desc": "Loop diagram showing how dimensions stack, with positive and negative contributors identified"}
+        ],
+        "process": [
+          "Start at one end of the functional requirement and trace a continuous path through mating surfaces to the other end. Every part boundary you cross and every gap you span adds a dimension to the chain.",
+          "Assign a sign convention: positive dimensions increase the gap being analyzed, negative dimensions decrease it. Be consistent. The nominal gap equals the sum of all signed dimensions.",
+          "Extract each dimension's nominal value and tolerance from the part drawings. Use the tolerance from GD&T callouts where they exist. For dimensions controlled by position tolerances, convert the position tolerance zone to a linear tolerance contribution in the stackup direction.",
+          "Account for form tolerances that affect fit. A flatness tolerance on a mating surface adds uncertainty to the assembly gap equal to the flatness tolerance value. Include these as separate line items in the chain.",
+          "Include assembly process contributions: press-fit variations, adhesive bond line thickness range, thermal expansion at assembly temperature vs operating temperature. These are often the largest contributors and are frequently overlooked."
+        ],
+        "tags": ["tolerance", "dimensions"]
+      },
+      {
+        "flow_name": "worst-case-stackup-calculation",
+        "description": "Calculate the worst-case stackup where every dimension simultaneously hits its extreme limit, giving the guaranteed minimum and maximum of the functional dimension.",
+        "inputs": [
+          {"name": "dimension-chain", "desc": "All dimensions with nominal, tolerance, and direction"},
+          {"name": "chain-diagram", "desc": "Loop diagram"}
+        ],
+        "outputs": [
+          {"name": "worst-case-results", "desc": "Maximum and minimum functional dimension under worst-case conditions, and whether the requirement is met"},
+          {"name": "sensitivity-ranking", "desc": "Dimensions ranked by their contribution to the total tolerance, showing which dimensions drive the result"}
+        ],
+        "process": [
+          "Calculate the nominal gap: G_nom = sum of (sign_i * nominal_i) for all dimensions in the chain.",
+          "Calculate the worst-case maximum: G_max = G_nom + sum of |tolerance_i / 2| for all dimensions. Calculate the worst-case minimum: G_min = G_nom - sum of |tolerance_i / 2|.",
+          "Compare G_max and G_min to the functional requirement limits. If both are within spec, the design works under all tolerance combinations. If not, the worst-case method says it can fail.",
+          "Rank dimensions by tolerance contribution: each dimension's contribution is |tolerance_i| / sum of all |tolerance_i|. The top 2-3 contributors typically account for 60-80% of the total. These are where tolerance tightening has the most leverage.",
+          "The worst-case method is conservative: it assumes every dimension simultaneously hits its worst limit. This is physically unlikely for chains of more than 3-4 dimensions. If worst-case fails, proceed to statistical methods before tightening tolerances."
+        ],
+        "tags": ["tolerance", "worst-case"]
+      },
+      {
+        "flow_name": "statistical-stackup-analysis",
+        "description": "Apply RSS and Monte Carlo methods to predict the actual statistical distribution of the functional dimension, accounting for the probability that not all dimensions simultaneously hit their extremes.",
+        "inputs": [
+          {"name": "worst-case-results", "desc": "Worst-case results showing margin or lack thereof"},
+          {"name": "sensitivity-ranking", "desc": "Dimension contribution ranking"}
+        ],
+        "outputs": [
+          {"name": "rss-results", "desc": "Mean and 3-sigma limits of the functional dimension under RSS assumption, with the defect rate if limits are exceeded"},
+          {"name": "monte-carlo-results", "desc": "Full probability distribution of the functional dimension from Monte Carlo simulation, with percentile values at 0.1%, 1%, 50%, 99%, 99.9%"}
+        ],
+        "process": [
+          "Calculate the RSS stackup. Assuming each tolerance represents a 3-sigma range (99.73% of parts fall within tolerance) and dimensions are normally distributed: sigma_gap = sqrt(sum of (tolerance_i / 6)^2). The 3-sigma gap range is G_nom +/- 3 * sigma_gap. This predicts a 0.27% defect rate (2700 ppm) at the tolerance limits.",
+          "RSS validity check: RSS assumes all dimensions are independent and normally distributed. This fails when dimensions are correlated (made on the same machine in the same setup), when distributions are not normal (skewed by tool wear, truncated by inspection), or when the chain has fewer than 4 dimensions (central limit theorem needs at least 4 contributors to be reasonable).",
+          "Run a Monte Carlo simulation for the most accurate prediction. Assign a distribution to each dimension: normal for machined features (sigma = tolerance/6), uniform for purchased components (equally likely anywhere in tolerance), skewed for features subject to tool wear. Generate 100,000 random assemblies.",
+          "Extract percentiles from the Monte Carlo results. The 0.1% and 99.9% percentiles represent 1000-ppm defect levels. Compare these to the functional requirement limits. If the requirement is met at 99.9%, the design works for all practical purposes.",
+          "If the Monte Carlo shows excess defects: identify which dimensions contribute most to the tail (not the same ranking as worst-case). Use the Monte Carlo to simulate the effect of tightening individual tolerances, and find the cheapest combination of tightening that brings defects below the target."
+        ],
+        "tags": ["tolerance", "statistics", "monte-carlo"]
+      },
+      {
+        "flow_name": "tolerance-allocation-method",
+        "description": "Allocate tolerances to individual dimensions to meet the assembly requirement at minimum manufacturing cost, using sensitivity analysis to put tight tolerances where they matter most.",
+        "inputs": [
+          {"name": "rss-results", "desc": "RSS statistical stackup results"},
+          {"name": "monte-carlo-results", "desc": "Monte Carlo distribution results"}
+        ],
+        "outputs": [
+          {"name": "allocated-tolerances", "desc": "Revised tolerance for each dimension in the chain, with the manufacturing process required to hold each tolerance and estimated cost impact"},
+          {"name": "tolerance-specification", "desc": "Updated drawing callouts for each part, ready for release to manufacturing"}
+        ],
+        "process": [
+          "Start with equal allocation: divide the total allowable tolerance equally among all contributors using RSS. Each dimension gets tolerance_i = (T_total / n) * sqrt(n) = T_total / sqrt(n) where n is the number of dimensions and T_total is the assembly tolerance requirement.",
+          "Adjust for manufacturing capability. Each tolerance has a natural achievable level depending on the process: general machining holds +/-0.1mm, precision machining +/-0.025mm, grinding +/-0.005mm, injection molding +/-0.1mm for the first 25mm. Tighter than the natural process capability requires secondary operations and cost escalation.",
+          "Use proportional scaling: allocate tighter tolerances to dimensions with higher sensitivity (larger influence on the functional dimension) and looser tolerances to dimensions with lower sensitivity. If dimension A has twice the sensitivity of dimension B, dimension A gets a tolerance sqrt(2) times tighter.",
+          "Apply cost weighting. Estimate the cost multiplier for each tolerance level: 1x at general machining, 2x at precision, 5x at grinding, 10x at lapping. Minimize total cost: the optimal allocation gives tighter tolerances to dimensions that are cheap to hold tight and looser tolerances to dimensions that are expensive to control.",
+          "Verify the allocation by running the Monte Carlo with the new tolerances. Confirm the defect rate meets the target. Document the allocated tolerances on the part drawings with GD&T callouts that reference the functional datums used in the stackup."
+        ],
+        "tags": ["tolerance", "allocation", "cost"]
+      }
+    ]
+  },
+  {
+    "chain_name": "material-selection-methodology",
+    "description": "Select materials for electronic system components using the Ashby chart approach combined with application-specific constraints, producing a documented material decision with full traceability from requirements to selection.",
+    "domain": "hardware",
+    "tags": ["materials", "mechanical", "selection", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "material-requirements-definition",
+        "description": "Translate the application requirements into material property targets, identifying which properties are constraints (must meet) and which are objectives (want to maximize or minimize).",
+        "inputs": [
+          {"name": "application-description", "desc": "What the part does, its operating environment, and expected life"},
+          {"name": "functional-loads", "desc": "Mechanical, thermal, electrical, and chemical loads the part must survive"}
+        ],
+        "outputs": [
+          {"name": "property-requirements", "desc": "Table of material properties with constraint values (pass/fail thresholds) and objective values (more is better or less is better)"},
+          {"name": "compatibility-constraints", "desc": "Constraints from adjacent materials (galvanic compatibility, CTE matching), manufacturing process, and regulatory requirements (RoHS, REACH, UL flammability)"}
+        ],
+        "process": [
+          "List every property that matters for this application. For a structural heat sink: thermal conductivity (objective: maximize), yield strength (constraint: minimum), density (objective: minimize), CTE (constraint: must match substrate within 5 ppm/C), machinability, cost per kg.",
+          "Set hard constraints first. These are pass/fail: if a material fails any constraint, it is eliminated regardless of how well it performs on objectives. Typical constraints: maximum operating temperature, minimum strength, specific regulatory compliance (RoHS eliminates lead alloys for most applications).",
+          "Define objectives with direction. For each objective property, state whether more is better (thermal conductivity) or less is better (cost, density). Some properties are optimized as ratios: stiffness-to-weight (E/rho) for minimum-weight designs, strength-to-cost for minimum-cost designs.",
+          "Check for galvanic compatibility with mating materials. The galvanic series ranks metals by their electrode potential in seawater. Metals more than 0.25V apart in the series will corrode when in contact in the presence of an electrolyte. Aluminum (active) bolted to stainless steel (noble) corrodes the aluminum.",
+          "Identify manufacturing constraints on material selection. Die casting requires alloys with good fluidity (aluminum A380, zinc Zamak). Injection molding requires thermoplastics or thermosets. Sheet metal forming requires ductile alloys with good bend radius capability. Welding requires compatible filler metals and heat-affected-zone properties."
+        ],
+        "tags": ["materials", "requirements"]
+      },
+      {
+        "flow_name": "ashby-chart-screening",
+        "description": "Use Ashby material property charts to screen the full material universe down to a short list of candidate material families using graphical constraint and objective lines.",
+        "inputs": [
+          {"name": "property-requirements", "desc": "Properties with constraints and objectives"},
+          {"name": "compatibility-constraints", "desc": "Adjacent material and process constraints"}
+        ],
+        "outputs": [
+          {"name": "candidate-materials", "desc": "Short list of 3-5 candidate material families that pass all constraints and perform well on objectives"},
+          {"name": "screening-rationale", "desc": "The Ashby chart plots used and the reasoning for including or excluding each material family"}
+        ],
+        "process": [
+          "Plot the first Ashby chart with the two most important properties as axes. For a lightweight heat sink: thermal conductivity vs density. Draw a selection line representing the performance index: materials above and to the left of the line meet the objective (high conductivity at low density).",
+          "Apply constraint lines to eliminate regions. A minimum thermal conductivity of 100 W/mK draws a vertical line. Everything to the left is eliminated. A maximum density of 3000 kg/m^3 draws a horizontal line. Everything above is eliminated.",
+          "Identify the material families in the surviving region. For the heat sink example: aluminum alloys, copper alloys, and some metal matrix composites survive. Steels are too heavy and too low in conductivity. Polymers are too low in conductivity. Ceramics (AlN, BeO) survive but at high cost.",
+          "Create a second chart with different property axes to further discriminate. Cost vs thermal conductivity separates aluminum (cheap, good) from copper (more expensive, better) from AlN (very expensive, comparable to aluminum). This second filter typically reduces 8-10 families to 3-5.",
+          "For each surviving family, identify 2-3 specific alloys or grades. Aluminum family: 6061-T6 (general purpose, good machinability), 6063-T5 (extrusion alloy for heat sinks), 1100 (highest thermal conductivity aluminum but low strength). Record the specific property values for comparison."
+        ],
+        "tags": ["materials", "ashby", "screening"]
+      },
+      {
+        "flow_name": "material-detailed-comparison",
+        "description": "Compare the short-listed candidate materials in detail using a weighted decision matrix with property data from reliable sources, making the final selection with documented trade-offs.",
+        "inputs": [
+          {"name": "candidate-materials", "desc": "Short list of candidates"},
+          {"name": "screening-rationale", "desc": "Why each candidate survived screening"}
+        ],
+        "outputs": [
+          {"name": "selected-material", "desc": "Final material selection with specific alloy/grade, temper/condition, and supplier specification (ASTM, AMS, or proprietary)"},
+          {"name": "selection-justification", "desc": "Decision matrix showing scores, weights, and the margin between the selected material and the runner-up"}
+        ],
+        "process": [
+          "Build the decision matrix. Rows are candidate materials (specific alloys). Columns are evaluation criteria (each property plus cost and manufacturability). Assign weights to each criterion: the most critical property gets the highest weight, normalized so weights sum to 1.0.",
+          "Score each material on each criterion using a 1-5 scale anchored to physical values. For thermal conductivity: 1 = below 100 W/mK, 3 = 150-200, 5 = above 350. The anchoring prevents subjective drift. Use material property data from ASM International, MatWeb, or the material supplier's datasheet, not general internet sources.",
+          "Calculate weighted scores: S_material = sum(weight_i * score_i). The material with the highest total weighted score is the primary recommendation. The runner-up is the backup if supply or cost issues arise.",
+          "Perform sensitivity analysis: vary each weight by +/-20% and check if the winner changes. If a 20% weight shift changes the result, the decision is sensitive to that criterion and deserves more scrutiny. Document which criteria, if reweighted, would change the outcome.",
+          "Specify the selected material completely: alloy designation (e.g., 6061-T6 per ASTM B209), any additional requirements (grain direction for anisotropic properties, lot traceability for safety-critical parts, certificate of conformance), and the approved supplier list if supply chain control is needed."
+        ],
+        "tags": ["materials", "decision-matrix", "selection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "shock-and-drop-design",
+    "description": "Design electronic products to survive shipping drops and operational shocks from standard identification through SRS analysis, isolation mount selection, and design verification to produce a shock-qualified design.",
+    "domain": "hardware",
+    "tags": ["shock", "drop", "reliability", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "shock-environment-definition",
+        "description": "Define the shock and drop environment from applicable standards and field conditions, converting drop heights into acceleration pulses and shock response spectra.",
+        "inputs": [
+          {"name": "product-category", "desc": "Product type (handheld, rack-mount, vehicle-mounted, portable equipment) and weight class"},
+          {"name": "shipping-and-handling", "desc": "Packaging type, shipping method (parcel, freight, air), and expected handling conditions"}
+        ],
+        "outputs": [
+          {"name": "shock-specification", "desc": "Shock pulse parameters (peak acceleration, pulse duration, pulse shape) for each applicable condition (operational shock, shipping drop, crash)"},
+          {"name": "shock-response-spectrum", "desc": "SRS curves derived from the shock pulses, showing the maximum acceleration experienced by a single-degree-of-freedom oscillator at each natural frequency"}
+        ],
+        "process": [
+          "Identify the applicable drop test standard. Consumer handheld (under 1kg): 1.0m drop to concrete per IEC 60068-2-31. Portable equipment (1-10kg): 0.75m drop. Rack equipment: 100mm free fall per Telcordia GR-63. Vehicle-mounted: MIL-STD-810 Method 516 with a 40g 11ms half-sine for operational shock.",
+          "Convert drop height to peak acceleration using the coefficient of restitution. For a rigid product dropped on concrete: a_peak = (1 + e) * v / delta_t where v = sqrt(2*g*h) is the impact velocity and delta_t is the pulse duration determined by product stiffness. A 1m drop gives v = 4.4 m/s. With a 2ms half-sine pulse, peak acceleration = (1 + 0.4) * 4.4 / 0.002 = 3080 m/s^2 = 314g.",
+          "Generate the shock response spectrum (SRS) from the shock pulse. The SRS plots the peak response of a series of single-degree-of-freedom oscillators (spanning the frequency range of interest) subjected to the shock pulse. At frequencies well below the pulse (f << 1/pulse_duration), the SRS approaches the peak acceleration. At high frequencies, it approaches the velocity change.",
+          "For shipping environments, combine drop shock with repetitive transportation vibration. The cumulative damage from thousands of small shocks during truck transport can exceed the damage from a single drop. Use PSD profiles from ISTA 3A or ASTM D4169 for the transportation vibration component.",
+          "Document the combined shock environment: number of drops per face/edge/corner, peak acceleration for each orientation, plus any operational shock events (door slam, emergency stop, seismic for rack equipment). Each condition becomes a test requirement."
+        ],
+        "tags": ["shock", "drop", "environment"]
+      },
+      {
+        "flow_name": "shock-survivability-analysis",
+        "description": "Analyze the product structure and components for survival under the defined shock loads, identifying the weak points before building a prototype.",
+        "inputs": [
+          {"name": "shock-specification", "desc": "Shock pulse parameters for each condition"},
+          {"name": "shock-response-spectrum", "desc": "SRS for each shock event"}
+        ],
+        "outputs": [
+          {"name": "critical-failure-modes", "desc": "Ranked list of components and features most likely to fail under shock, with the failure mechanism for each"},
+          {"name": "design-changes-needed", "desc": "Specific design changes to address each critical failure mode before prototyping"}
+        ],
+        "process": [
+          "Identify the three most common shock failure modes in electronics: 1) solder joint fracture from board flexure (especially BGA and large ceramic capacitors), 2) PCB fracture at stress concentration points (near mounting holes, heavy components, board edges), 3) connector intermittent contact or housing fracture.",
+          "Calculate the force on each PCB mounting point: F = m_board * a_peak / n_mounts where n_mounts is the number of fasteners. For a 200g board with 4 screws at 500g shock: F = 0.2 * 500 * 9.81 / 4 = 245N per screw. Check that the boss, standoff, and screw can handle this in shear and tension.",
+          "Analyze solder joints of the largest BGA and MLCC components. Under shock, the board bends and solder joints at the component corners experience the highest strain. Strain = (board_curvature * distance_from_neutral_axis * package_length) / (2 * solder_height). Compare to the solder fracture strain (approximately 1-2% for SAC305).",
+          "Check tall, heavy components for lead and solder stress from inertial loading. A 30g transformer at 500g shock exerts 147N on its solder joints. Divide by the total solder joint area to get stress, and compare to solder shear strength (approximately 25-35 MPa for SAC305).",
+          "Specify design mitigations: add corner screws near large BGAs to reduce local board deflection, use adhesive (underfill) on BGA corners, avoid placing MLCC components larger than 0402 within 5mm of mounting holes or board edges, add strain relief to flex cables, use positive-locking connectors."
+        ],
+        "tags": ["shock", "analysis", "failure-modes"]
+      },
+      {
+        "flow_name": "shock-isolation-design",
+        "description": "Design shock isolation mounts when the shock loads exceed what the electronics can survive, selecting isolator type, stiffness, and damping to decouple the payload from the shock input.",
+        "inputs": [
+          {"name": "critical-failure-modes", "desc": "Failure modes and their acceleration thresholds"},
+          {"name": "design-changes-needed", "desc": "Design changes that are insufficient without isolation"}
+        ],
+        "outputs": [
+          {"name": "isolator-specification", "desc": "Isolator type, stiffness, damping, load rating, and mounting configuration with predicted transmitted shock at the payload"},
+          {"name": "isolation-trade-offs", "desc": "Displacement budget (isolated payload moves more), low-frequency amplification, and sway space requirements in the enclosure"}
+        ],
+        "process": [
+          "Calculate the required isolation frequency. The isolator natural frequency must be well below the shock pulse frequency content for effective isolation. Rule of thumb: fn_isolator < 1/(5 * pulse_duration). For an 11ms half-sine pulse, fn < 18 Hz. Lower fn gives better isolation but more displacement.",
+          "Size the isolator stiffness from the natural frequency and payload mass: k = (2 * pi * fn)^2 * m. For a 2kg payload and 15 Hz natural frequency: k = (2*pi*15)^2 * 2 = 17,765 N/m = 17.8 kN/m. This is the total stiffness; divide among the number of mounts.",
+          "Select the isolator type. Wire rope isolators: excellent shock isolation, multi-axis, temperature-resistant, high damping (zeta = 0.15-0.35). Elastomeric mounts: compact, cheap, limited temperature range (-40 to +70C for natural rubber, -55 to +200C for silicone). Helical spring with viscous damper: precise control of stiffness and damping, larger.",
+          "Calculate the expected displacement under shock: x_max = v_impact / (2 * pi * fn * sqrt(1 - zeta^2)) for a velocity shock. With v = 4.4 m/s, fn = 15 Hz, zeta = 0.2: x_max = 4.4 / (94.2 * 0.98) = 47.6mm. The enclosure must provide this sway space in every direction of potential shock.",
+          "Verify with SRS analysis: overlay the isolator transmissibility curve on the shock SRS. The transmitted SRS at the payload should be below the fragility level of the electronics at all frequencies. Watch for high-frequency content that passes through the isolator (rubber mounts have a high-frequency resonance from internal mass-spring behavior). Add damping or a secondary isolation stage if needed."
+        ],
+        "tags": ["shock", "isolation", "mounts"]
+      },
+      {
+        "flow_name": "shock-test-verification",
+        "description": "Design and execute the shock and drop test program, defining pass/fail criteria that catch the actual failure modes rather than just surviving without visible damage.",
+        "inputs": [
+          {"name": "isolator-specification", "desc": "Isolation design if used"},
+          {"name": "isolation-trade-offs", "desc": "Expected behavior during shock"}
+        ],
+        "outputs": [
+          {"name": "test-plan", "desc": "Complete shock and drop test plan with sample size, test sequence, pass/fail criteria, and instrumentation requirements"},
+          {"name": "acceptance-criteria", "desc": "Specific functional tests to run before and after each shock or drop to detect degradation, not just catastrophic failure"}
+        ],
+        "process": [
+          "Define pass/fail criteria that go beyond visual inspection. Most shock failures are intermittent electrical opens in solder joints or cracked ceramic capacitors that show no external damage. The criteria must include: full electrical functionality test, insulation resistance measurement, boundary scan or JTAG continuity test for BGA connections.",
+          "Specify the test sequence. IEC 60068-2-27 calls for 3 shocks per direction (positive and negative) in each axis = 18 total shocks. Run functional tests before the first shock (baseline), after each axis (to catch which axis causes failure), and after all shocks are complete.",
+          "Instrument the test. Mount accelerometers on the product (response) and on the test fixture (control). Use a sample rate at least 10x the highest frequency of interest (for an 11ms pulse, energy extends to about 500 Hz, so sample at 5 kHz minimum). Record time history for post-test analysis.",
+          "For drop tests, define the drop surface (50mm steel plate on concrete per IEC 60068-2-31), drop height per face, edge, and corner, and number of drops per orientation. Edge and corner drops often cause more damage than flat drops because the impact energy concentrates into a smaller area.",
+          "Size the test sample. For design qualification: test 3 samples minimum (one is not statistical evidence). For production acceptance: use a sampling plan based on AQL. After test: disassemble one sample for failure analysis (cross-section solder joints at critical locations, dye-and-pry for BGA inspection) even if it passed, to assess remaining margin."
+        ],
+        "tags": ["shock", "drop", "testing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "connector-selection-methodology",
+    "description": "Select connectors for electronic systems by systematically evaluating electrical, mechanical, environmental, and cost requirements against connector families, producing a fully specified connector with its mating and termination details.",
+    "domain": "hardware",
+    "tags": ["connectors", "mechanical", "electrical", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "connector-requirements-extraction",
+        "description": "Extract the complete connector requirements from the system design, catching the requirements that are typically discovered too late in development.",
+        "inputs": [
+          {"name": "interface-definition", "desc": "Signals that must cross the connector: count, type (power, analog, digital, RF), voltage and current levels"},
+          {"name": "application-environment", "desc": "Operating environment, mating cycles, cable type, and connector accessibility during assembly and service"}
+        ],
+        "outputs": [
+          {"name": "connector-requirements", "desc": "Complete requirements: pin count, current per contact, voltage rating, impedance (if controlled), environmental rating, mating cycles, retention force, keying, and mounting method"},
+          {"name": "interface-constraints", "desc": "Constraints from the PCB (available board area, component height limit), cable (wire gauge range, bend radius), and assembly process (blind mate, hand mate, automated)"}
+        ],
+        "process": [
+          "Count the signals and group by type. Separate power (high current), ground (low inductance), analog (shielded, low noise), digital (controlled impedance if over 100 MHz), and RF (coaxial). Each type has different contact requirements.",
+          "Determine current requirements per contact. Derate the manufacturer's current rating for your actual temperature rise limit and contact count. A contact rated 3A in free air may only handle 1.5A when all positions in a multi-pin connector are loaded, because adjacent contacts share the thermal path. Apply a 50% derating for fully loaded connectors.",
+          "Set the voltage rating. Working voltage must be below the connector's rated voltage at the operating altitude. Voltage rating decreases with altitude due to reduced air density. At 3000m altitude, derate by approximately 30% for voltages above 200V. For DC applications, also check the dielectric withstand voltage (typically 2x rated + 1000V for 1 minute).",
+          "Define the impedance requirement for high-speed signals. If the signal bandwidth exceeds 100 MHz, use impedance-controlled contacts. Standard controlled-impedance connectors: 50 ohm single-ended, 100 ohm differential. The connector's impedance mismatch budget is typically +/-10% of the system impedance for return loss below -20 dB.",
+          "Specify mating cycles, insertion/extraction force, and keying. Industrial connectors: 500-1000 cycles minimum. Consumer: 5000-10,000 (USB standard requires 10,000). Keying (polarization) prevents mis-mating. Specify unique keying between connectors with different pinouts on the same product to prevent cross-plugging."
+        ],
+        "tags": ["connectors", "requirements"]
+      },
+      {
+        "flow_name": "connector-family-screening",
+        "description": "Screen connector families against the requirements to produce a short list of viable connector types, eliminating families that cannot meet any single hard constraint.",
+        "inputs": [
+          {"name": "connector-requirements", "desc": "All requirements with pass/fail thresholds"},
+          {"name": "interface-constraints", "desc": "Board, cable, and assembly constraints"}
+        ],
+        "outputs": [
+          {"name": "candidate-connectors", "desc": "Short list of 3-5 connector families with specific part numbers, each meeting all hard constraints"},
+          {"name": "screening-log", "desc": "Record of which families were eliminated and why, to prevent revisiting dead ends"}
+        ],
+        "process": [
+          "Apply hard constraint filters in order of most restrictive first. Environmental rating (IP/mil-spec): eliminates most consumer-grade connectors for outdoor or vehicle applications. Pin count: eliminates families that max out below the required count. Controlled impedance: eliminates all non-impedance-matched families.",
+          "For each surviving family, check availability in the required configuration: right-angle vs vertical, through-hole vs surface-mount, plug vs receptacle, panel-mount vs free-hanging. Many connector families have gaps in their configuration matrix.",
+          "Verify the termination method matches the cable type and assembly process. Crimp: requires the correct crimp tool (often $200-$2000 per connector family, and the wrong tool damages the contact). Solder: manual assembly, thermal mass may damage adjacent contacts. IDC (insulation displacement): fast assembly but limited to specific wire gauges. Press-fit: no soldering, good for high-reliability applications.",
+          "Check the supply chain. At least two sources (manufacturer or authorized distributor) for production. Lead time under 12 weeks. Not on any end-of-life or last-time-buy notice. For military/aerospace: QPL-listed sources per the applicable MIL-DTL specification.",
+          "Short-list 3-5 candidates with specific part numbers. For each, record: manufacturer, series name, pin count, current rating, voltage rating, environmental rating, mating cycles, PCB footprint dimensions, and unit cost at target volume."
+        ],
+        "tags": ["connectors", "screening"]
+      },
+      {
+        "flow_name": "connector-detailed-evaluation",
+        "description": "Evaluate the short-listed connectors in detail including vibration performance, thermal effects, signal integrity, and total cost of ownership to make the final selection.",
+        "inputs": [
+          {"name": "candidate-connectors", "desc": "Short list with part numbers"},
+          {"name": "screening-log", "desc": "Why alternatives were eliminated"}
+        ],
+        "outputs": [
+          {"name": "selected-connector", "desc": "Final connector selection with complete part numbers for plug, receptacle, contacts, seals, backshell, and crimp tool"},
+          {"name": "connector-application-notes", "desc": "PCB footprint requirements, assembly instructions, and cable preparation specifications for the selected connector"}
+        ],
+        "process": [
+          "Evaluate vibration performance. Unsealed connectors are vulnerable to fretting corrosion: micro-sliding between contacts under vibration wears through the plating and oxidizes the base metal, increasing contact resistance. Gold plating (minimum 0.75 microns per MIL-DTL-83513) resists fretting. Tin plating frets rapidly above 1g vibration. For automotive/mil applications, connectors must have a positive locking mechanism (not friction alone) and gold or palladium-nickel contacts.",
+          "Evaluate thermal effects on contact resistance. Contact resistance increases with temperature due to base metal oxidation and contact normal force relaxation (spring temper loss). Beryllium copper contacts maintain spring force to 150C. Phosphor bronze relaxes above 100C. Check that contact resistance (typically 10-30 milliohms initial) stays below the maximum after thermal aging at maximum operating temperature.",
+          "For controlled-impedance applications, request the connector manufacturer's S-parameter data (Touchstone .s2p files) or impedance profile. Simulate the connector in the signal chain using the S-parameters. Check return loss (less than -15 dB), insertion loss (less than -1 dB), and crosstalk (less than -30 dB) at the signal frequency. If data is not available, a connector sample must be characterized on a VNA.",
+          "Calculate total cost of ownership: connector cost + contact cost per pin + crimp tool amortized over production volume + assembly labor time + cable preparation time + rework cost for defective terminations. A cheap connector with expensive tooling or high rework rates can cost more than a premium connector with simpler assembly.",
+          "Make the final selection. Document the complete bill of materials: plug housing, receptacle housing, male contacts (type and plating), female contacts (type and plating), sealing plugs for unused positions, backshell or strain relief, crimp tool with specific die set, and extraction tool. Issue a connector specification document with the approved part numbers and assembly procedure."
+        ],
+        "tags": ["connectors", "evaluation", "selection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "thermal-interface-material-selection",
+    "description": "Select thermal interface materials for electronic assemblies by analyzing the thermal resistance requirement, evaluating TIM types against the application constraints, and specifying the assembly process to achieve repeatable thermal performance.",
+    "domain": "hardware",
+    "tags": ["thermal", "TIM", "materials", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "tim-thermal-resistance-budget",
+        "description": "Calculate the thermal resistance budget for the interface, determining how much thermal resistance the TIM is allowed to contribute while keeping junction temperature within spec.",
+        "inputs": [
+          {"name": "component-thermal-data", "desc": "Component power dissipation, maximum junction temperature, and package thermal resistance values from the datasheet"},
+          {"name": "cooling-solution", "desc": "Heat sink or cold plate thermal resistance from the heat sink surface to ambient"}
+        ],
+        "outputs": [
+          {"name": "tim-resistance-budget", "desc": "Maximum allowable TIM thermal resistance in C*cm^2/W, derived from the total thermal path budget"},
+          {"name": "interface-geometry", "desc": "Contact area dimensions, surface roughness and flatness of both mating surfaces, clamping pressure available, and gap to be filled"}
+        ],
+        "process": [
+          "Calculate the total allowable thermal resistance from junction to ambient: R_total = (Tj_max - T_ambient_max) / P_component. For a component dissipating 15W with Tj_max = 100C and T_ambient = 55C: R_total = 45/15 = 3.0 C/W.",
+          "Subtract known thermal resistances in the path: R_junction_to_case (from datasheet, typically 0.2-2.0 C/W), R_case_to_TIM_surface (usually negligible for direct die exposure, or equal to package lid resistance), R_heat_sink (from vendor data at the operating airflow).",
+          "The remainder is the TIM budget: R_TIM_max = R_total - R_jc - R_heatsink. If R_total = 3.0, R_jc = 0.5, R_heatsink = 1.5: R_TIM_max = 1.0 C/W. Convert to area-normalized units: R_TIM * A_contact in C*cm^2/W. For a 30mm x 30mm interface: 1.0 * 9 = 9 C*cm^2/W.",
+          "Characterize the interface geometry. Measure surface flatness with a dial indicator or profilometer. Heat spreader lids are typically flat within 25-75 microns. Die-exposed packages may have tilt. The gap that the TIM must fill equals the total flatness deviation of both surfaces plus any designed standoff.",
+          "If the TIM budget is less than 1 C*cm^2/W, you need a high-performance TIM (liquid metal, indium foil, or high-conductivity grease with controlled bond line). Between 1-5 is the range for most thermal pads and good greases. Above 5 gives you freedom to use commodity gap fillers."
+        ],
+        "tags": ["thermal", "TIM", "budget"]
+      },
+      {
+        "flow_name": "tim-type-evaluation",
+        "description": "Evaluate TIM types against the application requirements, understanding the physics of each type's thermal performance and failure mechanisms.",
+        "inputs": [
+          {"name": "tim-resistance-budget", "desc": "Maximum allowable TIM resistance"},
+          {"name": "interface-geometry", "desc": "Surface conditions and gap dimensions"}
+        ],
+        "outputs": [
+          {"name": "tim-candidates", "desc": "Short list of TIM types and specific products with their thermal resistance at the application conditions, not just the datasheet bulk conductivity"},
+          {"name": "tim-failure-risk-assessment", "desc": "Expected failure mechanism and time-to-failure for each candidate under the application thermal cycling profile"}
+        ],
+        "process": [
+          "Understand that bulk thermal conductivity is not the whole story. TIM thermal resistance = bulk resistance + contact resistance at both surfaces. R_TIM = BLT/k + R_contact_1 + R_contact_2. A 5 W/mK pad at 0.5mm BLT has bulk R = 0.05/(5*0.0001) = 100 C*cm^2/W... but with clamping pressure of 200kPa, contact resistance drops and the actual performance is 2-3x better than the bulk calculation alone.",
+          "Compare TIM types for the application:\n- Thermal grease (2-8 W/mK): lowest contact resistance, fills all gaps, but pump-out under thermal cycling causes degradation over time. Best for prototype and rework-friendly designs.\n- Phase change material (3-6 W/mK): solid at room temperature, softens above 45-55C to fill gaps. No pump-out. Easier to apply than grease. Requires initial heat cycling to wet the surfaces.\n- Thermal pad (1-15 W/mK): compressible solid, gap-filling, electrically isolating options available. Higher thermal resistance than grease but more consistent BLT. Best for applications where gap tolerance is large.\n- Gap filler (1-5 W/mK): very soft, fills large gaps (0.5-5mm). Low clamping force required. Used between components and heat sink lids where gap variation is large.\n- Indium foil (80 W/mK): metal, conforms under pressure, no degradation. Expensive. For high-reliability or high-power applications.",
+          "Calculate the actual thermal resistance for each candidate at the application conditions. Use the manufacturer's test data at the relevant bond line thickness and clamping pressure, not the bulk conductivity alone. If data is not available at your conditions, test a sample.",
+          "Assess reliability failure mechanisms. Grease pump-out: the thermal resistance of silicone grease can double over 1000 thermal cycles between -40C and 125C as the grease migrates from the high-pressure center to the low-pressure edges. Phase change: stable, no pump-out, but the phase change temperature must be below the operating temperature or the TIM never wets. Pads: compression set reduces contact force over time.",
+          "Short-list 2-3 candidates that meet the thermal resistance budget with margin for degradation over product life. For each, specify: manufacturer and part number, thickness, required clamping pressure, thermal resistance at application conditions (not just datasheet spec), and expected degradation over life."
+        ],
+        "tags": ["thermal", "TIM", "evaluation"]
+      },
+      {
+        "flow_name": "tim-assembly-specification",
+        "description": "Specify the TIM assembly process to achieve repeatable thermal performance in production, controlling the variables that cause unit-to-unit thermal resistance variation.",
+        "inputs": [
+          {"name": "tim-candidates", "desc": "Selected TIM products"},
+          {"name": "tim-failure-risk-assessment", "desc": "Failure mechanisms and expected life"}
+        ],
+        "outputs": [
+          {"name": "tim-application-procedure", "desc": "Step-by-step assembly procedure including surface preparation, TIM application method, clamping sequence, and torque specification"},
+          {"name": "tim-inspection-criteria", "desc": "Inspection method and acceptance criteria to verify proper TIM application without destructive testing"}
+        ],
+        "process": [
+          "Specify surface preparation. Both surfaces must be clean and free of oils, flux residue, and particles. Clean with isopropyl alcohol and a lint-free wipe. For metal surfaces, verify flatness meets the TIM specification (most TIMs compensate for 25-50 microns of non-flatness but not more).",
+          "Define the application method for the selected TIM type. For grease: screen print through a stencil (most repeatable) or dispense in an X-pattern (center coverage is critical; edges can be under-filled). Stencil thickness sets the BLT. For pads: die-cut to the exact contact area, apply to the heat sink side first, remove the liner just before mating. For phase change: apply film to the heat sink, pre-flow by heating above phase change temperature.",
+          "Specify the clamping hardware and torque sequence. Clamping pressure must be uniform across the interface. Use at least 4 screws for a 30mm x 30mm interface, tightened in a cross pattern to prevent tilting. Spring-loaded fasteners (captive springs or Belleville washers) maintain clamp force through thermal expansion and compression set. Specify torque with a +/-10% tolerance.",
+          "Calculate the required clamp force. The TIM manufacturer specifies the clamping pressure for rated performance. Total force = pressure * area. For a 3mm x 3mm component with 200kPa recommended pressure: F = 200000 * 0.009 = 1800N. This force is split among the mounting screws and must not exceed the PCB or component load limits.",
+          "Define the inspection method. Non-destructive: thermal imaging of the assembled board under powered conditions. The TIM interface should show uniform temperature without hot spots indicating voids. Destructive (for first-article qualification): disassemble and inspect the TIM coverage pattern. Grease should show full contact area coverage without dry spots. Pads should show full compression without wrinkles or bubbles."
+        ],
+        "tags": ["thermal", "TIM", "assembly"]
+      }
+    ]
+  },
+  {
+    "chain_name": "conformal-coating-methodology",
+    "description": "Design and specify conformal coating for electronic assemblies from coating type selection through process specification, inspection, and rework to produce a coating specification that protects the assembly while remaining manufacturable.",
+    "domain": "hardware",
+    "tags": ["conformal-coating", "protection", "manufacturing", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "conformal-coating-requirements",
+        "description": "Define what the conformal coating must protect against and what areas must remain uncoated, translating the operating environment into coating performance requirements.",
+        "inputs": [
+          {"name": "operating-environment", "desc": "Temperature range, humidity exposure, chemical exposure, condensation risk, salt spray, altitude, and expected product life"},
+          {"name": "pcb-assembly-details", "desc": "Component types, connector locations, test points, adjustment potentiometers, and RF-sensitive areas"}
+        ],
+        "outputs": [
+          {"name": "coating-performance-requirements", "desc": "Required insulation resistance, temperature range, chemical resistance, flexibility, and applicable standards (IPC-CC-830, MIL-I-46058C, or UL746E)"},
+          {"name": "masking-map", "desc": "Drawing showing keep-out zones that must not be coated: connectors, test points, mounting holes, switches, LEDs, sensors, and heat sink interfaces"}
+        ],
+        "process": [
+          "Identify the primary threat. High humidity with temperature cycling causes condensation on cold PCB surfaces, leading to electrochemical migration between conductors and eventual short circuits. Salt spray creates conductive paths. Chemical exposure (cleaning fluids, fuels, solvents) can dissolve some coating types.",
+          "Set the insulation resistance requirement. IPC-CC-830 requires a minimum of 10^8 ohms after humidity exposure for qualified coatings. For fine-pitch components (below 0.5mm spacing), higher insulation resistance may be needed. The coating must maintain this resistance at the maximum operating humidity and temperature.",
+          "Define the temperature range. The coating must remain flexible and adherent from the minimum storage temperature to the maximum operating temperature. Many coatings become brittle below -40C, cracking and delaminating from the PCB. The CTE mismatch between coating and substrate drives this failure.",
+          "Map every keep-out area on the assembly drawing. Connectors: mating surfaces must be uncoated. Test points: any point that will be probed during in-circuit test or field service. Adjustment components: potentiometers, DIP switches. Thermal interfaces: heat sink mounting pads. RF areas: antenna traces and matching networks (coating changes the dielectric constant and detunes the circuit). Board edge contacts.",
+          "Select the applicable standard. Commercial electronics: IPC-CC-830 Class 1 (general) or Class 2 (high-reliability). Military: MIL-I-46058C Type AR/UR/SR/ER/XY. Automotive: may reference IPC-CC-830 plus the OEM's specific requirements for temperature cycling and chemical resistance."
+        ],
+        "tags": ["conformal-coating", "requirements"]
+      },
+      {
+        "flow_name": "coating-type-selection",
+        "description": "Select the conformal coating chemistry based on the protection requirements, process compatibility, and rework needs, understanding the trade-offs between coating types.",
+        "inputs": [
+          {"name": "coating-performance-requirements", "desc": "Temperature, humidity, chemical resistance, and flexibility requirements"},
+          {"name": "masking-map", "desc": "Keep-out zones"}
+        ],
+        "outputs": [
+          {"name": "selected-coating", "desc": "Coating chemistry, specific product, application method, thickness specification, and cure process"},
+          {"name": "coating-trade-off-rationale", "desc": "Why this coating was selected over alternatives, including the rework and repair implications"}
+        ],
+        "process": [
+          "Compare coating chemistries:\n- Acrylic (AR): easy to apply and remove (dissolves in solvent for rework), good moisture resistance, limited chemical resistance, operating range -65 to +125C. The default choice for most commercial electronics where rework is needed.\n- Silicone (SR): widest temperature range (-65 to +200C), excellent flexibility (does not crack), good moisture resistance, very difficult to remove for rework (must be mechanically peeled). Used for high-temperature applications.\n- Polyurethane (UR): excellent chemical and solvent resistance, good moisture protection, harder to remove than acrylic (requires specialized solvents or burn-through for rework). Used for chemical exposure environments.\n- Epoxy (ER): hardest and most chemical-resistant, practically impossible to remove without damaging components. Used only where rework is not expected and maximum protection is needed.\n- Parylene (XY): applied by chemical vapor deposition, perfectly uniform thickness even under components, excellent moisture barrier, cannot be selectively applied (entire board is coated, masking is difficult). Very thin (5-25 microns vs 25-75 for others). Expensive process.",
+          "Match the coating to the primary threat. Humidity only: acrylic is sufficient and the easiest to rework. Chemical exposure: polyurethane or epoxy. High temperature: silicone. Maximum protection with no rework: parylene. Automotive underhood: silicone (temperature) or polyurethane (chemicals + temperature).",
+          "Select the application method based on production volume and masking complexity. Spray: manual (low volume, complex masking) or automated selective (high volume, programmable path avoids keep-outs). Dip: uniform coverage, requires masking of all keep-outs (expensive). Brush: touch-up and repair only. CVD: parylene only, coats everything uniformly.",
+          "Specify the thickness. IPC-CC-830 recommends 25-75 microns for most coatings, 12.5-25 microns for parylene. Too thin provides inadequate protection. Too thick increases stress on components during thermal cycling, can bridge between closely spaced leads causing shorts, and wastes material.",
+          "Define the cure process. UV-curable coatings: cure in seconds under UV lamp, shadow areas need secondary moisture cure. Thermal cure: 10-60 minutes at 60-80C for most coatings. Room temperature cure: 24 hours for acrylics (ties up production space). Moisture cure: for some silicones and polyurethanes, takes 24-72 hours depending on humidity."
+        ],
+        "tags": ["conformal-coating", "selection", "chemistry"]
+      },
+      {
+        "flow_name": "coating-process-specification",
+        "description": "Specify the coating application process, masking procedure, cure profile, and inspection methodology to produce repeatable coating coverage in production.",
+        "inputs": [
+          {"name": "selected-coating", "desc": "Coating product, application method, and thickness"},
+          {"name": "coating-trade-off-rationale", "desc": "Application constraints and requirements"}
+        ],
+        "outputs": [
+          {"name": "coating-process-document", "desc": "Step-by-step process specification: surface preparation, masking, application, cure, de-mask, and inspection with acceptance criteria"},
+          {"name": "rework-procedure", "desc": "Procedure for removing coating from specific areas for repair and recoating after component replacement"}
+        ],
+        "process": [
+          "Specify surface preparation. The PCB must be clean and dry before coating. Residual flux, fingerprints, or moisture trapped under the coating cause adhesion failure and corrosion. Clean per IPC-A-610 requirements: deflux (if using no-clean flux, verify compatibility with coating), clean with appropriate solvent, and bake at 65C for 2-4 hours to drive off moisture.",
+          "Define the masking procedure. Masking options: peelable latex mask (hand-applied dots for test points and connectors), polyimide tape (Kapton) for straight-edge keep-outs, custom rubber boots for tall connectors. For selective spray: program the spray path to avoid keep-outs, but use masking as a backup for critical areas where overspray would cause functional failure.",
+          "Specify the application parameters. For spray: nozzle-to-board distance (150-200mm typical), spray pressure, fan pattern width, pass speed, and number of passes for target thickness. For dip: immersion speed (25-50mm/s), dwell time (3-5 seconds), withdrawal speed (sets the film thickness: slower = thicker). Record these parameters for process control.",
+          "Specify the inspection method. Visual inspection under UV light (most coatings fluoresce under 365nm UV): check for complete coverage in coated areas and absence of coating in keep-outs. Accept the coating if: no bubbles larger than 3mm diameter, no uncoated areas in the required zone (except component tops that are not specified for coverage), no bridging between closely spaced leads, and coating in keep-outs within the rework tolerance.",
+          "Write the rework procedure. For acrylic: apply solvent (butyl acetate or proprietary stripper) to the repair area with a brush, wait for the coating to soften, and peel or wipe away. Replace the component. Clean the area. Recoat using a brush, applying two thin coats with a 10-minute flash between coats. Re-inspect under UV. For silicone: carefully cut and peel the coating from the repair area using a scalpel, taking care not to damage adjacent components or traces."
+        ],
+        "tags": ["conformal-coating", "process", "inspection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reliability-centered-maintenance",
+    "description": "Apply reliability-centered maintenance analysis to electronic and electromechanical systems to determine the optimal maintenance strategy for each failure mode, replacing calendar-based maintenance with condition-based decisions backed by failure data.",
+    "domain": "hardware",
+    "tags": ["reliability", "maintenance", "RCM", "hardware-engineering"],
+    "steps": [
+      {
+        "flow_name": "rcm-system-decomposition",
+        "description": "Decompose the system into maintainable items and identify the functions each must perform, establishing the functional context for failure analysis.",
+        "inputs": [
+          {"name": "system-description", "desc": "System architecture, operating context, and performance requirements"},
+          {"name": "maintenance-history", "desc": "Available failure records, repair logs, and current maintenance schedule"}
+        ],
+        "outputs": [
+          {"name": "functional-breakdown", "desc": "Hierarchical list of system functions at the system, subsystem, and component level, with performance standards for each function"},
+          {"name": "maintenance-significant-items", "desc": "Items selected for RCM analysis based on safety, operational, or economic significance of their failure"}
+        ],
+        "process": [
+          "Define the system's primary and secondary functions. A power supply's primary function: convert 120VAC to 12VDC at 50A with less than 1% voltage regulation. Secondary functions: provide short-circuit protection, provide input-to-output isolation of 4kV, operate without audible noise above 35 dBA.",
+          "Decompose to the lowest replaceable unit. For electronics: individual PCB assemblies, power supplies, fan assemblies, filter assemblies, batteries. Do not go below the field-replaceable level unless repair at a lower level is economically justified.",
+          "For each item, list all functions with quantified performance standards. A function without a performance standard cannot be analyzed for failure. 'Supply power' is not a function. 'Supply 12V +/-0.12V at 0-50A with less than 100mV ripple' is a function.",
+          "Screen items for maintenance significance. An item is maintenance-significant if its failure has safety consequences, if its failure stops production or mission, or if its failure costs more than preventive maintenance. Items with none of these consequences can run to failure.",
+          "Prioritize items by consequence severity. Safety-significant items must be analyzed first and most thoroughly. Operational items (production stops) second. Economic items third. This ranking drives the depth of analysis and the rigor of the maintenance task."
+        ],
+        "tags": ["reliability", "RCM", "decomposition"]
+      },
+      {
+        "flow_name": "failure-mode-and-effect-identification",
+        "description": "Identify how each maintenance-significant item can fail, what causes each failure, and what happens when it does, using field data where available and engineering analysis where not.",
+        "inputs": [
+          {"name": "functional-breakdown", "desc": "System functions with performance standards"},
+          {"name": "maintenance-significant-items", "desc": "Items to analyze"}
+        ],
+        "outputs": [
+          {"name": "failure-mode-catalog", "desc": "For each significant item: failure modes, failure causes, local effects, system effects, and failure evidence (how the operator detects the failure)"},
+          {"name": "failure-distribution-data", "desc": "Available failure rate or time-to-failure distribution data for each failure mode from field data, vendor data, or handbooks"}
+        ],
+        "process": [
+          "For each function, ask: how can this function be lost? How can it degrade? A power supply function 'supply 12V' can fail by: output goes to zero (total loss), output drifts high (degradation, overvoltage), output drifts low (degradation, undervoltage), output ripple exceeds limit (degradation). Each is a distinct failure mode requiring a different maintenance approach.",
+          "Identify failure causes for each mode. Output goes to zero: main switching MOSFET short circuit, control IC failure, input fuse opens due to capacitor degradation, solder joint fracture on power path. Each cause has a different failure pattern (random, wear-out, early-life) that determines whether preventive maintenance is effective.",
+          "Document the effects at three levels: local (what happens at the component), system (what the operator experiences), and safety (any hazard). A capacitor failure in a power supply filter: local = increased ripple, system = downstream circuits malfunction, safety = none for this example. If the effect were fire risk, the consequence classification changes dramatically.",
+          "Gather failure data. Best source: field failure records from the same or similar equipment. Second: manufacturer reliability data (MTBF, FIT rates). Third: handbook data (MIL-HDBK-217F, SN 29500, FIDES). Handbook data gives failure rates; field data gives failure distributions (Weibull shape and scale parameters), which are more useful for maintenance planning.",
+          "Classify each failure mode by its age-reliability pattern. The classic bathtub curve applies only to some failure modes. Electronic components typically show pattern E (constant failure rate) or pattern F (infant mortality decreasing to constant). Mechanical wear items show pattern B (wear-out). This classification determines which maintenance strategies apply."
+        ],
+        "tags": ["reliability", "failure-modes", "RCM"]
+      },
+      {
+        "flow_name": "maintenance-task-selection",
+        "description": "Apply the RCM decision logic to each failure mode to select the maintenance task that manages the failure consequence at the lowest total cost.",
+        "inputs": [
+          {"name": "failure-mode-catalog", "desc": "Failure modes with effects and consequences"},
+          {"name": "failure-distribution-data", "desc": "Failure rate or Weibull data"}
+        ],
+        "outputs": [
+          {"name": "maintenance-task-assignments", "desc": "For each failure mode: the selected maintenance task (condition monitoring, scheduled restoration, scheduled discard, failure finding, run to failure, or redesign) with the task interval and justification"},
+          {"name": "maintenance-schedule", "desc": "Consolidated maintenance schedule showing all tasks organized by interval (daily, weekly, monthly, annually, at overhaul)"}
+        ],
+        "process": [
+          "Apply the RCM decision logic tree to each failure mode. First question: is the failure evident to the operator during normal duties? If no, it is a hidden failure and requires a failure-finding task regardless of consequence. Hidden failures in safety systems (backup power, redundant channels) are the highest priority for scheduled checks.",
+          "For evident failures, select the task based on consequence and failure pattern:\n- Condition-based maintenance (CBM): monitor a parameter that indicates deterioration before functional failure. Effective for wear-out patterns (Weibull beta > 1). Examples: capacitor ESR measurement detects aging before failure, thermal imaging detects hot spots from degraded connections, vibration monitoring detects bearing wear. The P-F interval (time between detectable degradation and functional failure) must be long enough for corrective action.\n- Scheduled restoration: restore the item to original condition at a fixed interval. Effective only if the failure mode has a well-defined wear-out age. Rebuilding a fan motor every 5 years is effective if bearings consistently wear out between 6-8 years. Not effective for electronic components with constant failure rates.\n- Scheduled discard: replace the item at a fixed interval regardless of condition. The interval must be at the beginning of the wear-out region (Weibull beta > 1, interval set where the reliability curve begins to decline). Effective for items with low replacement cost relative to failure consequence.\n- Run to failure: no preventive action; repair when it fails. Default for failures with low consequence and no detectable degradation pattern.",
+          "Calculate failure-finding task intervals for hidden failures. The interval must produce the required availability of the hidden function. If the safety system must be available 99% of the time: T_interval = 2 * (1 - A_required) * MTBF. For MTBF = 50,000 hours and 99% availability: T = 2 * 0.01 * 50000 = 1000 hours (approximately 42 days).",
+          "For failure modes where no maintenance task is both applicable and effective, and the consequence is safety-related, the answer is mandatory redesign. Redesign the system to eliminate the failure mode or make it evident. This is the only RCM answer that requires hardware changes rather than maintenance changes.",
+          "Consolidate all task assignments into a maintenance schedule. Group tasks by interval for efficient execution: combine all weekly checks into one procedure, all monthly checks into another. Align intervals with operational windows (maintenance during planned downtime). Calculate the annual maintenance cost and compare to the current maintenance program cost and the cost of unplanned failures."
+        ],
+        "tags": ["reliability", "RCM", "maintenance-planning"]
+      },
+      {
+        "flow_name": "rcm-implementation-and-feedback",
+        "description": "Implement the RCM-derived maintenance program and establish the feedback loop that updates maintenance tasks as field data accumulates, preventing the program from becoming static and obsolete.",
+        "inputs": [
+          {"name": "maintenance-task-assignments", "desc": "Selected tasks for each failure mode"},
+          {"name": "maintenance-schedule", "desc": "Consolidated schedule"}
+        ],
+        "outputs": [
+          {"name": "maintenance-procedures", "desc": "Work instructions for each maintenance task including what to inspect, how to measure, acceptance criteria, and actions if criteria are not met"},
+          {"name": "feedback-mechanism", "desc": "Data collection requirements and review trigger criteria that update maintenance intervals as field experience grows"}
+        ],
+        "process": [
+          "Write maintenance procedures that technicians can follow without RCM expertise. Each procedure must state: what to do (specific measurements or inspections), how to do it (tools, instrument settings, access procedure), what constitutes a pass (quantified acceptance criteria, not 'appears satisfactory'), and what to do if it fails (repair, replace, schedule corrective action, or declare the unit unserviceable).",
+          "For condition-based tasks, define the measurement technology and trending methodology. Example: electrolytic capacitor ESR monitoring. Measure ESR with an LCR meter at 100 kHz on each scheduled maintenance. Plot the trend. Set alert threshold at 2x initial ESR. Set action threshold at 3x initial ESR. The slope of the trend predicts remaining life.",
+          "Establish the age exploration process. For every failure mode currently assigned to run-to-failure or condition-based monitoring, track the failure age (operating hours or calendar time at failure). After accumulating 5-10 failure data points, fit a Weibull distribution. If the shape parameter beta exceeds 1.5, the failure mode is wear-out and may benefit from scheduled replacement at the characteristic life (63% of the population has failed).",
+          "Define the review triggers that prompt a maintenance program update: a failure that the maintenance program should have prevented, three or more failures of the same mode within a review period, new information from the manufacturer (service bulletin, reliability update), or a change in operating context (increased duty cycle, new environment).",
+          "Calculate maintenance effectiveness metrics after 12 months of operation. Track: unplanned failure rate (should decrease), maintenance cost per operating hour (should decrease or remain stable), system availability (should increase). If unplanned failures are not decreasing, the maintenance tasks are not addressing the dominant failure modes and the RCM analysis needs revision."
+        ],
+        "tags": ["reliability", "RCM", "implementation"]
+      }
+    ]
+  }
+]

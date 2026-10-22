@@ -1,0 +1,1168 @@
+[
+  {
+    "chain_name": "smt-process-optimization",
+    "description": "Optimize a surface mount technology assembly line from solder paste printing through reflow, using process capability data to drive parameter selection, SPC monitoring, and defect root cause analysis at each stage.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "smt", "process-engineering", "electronics-assembly"],
+    "steps": [
+      {
+        "flow_name": "solder-paste-selection-analysis",
+        "description": "Select solder paste alloy, particle size classification, and flux chemistry from board design constraints and process requirements.",
+        "inputs": [
+          {"name": "smallest-component-pitch", "desc": "Finest pitch on the board in mm (e.g. 0.3mm for 01005, 0.4mm for 0201, 0.5mm for QFP)"},
+          {"name": "board-finish-type", "desc": "Surface finish (HASL, ENIG, OSP, immersion silver, immersion tin) affecting wettability"},
+          {"name": "reflow-atmosphere", "desc": "Air or nitrogen reflow environment"},
+          {"name": "alloy-requirements", "desc": "Lead-free or tin-lead requirement, any customer or regulatory constraints"}
+        ],
+        "outputs": [
+          {"name": "paste-alloy-selection", "desc": "Selected alloy (SAC305, SAC105, SN100C, SnPb) with melting point and wetting characteristics"},
+          {"name": "particle-size-class", "desc": "IPC type classification (Type 3 through Type 6) matched to aperture size and area ratio"},
+          {"name": "flux-chemistry-selection", "desc": "Flux type (no-clean ROL0/ROL1, water-soluble ORH1, rosin) with activity level rationale"},
+          {"name": "paste-handling-requirements", "desc": "Storage temperature, warm-up time, stencil life, and working life constraints"}
+        ],
+        "process": [
+          "Map the smallest aperture size from the finest pitch component. For 0.4mm pitch QFP, aperture width is approximately 0.2mm. For micro-BGA at 0.3mm pitch, apertures may be 0.15mm diameter.",
+          "Calculate the area ratio for the smallest aperture: area ratio = aperture area / (aperture perimeter x stencil thickness). Target area ratio above 0.66 for reliable paste release. If below 0.66 with Type 3 paste, step to Type 4 (20-38 micron) or Type 5 (15-25 micron).",
+          "Select alloy based on reliability and process requirements. SAC305 (Sn96.5/Ag3.0/Cu0.5) at 217-220C liquidus is the default lead-free. SAC105 at lower silver content reduces cost but has lower fatigue life. SN100C (Sn/Cu/Ni/Ge) for wave-compatible processes. SnPb (Sn63/Pb37) at 183C liquidus where exemptions apply.",
+          "Match flux chemistry to board finish and cleaning capability. No-clean ROL0 for ENIG/OSP with no post-reflow cleaning. Water-soluble ORH1 for HASL or oxidized surfaces when aqueous cleaning is available. Higher activity flux compensates for poor wettability but requires cleaning.",
+          "Document handling constraints: refrigerated storage at 0-10C, 4-hour minimum warm-up to room temperature before opening, 8-hour stencil life for no-clean, 24-hour stencil life for water-soluble. These parameters become SPC control points."
+        ],
+        "tags": ["smt", "solder-paste", "material-selection"]
+      },
+      {
+        "flow_name": "stencil-design-optimization",
+        "description": "Design the solder paste stencil with aperture geometry modifications, foil thickness selection, and area ratio optimization for each component type on the board.",
+        "inputs": [
+          {"name": "paste-alloy-selection", "desc": "Selected alloy and its rheological properties"},
+          {"name": "particle-size-class", "desc": "Paste particle size classification"},
+          {"name": "smallest-component-pitch", "desc": "Finest pitch on the board"},
+          {"name": "board-component-list", "desc": "Component types and their pad geometries (QFP, BGA, 0201, 0402, connectors)"}
+        ],
+        "outputs": [
+          {"name": "stencil-thickness", "desc": "Foil thickness in mm with rationale from area ratio analysis"},
+          {"name": "aperture-modification-table", "desc": "Per-component aperture geometry: size reduction percentage, shape modifications (home plate, inverted home plate, rounded corners)"},
+          {"name": "step-stencil-requirements", "desc": "Whether step-up or step-down regions are needed and their locations"},
+          {"name": "stencil-material-selection", "desc": "Laser-cut stainless steel vs electroformed nickel selection with wall smoothness requirements"}
+        ],
+        "process": [
+          "Start with the finest pitch component to set the base stencil thickness. For 0.4mm pitch QFP with 0.2mm aperture width, area ratio = (0.2 x L) / (2 x (0.2 + L) x t) where t is thickness. At 0.1mm (4mil) thickness, check that area ratio exceeds 0.66.",
+          "Check area ratio for every component type at the chosen thickness. Large pads (connectors, power components) may need increased volume. If the ratio between smallest and largest pad deposit requirements exceeds what one thickness can serve, specify a step stencil.",
+          "Apply aperture modifications by component type. Reduce QFP apertures by 10-15% on width to prevent bridging. Use home-plate shape for gull-wing leads to center the deposit. Round aperture corners with radius equal to stencil thickness for better paste release. For BGA, use 1:1 or slight reduction of pad-to-aperture ratio.",
+          "For 0201 and 01005 components, specify aperture elongation (aspect ratio 1.5:1) oriented in the print direction to increase deposit volume while maintaining area ratio. These components are most sensitive to insufficient paste volume causing opens.",
+          "Select stencil material. Electroformed nickel for pitches below 0.4mm due to trapezoidal aperture walls (wider at board side) that improve paste release. Laser-cut stainless steel with electropolish for standard pitches. Nano-coating on aperture walls reduces paste adhesion.",
+          "Document the aperture table as a manufacturing specification. Include the nominal paste volume target per pad in nanoliters for SPI correlation."
+        ],
+        "tags": ["smt", "stencil-design", "process-engineering"]
+      },
+      {
+        "flow_name": "print-process-parameter-setup",
+        "description": "Configure solder paste printer parameters and establish the process window through designed experiments on print speed, pressure, separation speed, and snap-off distance.",
+        "inputs": [
+          {"name": "stencil-thickness", "desc": "Foil thickness selected"},
+          {"name": "stencil-material-selection", "desc": "Material and coating of stencil"},
+          {"name": "paste-alloy-selection", "desc": "Paste alloy and rheology"},
+          {"name": "particle-size-class", "desc": "Particle size classification"}
+        ],
+        "outputs": [
+          {"name": "print-speed-range", "desc": "Qualified print speed range in mm/s with transfer efficiency data"},
+          {"name": "squeegee-pressure", "desc": "Pressure setting in N/mm or kg with clean wipe rationale"},
+          {"name": "separation-parameters", "desc": "Separation speed and distance settings for paste release quality"},
+          {"name": "print-process-window", "desc": "DOE results showing the interaction between speed, pressure, and separation on volume and height consistency"}
+        ],
+        "process": [
+          "Set initial squeegee pressure to achieve clean stencil wipe without paste scavenging from apertures. Start at 0.3-0.5 N/mm of squeegee length. Inspect the stencil underside after printing. Paste bleeding under the stencil indicates excess pressure or insufficient snap-off.",
+          "Run a print speed DOE from 20mm/s to 150mm/s in 25mm/s increments. At each speed, measure paste volume on 10+ pads across the board using SPI. Plot transfer efficiency (actual volume / theoretical volume) vs speed. Transfer efficiency should be 80-120%. Identify the speed at which efficiency drops below 80%.",
+          "Set separation speed and distance. Fast separation (>3mm/s) causes dog-ears and inconsistent deposits on fine pitch. Slow separation (<0.5mm/s) increases cycle time. Start at 1mm/s with 2mm separation distance. For fine pitch (<0.5mm), use two-stage separation: slow initial (0.3mm/s for first 0.5mm) then fast.",
+          "Run a full factorial DOE with speed (3 levels), pressure (3 levels), and separation speed (3 levels) on a test vehicle. Measure paste volume, height, area, and offset on the smallest pitch component. Use response surface methodology to find the center of the process window.",
+          "Establish under-stencil cleaning frequency. Wet-dry-vacuum every 3-5 prints for fine pitch. Monitor SPI volume trending to detect cleaning degradation. Increase cleaning frequency if volume Cpk drops below 1.33.",
+          "Lock the process parameters as the standard operating procedure. Set SPI volume limits at +/-50% of nominal for alarm and +/-30% for process adjustment triggers."
+        ],
+        "tags": ["smt", "print-process", "doe"]
+      },
+      {
+        "flow_name": "pick-and-place-capability-verification",
+        "description": "Verify and optimize pick-and-place machine accuracy, repeatability, and throughput for the specific board design through capability studies and feeder optimization.",
+        "inputs": [
+          {"name": "board-component-list", "desc": "Component types, package sizes, and quantities"},
+          {"name": "print-process-window", "desc": "Paste deposit accuracy data informing placement tolerance budget"}
+        ],
+        "outputs": [
+          {"name": "placement-accuracy-data", "desc": "Cpk for X, Y, and theta placement accuracy per component type"},
+          {"name": "feeder-optimization", "desc": "Feeder assignment, nozzle selection, and line balance between placement heads"},
+          {"name": "placement-defect-rate", "desc": "Expected placement defect rate (missing, shifted, rotated, wrong part) from capability data"},
+          {"name": "machine-program-validation", "desc": "First article placement verification results and program corrections"}
+        ],
+        "process": [
+          "Run a machine capability study: place 30+ boards and measure XY offset and rotation for each component type using post-placement AOI or offline measurement system. Calculate Cpk for each axis. Target Cpk > 1.67 for fine pitch, > 1.33 for standard pitch.",
+          "Verify nozzle-to-component matching. Each nozzle size has a pickup range. Map nozzle types to component body sizes. Verify vacuum level for each nozzle (insufficient vacuum causes drops, excess vacuum damages fragile components like MLCC).",
+          "Optimize feeder assignment for throughput. Group components by nozzle type to minimize nozzle changes. Balance placement count across heads. Place fine-pitch components on the most accurate head. Use simultaneous pickup where feeder spacing matches head spacing.",
+          "Validate the component centroid and rotation in the machine program against the CAD data. Run a first article with no paste (dry run) and measure all placements. Correct any systematic offset before production.",
+          "Set placement force limits. 0201 and 01005 components are sensitive to placement force pushing paste out from under the part. Typical placement force is 1-3N for chip components, 3-10N for QFP/BGA. Too high causes solder balling; too low causes insufficient contact with paste."
+        ],
+        "tags": ["smt", "pick-and-place", "capability-study"]
+      },
+      {
+        "flow_name": "reflow-profile-baseline",
+        "description": "Develop the baseline reflow profile from component thermal requirements, board thermal mass distribution, and solder paste specifications.",
+        "inputs": [
+          {"name": "paste-alloy-selection", "desc": "Alloy liquidus temperature and reflow window"},
+          {"name": "board-component-list", "desc": "Components with temperature ratings and moisture sensitivity levels"},
+          {"name": "smallest-component-pitch", "desc": "Finest pitch affecting thermal uniformity requirements"}
+        ],
+        "outputs": [
+          {"name": "reflow-profile-specification", "desc": "Zone temperatures, belt speed, peak temperature range, time above liquidus, thermal delta specification"},
+          {"name": "thermocouple-placement-map", "desc": "TC attachment locations covering thermal extremes on the board"},
+          {"name": "profile-compliance-data", "desc": "Measured profile at each TC location vs specification limits"},
+          {"name": "thermal-delta-measurement", "desc": "Maximum temperature difference across the board at peak and during ramp"}
+        ],
+        "process": [
+          "Identify the thermal constraints. The coldest joint must exceed liquidus + 10C (227C minimum for SAC305). The hottest component must stay below its maximum rating (typically 260C for 10 seconds for most SMD components). Moisture-sensitive components (MSL 3 and above) have specific time-temperature limits per J-STD-020.",
+          "Attach thermocouples to thermal extremes: the coldest point (typically a large ground pad or BGA center), the hottest point (typically a small component near board edge), and two intermediate locations. Use high-temperature solder or Kapton tape with thermal grease for consistent attachment.",
+          "Select profile type. Ramp-soak-spike for boards with high thermal delta (>15C between coldest and hottest). Linear ramp-to-peak for boards with low thermal delta (<10C) and no large thermal masses. Soak zone (150-200C for 60-120s) reduces delta by allowing cold regions to catch up.",
+          "Set zone temperatures starting from paste vendor guidelines. Preheat ramp rate 1-3C/s (faster causes paste spattering from volatile release). Soak at 150-200C. Ramp to peak at 1-3C/s. Peak temperature 235-245C for SAC305 with minimum 40s above liquidus (217C) and maximum 90s. Cooling rate 2-4C/s (faster improves joint microstructure but risks thermal shock).",
+          "Measure thermal delta at peak temperature. Specification is typically 10C maximum for fine pitch (<0.5mm) and 15C for standard assembly. If delta exceeds specification, adjust soak time, zone temperatures, or belt speed. Consider board support or edge rails to manage warpage.",
+          "Document the qualified profile as the manufacturing standard. Specify the acceptable range for each parameter (peak temperature +/-5C, time above liquidus +/-10s, ramp rate +/-0.5C/s)."
+        ],
+        "tags": ["smt", "reflow", "thermal-profiling"]
+      },
+      {
+        "flow_name": "first-article-inspection-protocol",
+        "description": "Execute a systematic first article inspection comparing the assembled board against design intent across all process stages, generating the acceptance baseline for production.",
+        "inputs": [
+          {"name": "reflow-profile-specification", "desc": "Qualified reflow parameters"},
+          {"name": "placement-accuracy-data", "desc": "Machine capability data"},
+          {"name": "print-process-window", "desc": "Qualified print parameters"},
+          {"name": "stencil-thickness", "desc": "Stencil specification"}
+        ],
+        "outputs": [
+          {"name": "fai-report", "desc": "First article inspection results with pass/fail per characteristic and corrective actions for failures"},
+          {"name": "ipc-class-compliance", "desc": "Classification of all solder joints per IPC-A-610 criteria at the required class level"},
+          {"name": "process-deviations", "desc": "Any deviations from the standard process required for this specific product"},
+          {"name": "production-release-status", "desc": "Go/no-go decision with supporting data for production release"}
+        ],
+        "process": [
+          "Inspect paste deposits on the first board via SPI before placement. Verify volume, height, area, and offset are within the qualified process window. Confirm no bridging, insufficient, or missing deposits. This is the first gate before committing components.",
+          "After placement (before reflow), inspect for placement accuracy, missing components, wrong components, polarity, and tombstone risk (paste deposit asymmetry). On the first article, visually inspect 100% of placements against the BOM and centroid data.",
+          "After reflow, perform visual inspection per IPC-A-610 at the customer-specified class level (Class 2 for commercial, Class 3 for high-reliability). Document solder joint condition for each component type: fillet formation, wetting, voiding (X-ray for BGA), bridging, solder balls, cold joints.",
+          "For BGA and bottom-terminated components, perform X-ray inspection. Check for head-in-pillow, voiding (target <25% void area per joint for Class 3), bridging, missing balls, and pad cratering. These defects are invisible to optical inspection.",
+          "Cross-section representative solder joints (destructive) if required by the product specification or if the process is new. Measure intermetallic thickness (target 1-3 microns for fresh joints), void content, and joint geometry.",
+          "Compile the FAI report with measurements, images, and pass/fail determinations. Identify any corrective actions needed before production release. The FAI package becomes the reference standard for ongoing production inspection."
+        ],
+        "tags": ["smt", "inspection", "first-article"]
+      },
+      {
+        "flow_name": "spc-monitoring-smt-line",
+        "description": "Establish statistical process control monitoring points across the SMT line with control chart selection, sampling strategy, and out-of-control response procedures.",
+        "inputs": [
+          {"name": "print-process-window", "desc": "Qualified print parameters and SPI data"},
+          {"name": "placement-accuracy-data", "desc": "Machine capability data"},
+          {"name": "reflow-profile-specification", "desc": "Qualified reflow parameters"},
+          {"name": "fai-report", "desc": "Baseline quality data from first article"}
+        ],
+        "outputs": [
+          {"name": "spc-control-plan", "desc": "Control chart type, measurement points, sampling frequency, and control limits for each process stage"},
+          {"name": "reaction-plan", "desc": "Out-of-control action procedures (OCAP) for each chart alarm type"},
+          {"name": "capability-targets", "desc": "Cpk targets and measurement system analysis requirements for each SPC point"},
+          {"name": "spc-review-schedule", "desc": "Periodic review frequency for control limit recalculation and capability assessment"}
+        ],
+        "process": [
+          "At the print station, monitor paste volume via SPI. Use X-bar and R charts on volume for 5 critical pads (finest pitch, largest pad, BGA, and two intermediate). Sample every board or every Nth board depending on volume. Set control limits from the first 25 subgroups of production data, not from the DOE data.",
+          "At the placement station, monitor placement offset using post-placement AOI or SPI delta measurement. Use individuals (I-MR) charts for X and Y offset of the finest pitch component. Offset trending indicates machine calibration drift.",
+          "At the reflow station, monitor profile parameters from the in-line profiler (if equipped) or periodic board-level profiling. Track peak temperature, time above liquidus, and thermal delta on a run chart with specification limits. Profile should be re-verified weekly, after belt speed changes, and after maintenance.",
+          "At post-reflow AOI, monitor defect rates using p-charts (fraction defective) or u-charts (defects per unit) depending on board complexity. Stratify defects by type (bridge, insufficient, missing, tombstone, solder ball) for Pareto analysis. A shift in any defect type triggers investigation.",
+          "Perform measurement system analysis (MSA) for each SPC measurement point. Gage R&R for SPI volume should show <10% of tolerance consumed by measurement variation. AOI false call rate should be <500ppm to maintain operator trust in the inspection system.",
+          "Set the review schedule: daily review of control charts by process engineering, weekly Cpk calculation, monthly control limit recalculation, quarterly measurement system re-verification."
+        ],
+        "tags": ["smt", "spc", "quality-control"]
+      },
+      {
+        "flow_name": "defect-root-cause-by-stage",
+        "description": "Diagnose the root cause of SMT defects by mapping defect types to their originating process stage, using physical evidence and process data correlation.",
+        "inputs": [
+          {"name": "spc-control-plan", "desc": "Active SPC data from each process stage"},
+          {"name": "fai-report", "desc": "Baseline quality data"},
+          {"name": "ipc-class-compliance", "desc": "Inspection criteria in use"}
+        ],
+        "outputs": [
+          {"name": "defect-cause-map", "desc": "Each defect type mapped to its most likely process stage origin with diagnostic evidence"},
+          {"name": "corrective-action-matrix", "desc": "Corrective actions for each defect type organized by process stage"},
+          {"name": "process-improvement-priorities", "desc": "Prioritized list of process improvements from defect Pareto and occurrence data"}
+        ],
+        "process": [
+          "Bridging: if between adjacent pads on fine pitch, root cause is paste (excess volume, slump) or stencil (aperture too large, under-stencil bleed). If between non-adjacent pads, root cause is solder balling during reflow or contamination. Check SPI data at the bridged location to differentiate.",
+          "Tombstoning: caused by unequal wetting forces during reflow. Originating causes include asymmetric paste deposits (print stage), component placement offset shifting the deposit balance (placement stage), or unequal pad thermal mass causing one end to wet before the other (design/reflow). Check SPI for paste volume ratio between the two pads.",
+          "Head-in-pillow on BGA: caused by board or component warpage during reflow separating the paste deposit from the ball at the moment of coalescence. Worst at center of large BGA packages. Not visible optically; detected by X-ray showing a smooth separation line. Mitigation is vapor-phase reflow, nitrogen atmosphere, or reflow profile optimization to reduce peak warpage.",
+          "Voiding: small voids (<15% area) are inherent in reflow process from flux volatile entrapment. Excessive voiding indicates insufficient flux activation temperature, too-fast ramp through the volatile release window, or contaminated pads. Vacuum reflow reduces voiding for power components where thermal performance requires <5% void area.",
+          "Insufficient solder (non-wetting): caused by insufficient paste volume (print stage), oxidized pads (storage/handling), or insufficient reflow temperature/time at the joint. Differentiate by checking SPI volume data and comparing the peak temperature at the defective joint to the profile specification.",
+          "Solder balls: small balls (<75um) near component are typically from paste spattering during reflow preheat (ramp rate too fast, paste not conditioned). Larger balls between pads indicate paste on solder mask from print misalignment or stencil damage. Mid-chip solder balls on passives are from paste under the component body.",
+          "Compile the defect-cause map and prioritize corrective actions by defect frequency multiplied by severity. The highest priority actions address the defect type contributing the most to scrap or rework cost."
+        ],
+        "tags": ["smt", "defect-analysis", "root-cause"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reflow-profile-design",
+    "description": "Design and qualify a reflow soldering profile from thermal profiling methodology through zone-by-zone optimization, accounting for component thermal limits, board thermal mass variation, and atmosphere effects.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "reflow", "thermal-profiling", "soldering"],
+    "steps": [
+      {
+        "flow_name": "profiler-board-preparation",
+        "description": "Prepare a thermal profiling board with thermocouple placement strategy based on board thermal topology and component sensitivity.",
+        "inputs": [
+          {"name": "board-assembly-drawing", "desc": "Assembly drawing showing component locations, copper distribution, and board dimensions"},
+          {"name": "component-thermal-ratings", "desc": "Maximum temperature ratings and moisture sensitivity levels for all component types"},
+          {"name": "solder-alloy-liquidus", "desc": "Liquidus temperature of the solder alloy in use"}
+        ],
+        "outputs": [
+          {"name": "tc-placement-map", "desc": "Thermocouple locations with rationale for each placement targeting thermal extremes"},
+          {"name": "tc-attachment-method", "desc": "Attachment method per location (high-temp solder, Kapton tape, epoxy) with accuracy implications"},
+          {"name": "profiler-board-specification", "desc": "Requirements for the profiling board: production board with components or bare board, thermocouple routing"}
+        ],
+        "process": [
+          "Identify thermal extremes on the board. The coldest point is typically the center of the largest BGA (thermal mass of the package and solder balls acts as a heat sink), a large ground plane area with heavy copper pour, or a connector with high thermal mass. The hottest point is typically a small component near the board edge or a region with minimal copper.",
+          "Place thermocouples at minimum 4 locations: coldest point (to verify minimum peak temperature), hottest point (to verify maximum temperature limit), and two intermediate points to characterize the thermal gradient across the board. For double-sided reflow, include top and bottom measurements.",
+          "Select thermocouple type. Type K (chromel-alumel) is standard for reflow profiling: range -200 to 1250C, accuracy +/-2.2C. Use 36AWG (0.13mm) wire to minimize thermal mass of the TC itself affecting the measurement. Smaller wire responds faster but is more fragile.",
+          "Attach thermocouples using high-temperature solder (bismuth-tin at 280C+ liquidus) for joints that must reach reflow temperature. Apply a small dot of solder to the pad, then solder the TC bead to it. For component body temperature, use Kapton tape with a small amount of thermal grease between TC and component.",
+          "Route thermocouple wires to minimize interference with the reflow process. Tape wires flat to the board surface along existing component rows. Exit the board from the trailing edge (opposite to oven entry). Ensure wires do not cast thermal shadows on nearby components."
+        ],
+        "tags": ["reflow", "thermal-profiling", "thermocouple"]
+      },
+      {
+        "flow_name": "reflow-zone-configuration",
+        "description": "Configure reflow oven zones to achieve the target profile shape, mapping each zone to its function in the thermal sequence and setting initial temperatures from alloy requirements.",
+        "inputs": [
+          {"name": "tc-placement-map", "desc": "Thermocouple locations on the profiling board"},
+          {"name": "solder-alloy-liquidus", "desc": "Liquidus temperature"},
+          {"name": "component-thermal-ratings", "desc": "Temperature limits for all components"}
+        ],
+        "outputs": [
+          {"name": "zone-temperature-settings", "desc": "Temperature setpoint for each oven zone with its function (preheat, soak, ramp, peak, cooling)"},
+          {"name": "belt-speed-initial", "desc": "Conveyor belt speed setting with the resulting total time in oven"},
+          {"name": "profile-type-selection", "desc": "Ramp-soak-spike or ramp-to-peak selection with rationale"}
+        ],
+        "process": [
+          "Determine the number of heating zones available. A typical production oven has 8-12 heating zones and 2-4 cooling zones. More zones provide finer profile control. Map the zones to profile regions: zones 1-3 for preheat (25C to 150C), zones 4-6 for soak (150-200C), zones 7-9 for ramp-to-peak, zones 10-12 for peak temperature.",
+          "Select the profile type. Ramp-soak-spike: use when thermal delta exceeds 15C, when boards have large thermal mass variation, or when paste vendor recommends a soak for flux activation. The soak zone allows the coldest regions to approach the hottest regions before the rapid ramp to peak. Ramp-to-peak (tent profile): use when thermal delta is low (<10C) and components are not moisture-sensitive.",
+          "Set initial zone temperatures. Preheat zones: ramp at 1-2C/s, set zone temperature 50-80C above the desired board temperature at that zone exit. Soak zones: set at 180-200C for a soak plateau of 150-200C at the board. Peak zones: set at 260-280C for SAC305 to achieve 235-245C at the board surface (the zone must be significantly hotter than the desired board temperature).",
+          "Set belt speed. Start with the paste vendor's recommended total time in oven (typically 4-6 minutes for a ramp-soak-spike profile). Belt speed = oven heated length / total time. For a 3-meter heated length and 5-minute target: 600mm/min = 10mm/s.",
+          "For cooling zones, set cooling rate of 2-4C/s. Faster cooling produces finer grain structure and better fatigue life in SAC alloys but risks thermal shock on ceramic components. Slower cooling produces coarser but more ductile microstructure. Forced nitrogen cooling provides faster, more controlled cooling than forced air."
+        ],
+        "tags": ["reflow", "oven-configuration", "process-engineering"]
+      },
+      {
+        "flow_name": "profile-optimization-iteration",
+        "description": "Iteratively adjust zone temperatures and belt speed to bring all thermocouple readings within specification, minimizing thermal delta while meeting time-temperature requirements.",
+        "inputs": [
+          {"name": "zone-temperature-settings", "desc": "Initial zone settings"},
+          {"name": "belt-speed-initial", "desc": "Starting belt speed"},
+          {"name": "tc-placement-map", "desc": "TC locations for measurement"},
+          {"name": "solder-alloy-liquidus", "desc": "Liquidus temperature for TAL calculation"}
+        ],
+        "outputs": [
+          {"name": "optimized-profile", "desc": "Final zone temperatures and belt speed with measured profile at each TC location"},
+          {"name": "thermal-delta-at-peak", "desc": "Measured temperature difference between coldest and hottest TC at peak reflow"},
+          {"name": "time-above-liquidus", "desc": "TAL for each TC location"},
+          {"name": "process-window-index", "desc": "PWI score indicating how centered the profile is within the specification window"}
+        ],
+        "process": [
+          "Run the first profile pass with the initial settings. Record the temperature-time data from all thermocouples. Plot the profiles overlaid with the specification window: ramp rate limits, soak temperature range, peak temperature range, time above liquidus range.",
+          "Calculate the process window index (PWI) for each TC location: PWI = max(abs((measured - center of spec) / (half width of spec))) across all specification parameters. A PWI of 0 means perfectly centered; PWI approaching 100% means at the specification edge. Target PWI < 70% for all TCs.",
+          "If the coldest TC peak temperature is below specification, increase the peak zone temperatures by 5C or decrease belt speed by 5%. If the hottest TC exceeds the maximum, decrease peak zone temperatures. Adjust one variable at a time and re-profile.",
+          "To reduce thermal delta: extend the soak zone (increase soak zone temperatures by 5-10C or decrease belt speed) to give the coldest region more time to absorb heat before the ramp to peak. Moving the soak setpoint closer to liquidus reduces the remaining temperature rise needed and thus reduces the delta at peak.",
+          "Iterate until all TCs simultaneously meet: peak temperature within specification, time above liquidus within specification, ramp rates within specification, and thermal delta within specification. Typically requires 3-5 profiling runs.",
+          "Record the final optimized profile as the production standard. Save the raw TC data files, the oven recipe (zone temperatures, belt speed, rail width), and the PWI calculation for each TC location."
+        ],
+        "tags": ["reflow", "profile-optimization", "process-window"]
+      },
+      {
+        "flow_name": "atmosphere-and-special-reflow",
+        "description": "Evaluate nitrogen atmosphere, vacuum reflow, and vapor-phase reflow alternatives for improved joint quality, and determine cost-benefit for the specific product.",
+        "inputs": [
+          {"name": "optimized-profile", "desc": "Baseline air reflow profile"},
+          {"name": "thermal-delta-at-peak", "desc": "Thermal delta achieved in air reflow"},
+          {"name": "component-thermal-ratings", "desc": "Temperature-sensitive components that constrain peak temperature"}
+        ],
+        "outputs": [
+          {"name": "atmosphere-recommendation", "desc": "Air vs nitrogen vs vacuum vs vapor-phase recommendation with cost-benefit analysis"},
+          {"name": "nitrogen-specification", "desc": "If nitrogen recommended: purity requirement (ppm O2), flow rate, and cost per board estimate"},
+          {"name": "wetting-improvement-data", "desc": "Measured improvement in wetting angle and spread from reduced oxidation"},
+          {"name": "voiding-reduction-data", "desc": "Void area reduction data for BGA and bottom-terminated components under the selected atmosphere"}
+        ],
+        "process": [
+          "Nitrogen atmosphere reduces solder surface oxidation during reflow, improving wetting. The improvement is most significant for lead-free alloys which oxidize faster than SnPb. At <500ppm O2, wetting angle improves by 10-20 degrees for SAC305 on copper. At <100ppm O2, further improvement is marginal for most applications.",
+          "Evaluate whether nitrogen is justified for this product. The cost of nitrogen is $0.02-$0.10 per board depending on oven size and flow rate. The benefit is measurable for: fine-pitch components where marginal wetting causes opens, OSP board finish which degrades during reflow, and lead-free processes on thermally challenging boards where lower peak temperature is desired (nitrogen allows 5-10C lower peak).",
+          "For BGA voiding below 25% (IPC-7095 Class 3), nitrogen alone may be insufficient. Vacuum reflow (vacuum applied after peak temperature, during solidification) actively extracts entrapped flux volatiles, reducing void area to <5%. Cost is $0.50-$2.00 per board for vacuum-capable equipment.",
+          "Vapor-phase reflow (condensation soldering) provides inherent peak temperature control equal to the vapor temperature (230C for Galden LS230, 240C for LS240). This eliminates the risk of overheating and reduces thermal delta because the condensation rate self-limits on hotter surfaces. Cost is higher than convection reflow but may be justified for thermally sensitive assemblies.",
+          "Make the recommendation based on the specific product requirements. Standard commercial assembly: air reflow with proper profile optimization is usually sufficient. High-reliability or fine-pitch assembly: nitrogen reflow. Power electronics or high-current BGA: vacuum reflow for void reduction. Thermally sensitive mixed-technology: vapor-phase."
+        ],
+        "tags": ["reflow", "nitrogen", "vapor-phase", "atmosphere"]
+      },
+      {
+        "flow_name": "mixed-technology-profile-strategy",
+        "description": "Develop reflow strategies for boards with conflicting thermal requirements: mixed alloy, double-sided reflow, large thermal mass components alongside fine-pitch, and temperature-sensitive components.",
+        "inputs": [
+          {"name": "optimized-profile", "desc": "Single-pass profile baseline"},
+          {"name": "atmosphere-recommendation", "desc": "Atmosphere selection"},
+          {"name": "board-assembly-drawing", "desc": "Full assembly showing both sides and all component types"},
+          {"name": "component-thermal-ratings", "desc": "All component temperature limits"}
+        ],
+        "outputs": [
+          {"name": "reflow-sequence", "desc": "Defined sequence for double-sided reflow including which side first and why"},
+          {"name": "multi-pass-profile-set", "desc": "Profiles for each reflow pass with cumulative thermal exposure tracking"},
+          {"name": "component-retention-strategy", "desc": "Strategy for preventing second-side component drop during the second reflow pass"},
+          {"name": "mixed-technology-qualification-results", "desc": "Qualification data showing all joints meet specification after the full reflow sequence"}
+        ],
+        "process": [
+          "For double-sided SMT, reflow the heavier side first (bottom side with larger components). During the second pass, the first side faces down and gravity acts on the components. Components stay in place if their weight does not exceed the surface tension of the molten solder. Rule of thumb: components under 0.1g stay; components over 0.5g need adhesive or mechanical retention.",
+          "Track cumulative thermal exposure. Each reflow pass subjects all previously soldered joints to another reflow cycle. Excessive reflow cycles cause intermetallic compound (IMC) growth: Cu6Sn5 and Cu3Sn. After 3+ reflow cycles, IMC thickness may exceed 5 microns, reducing joint ductility. For high-reliability products, limit total reflow passes to 2 plus 1 rework cycle.",
+          "For boards with mixed thermal mass (large power connector next to 0201 chips), consider local shielding. A reflective shield over temperature-sensitive components reduces their peak temperature by 5-15C during reflow without affecting the oven recipe. Alternatively, design the reflow profile with a longer soak to equalize temperatures before the peak.",
+          "For mixed-alloy assembly (leaded and lead-free components on the same board), the reflow temperature must be high enough to fully melt the lead-free alloy (217C for SAC305) which also melts SnPb (183C). The mixed alloy joint metallurgy is acceptable per IPC-J-STD-001 if wetting is adequate. However, backward compatibility testing should verify reliability.",
+          "Qualify the full reflow sequence as a system. Run the complete sequence (first side, flip, second side, any selective soldering) on profiler boards and verify all joints at all locations meet temperature and time specifications after the complete sequence. The first-side joints see the second reflow as an additional thermal cycle; verify they are still within IPC specifications."
+        ],
+        "tags": ["reflow", "mixed-technology", "double-sided"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wave-solder-process",
+    "description": "Configure and optimize a wave soldering process for through-hole and mixed-technology boards, covering flux application, preheat, wave parameters, solder pot management, and defect elimination.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "wave-solder", "through-hole", "soldering"],
+    "steps": [
+      {
+        "flow_name": "wave-solder-flux-application",
+        "description": "Select and configure the flux application system for wave soldering, matching flux type to board requirements and setting application parameters for consistent coverage.",
+        "inputs": [
+          {"name": "board-surface-finish", "desc": "Board surface finish type affecting flux activity requirements"},
+          {"name": "component-types", "desc": "Through-hole and any bottom-side SMT components on the wave-solder side"},
+          {"name": "cleaning-capability", "desc": "Whether aqueous cleaning is available post-soldering"},
+          {"name": "solder-alloy-type", "desc": "Tin-lead or lead-free alloy in the solder pot"}
+        ],
+        "outputs": [
+          {"name": "flux-type-selection", "desc": "Selected flux chemistry (no-clean, water-soluble, rosin-based) with IPC J-STD-004 classification"},
+          {"name": "flux-application-method", "desc": "Spray vs foam application with parameter settings"},
+          {"name": "flux-coverage-specification", "desc": "Target flux thickness in micrograms per square centimeter with measurement method"},
+          {"name": "flux-specific-gravity-control", "desc": "Specific gravity target and monitoring frequency for consistent concentration"}
+        ],
+        "process": [
+          "Select flux chemistry. For lead-free wave soldering, higher-activity flux is needed because SAC alloys wet more slowly than SnPb. Water-soluble ORL1 or ORH0 flux provides the best wetting for lead-free but requires aqueous cleaning within 4 hours of soldering. No-clean ROL0 or ROL1 flux is acceptable for SnPb and well-designed SAC processes but may leave visible residue.",
+          "Choose application method. Spray fluxing provides more uniform coverage and uses less flux than foam. Set spray nozzle air pressure, flux flow rate, and conveyor speed to achieve 500-1500 ug/cm2 of flux solids on the board bottom. Foam fluxing is simpler but wastes more flux and is less uniform at board edges.",
+          "Set specific gravity for the flux bath. The flux vendor provides the target specific gravity (typically 0.82-0.86 for spray fluxes). Monitor specific gravity daily with a hydrometer. Add thinner when SG rises (solvent evaporation concentrates the flux). Add flux concentrate when SG drops (contamination dilutes the flux).",
+          "Verify flux coverage using a test board with witness coupons. The solvent evaporates during preheat, leaving only the flux solids. Measure residue weight on a known area to confirm coverage. Alternatively, use a UV-fluorescent flux additive to visually inspect coverage uniformity."
+        ],
+        "tags": ["wave-solder", "flux", "process-engineering"]
+      },
+      {
+        "flow_name": "wave-preheat-setup",
+        "description": "Configure wave solder preheat to activate flux, reduce thermal shock, and manage board temperature for reliable wetting, accounting for board mass and component sensitivity.",
+        "inputs": [
+          {"name": "flux-type-selection", "desc": "Selected flux and its activation temperature range"},
+          {"name": "board-surface-finish", "desc": "Board finish affecting preheat requirements"},
+          {"name": "solder-alloy-type", "desc": "Alloy in the solder pot (liquidus temperature)"},
+          {"name": "board-assembly-drawing", "desc": "Board dimensions, layer count, and copper weight affecting thermal mass"}
+        ],
+        "outputs": [
+          {"name": "preheat-zone-settings", "desc": "Temperature settings for each preheat zone (top and bottom heaters independently)"},
+          {"name": "board-topside-temperature", "desc": "Target board topside temperature entering the wave, measured at the solder pad"},
+          {"name": "preheat-ramp-rate", "desc": "Temperature rise rate through the preheat section"},
+          {"name": "flux-activation-verification", "desc": "Method to verify flux is fully activated before the board contacts the wave"}
+        ],
+        "process": [
+          "The preheat must accomplish three things simultaneously: activate the flux (typically requires 100-150C for 30-60 seconds), evaporate flux solvents to prevent spattering at the wave, and bring the board to a temperature that minimizes thermal shock when contacting the molten solder.",
+          "Set preheat to achieve a board topside temperature of 100-130C for tin-lead wave soldering and 110-145C for lead-free. The board bottom contacting the wave should be 10-20C higher than the topside. Insufficient preheat causes thermal shock (solder solidifies before filling barrels) and poor flux activation. Excessive preheat degrades flux activity and causes outgassing at the wave.",
+          "Configure preheat zones: bottom infrared heaters for direct board heating, top convection or IR for uniform heating of components. Ramp rate of 2-4C/s through the preheat zones. Total preheat time of 60-120 seconds depending on board thermal mass.",
+          "Verify flux activation by measuring the residue state after preheat. A properly activated flux will change from a wet, glossy appearance to a dry, matte appearance. Under-activated flux remains wet and will splatter at the wave. Over-activated flux is dry and charred, unable to clean oxides during soldering.",
+          "For lead-free wave soldering, higher preheat temperatures are critical because the solder pot is at 260-265C vs 245-250C for SnPb. The thermal gradient between board and solder must be managed to prevent barrel fill deficiency."
+        ],
+        "tags": ["wave-solder", "preheat", "thermal-management"]
+      },
+      {
+        "flow_name": "wave-parameter-optimization",
+        "description": "Optimize wave soldering machine parameters including wave height, contact length, conveyor speed, and immersion depth for consistent barrel fill and minimal bridging.",
+        "inputs": [
+          {"name": "board-topside-temperature", "desc": "Achieved board temperature from preheat"},
+          {"name": "solder-alloy-type", "desc": "Alloy and pot temperature"},
+          {"name": "component-types", "desc": "Through-hole component types (pin count, barrel diameter, lead finish)"},
+          {"name": "board-assembly-drawing", "desc": "Board layout showing through-hole locations and routing"}
+        ],
+        "outputs": [
+          {"name": "wave-height-setting", "desc": "Solder wave height relative to the board bottom surface"},
+          {"name": "conveyor-speed", "desc": "Belt speed through the wave section with contact time calculation"},
+          {"name": "wave-contact-length", "desc": "Length of solder contact from entry to exit, controlled by wave geometry and board angle"},
+          {"name": "immersion-depth", "desc": "How deep the board penetrates into the wave, measured from the board bottom surface"}
+        ],
+        "process": [
+          "Set wave height so the solder contacts the board bottom surface evenly across the full board width. The wave must be high enough to fill through-hole barrels by capillary action. For a dual-wave machine, set the chip wave (turbulent wave) height to contact the board for SMT components on the solder side, and the lambda wave (smooth wave) for through-hole barrel fill and bridge elimination.",
+          "Calculate contact time from conveyor speed and wave contact length. Contact time = contact length / conveyor speed. Target contact time of 2-4 seconds for SnPb and 3-5 seconds for lead-free (SAC alloys wet more slowly). For a 50mm wave contact length: 3 seconds requires a conveyor speed of 1 m/min.",
+          "Set immersion depth (also called penetration depth) to 50-75% of the board thickness. The solder should wick through the barrels by capillary action, not by pressure filling from the wave. Excessive immersion floods the board bottom and causes bridging. Insufficient immersion leaves barrels unfilled.",
+          "Adjust the board conveyor angle (typically 5-7 degrees from horizontal, trailing edge higher). This controls the peel-back of solder from the board as it exits the wave. A steeper angle improves drainage and reduces bridging but decreases contact time at the trailing edge.",
+          "For the chip wave (first wave, turbulent): set pump speed for aggressive flow to ensure solder contacts all surfaces of bottom-side SMT components in the wave shadow areas. For the lambda wave (second wave, smooth): set pump speed for a stable, laminar flow that does not disturb the chip wave solder and provides a clean peel-back."
+        ],
+        "tags": ["wave-solder", "wave-parameters", "process-optimization"]
+      },
+      {
+        "flow_name": "solder-pot-contamination-management",
+        "description": "Monitor and manage solder pot chemistry to prevent contamination-related defects, including copper dissolution, gold embrittlement, and dross formation.",
+        "inputs": [
+          {"name": "solder-alloy-type", "desc": "Base alloy composition"},
+          {"name": "wave-contact-length", "desc": "Contact time and volume throughput affecting dissolution rate"},
+          {"name": "board-surface-finish", "desc": "Board finish affecting contamination type (ENIG adds gold, OSP adds organics)"}
+        ],
+        "outputs": [
+          {"name": "contamination-limits", "desc": "Maximum allowable levels for copper, gold, and other contaminants with analysis frequency"},
+          {"name": "pot-maintenance-schedule", "desc": "Solder addition, dross removal, and pot cleaning schedule"},
+          {"name": "contamination-monitoring-plan", "desc": "Sampling frequency and laboratory analysis requirements"},
+          {"name": "pot-temperature-control", "desc": "Temperature setpoint and tolerance with calibration requirements"}
+        ],
+        "process": [
+          "Copper dissolves from the board pads and component leads into the solder pot during wave contact. For SAC305, the copper saturation point is approximately 1.5% at 260C. Below saturation, copper dissolution from pads is aggressive (pad erosion). Above saturation, copper crystallizes out of solution and forms gritty joints. Monitor copper content and keep below 0.5% for SnPb and below 0.8% for SAC.",
+          "Gold from ENIG-finished boards dissolves rapidly into the pot. Gold content above 0.3% in SnPb causes gold embrittlement (AuSn4 intermetallic formation at grain boundaries makes joints brittle). For SAC, gold tolerance is slightly higher but should still be kept below 0.5%. Track gold content if processing ENIG boards regularly.",
+          "Dross (oxidized solder) forms on the pot surface continuously. Dross increases with pot temperature, wave turbulence, and air exposure. For SAC305, dross rate is higher than SnPb due to higher operating temperature. Remove dross before each production shift. Use nitrogen blanket over the pot surface to reduce dross formation by 50-80%.",
+          "Set pot temperature to alloy liquidus + 30-50C. For SnPb: 245-255C. For SAC305: 255-265C. Higher temperature improves wetting but increases copper dissolution rate, dross formation, and component thermal stress. Monitor pot temperature with an independent thermocouple (do not rely only on the machine thermocouple).",
+          "Sample the solder pot for chemical analysis monthly for low-volume production, weekly for high-volume. When contamination approaches limits, add fresh solder to dilute. When contamination exceeds limits, drain and replace the pot. Cost of a pot replacement is far less than the cost of contaminated solder defects."
+        ],
+        "tags": ["wave-solder", "solder-pot", "contamination"]
+      },
+      {
+        "flow_name": "wave-solder-defect-diagnosis",
+        "description": "Identify and correct wave solder defects by mapping physical evidence to process parameters, with corrective actions for bridging, icicles, insufficient fill, blowholes, and solder balls.",
+        "inputs": [
+          {"name": "wave-height-setting", "desc": "Current wave parameters"},
+          {"name": "conveyor-speed", "desc": "Belt speed and contact time"},
+          {"name": "preheat-zone-settings", "desc": "Preheat configuration"},
+          {"name": "contamination-limits", "desc": "Current pot chemistry status"}
+        ],
+        "outputs": [
+          {"name": "wave-defect-analysis", "desc": "Each defect type with root cause analysis, physical evidence, and corrective action"},
+          {"name": "parameter-adjustment-log", "desc": "Changes made to process parameters with before/after defect rate data"},
+          {"name": "process-capability-improvement", "desc": "Updated defect rate after corrections with Pareto of remaining defects"}
+        ],
+        "process": [
+          "Bridging (solder short between adjacent pins): caused by insufficient drainage at wave exit. Corrective actions: increase conveyor angle, decrease wave height, increase nitrogen flow at the peel-back zone, slow the conveyor to allow more drainage time. For fine-pitch connectors, ensure the lambda wave is smooth and laminar.",
+          "Icicles (pointed solder projections on pin tips): caused by solder wetting up the lead and solidifying during peel-back. Related to insufficient preheat (board too cold causes rapid solidification) or excessive wave contact (solder wets too high on the lead). Increase preheat temperature or reduce immersion depth.",
+          "Insufficient barrel fill (solder does not rise to the top side of the board): caused by insufficient preheat (capillary action fails because solder solidifies in the barrel), insufficient contact time, or poor flux activation. Verify board topside temperature exceeds 100C at the wave. Increase contact time or wave height. Check flux coverage.",
+          "Blowholes (voids in the solder fillet with a crater): caused by moisture or flux volatile outgassing during soldering. Moisture sources: absorbed moisture in the board laminate, component body, or flux. Increase preheat time and temperature to fully evaporate volatiles before wave contact. Bake moisture-sensitive boards per IPC-J-STD-033 before assembly.",
+          "Solder balls (small spheres on the board surface near wave-soldered joints): caused by solder spattering from flux outgassing at the wave, excessive dross on the pot surface, or turbulent wave contact. Ensure thorough preheat for flux activation, clean dross, and verify chip wave is not excessively turbulent.",
+          "Track defect rates by type using control charts. After each corrective action, run a statistically significant quantity (minimum 30 boards) and compare defect rates using a proportions test to verify the improvement is real, not random variation."
+        ],
+        "tags": ["wave-solder", "defect-analysis", "troubleshooting"]
+      }
+    ]
+  },
+  {
+    "chain_name": "solder-joint-reliability-methodology",
+    "description": "Predict and verify solder joint reliability using physics-of-failure models for thermal cycling, mechanical shock, and vibration, selecting alloy and pad design to meet the target service life.",
+    "domain": "hardware",
+    "tags": ["reliability", "solder-joint", "physics-of-failure", "manufacturing"],
+    "steps": [
+      {
+        "flow_name": "solder-fatigue-mechanism-analysis",
+        "description": "Identify the dominant fatigue mechanism for solder joints in the target application from the thermal and mechanical environment profile.",
+        "inputs": [
+          {"name": "operating-environment", "desc": "Temperature range, number of thermal cycles per day/year, vibration spectrum, shock events expected over service life"},
+          {"name": "component-package-types", "desc": "Package types on the board (BGA, QFP, chip resistors, connectors) with their CTE and standoff height"},
+          {"name": "board-properties", "desc": "Board CTE, thickness, layer count, and mounting configuration"},
+          {"name": "target-service-life", "desc": "Required service life in years and failure rate target"}
+        ],
+        "outputs": [
+          {"name": "dominant-failure-mechanism", "desc": "Primary failure mechanism (thermal fatigue, vibration fatigue, mechanical shock, or combination) with ranking"},
+          {"name": "critical-joints", "desc": "Component locations most susceptible to fatigue failure, ranked by stress level"},
+          {"name": "cte-mismatch-analysis", "desc": "CTE mismatch between each component package and the board, driving shear strain in solder joints"},
+          {"name": "fatigue-life-drivers", "desc": "The parameters that most affect joint life for this application (temperature range, dwell time, vibration frequency, DNP)"}
+        ],
+        "process": [
+          "Calculate the CTE mismatch for each component type. Board CTE is typically 14-18 ppm/C for FR-4 (depends on copper content and resin system). Ceramic packages (CBGA, ceramic chip capacitors) have CTE of 6-7 ppm/C. Plastic packages (PBGA, QFP) have CTE of 15-25 ppm/C depending on mold compound. The mismatch drives shear strain in the solder joint during thermal excursions.",
+          "Identify the distance from neutral point (DNP) for area array packages (BGA). The outermost solder balls experience the highest shear strain: strain = (CTE_mismatch x delta_T x DNP) / solder_joint_height. A 35mm BGA with 0.5mm standoff, 10 ppm/C mismatch, and 100C cycle range produces approximately 2% shear strain at the corner balls.",
+          "For thermal fatigue, shear strain is the primary driver. For vibration fatigue, bending stress from board flexure dominates, and the joints nearest the board edges or mounting points see the highest stress. For mechanical shock (drop), the strain rate is high, and the failure mode shifts from bulk solder fatigue to pad cratering (fracture in the board laminate under the pad).",
+          "Rank the failure mechanisms by the product application. Automotive underhood: thermal cycling dominates (−40 to +125C, 10+ years, 1000+ cycles). Consumer handheld: mechanical shock (drop) and vibration dominate. Telecom infrastructure: thermal cycling at narrow range (20 to 55C) over 20 years, vibration from fans.",
+          "Identify the critical joints: corner balls of the largest BGA (highest DNP), small chip components in high-flex zones (vibration), and components near board edges (shock). These locations should receive design attention and will be the focus of reliability testing."
+        ],
+        "tags": ["reliability", "fatigue", "solder-joint"]
+      },
+      {
+        "flow_name": "coffin-manson-life-prediction",
+        "description": "Apply the Coffin-Manson strain-life model and Norris-Landzberg acceleration factor to predict solder joint thermal fatigue life from accelerated test data.",
+        "inputs": [
+          {"name": "cte-mismatch-analysis", "desc": "CTE mismatch and DNP data for critical components"},
+          {"name": "dominant-failure-mechanism", "desc": "Confirmation that thermal fatigue is the primary mechanism"},
+          {"name": "operating-environment", "desc": "Field temperature cycling profile"},
+          {"name": "target-service-life", "desc": "Required cycles to failure at the target failure probability"}
+        ],
+        "outputs": [
+          {"name": "predicted-field-life", "desc": "Predicted number of thermal cycles to failure in the field for each critical joint"},
+          {"name": "acceleration-factor", "desc": "Ratio of field cycles to test cycles for the selected test profile"},
+          {"name": "test-duration", "desc": "Number of accelerated test cycles needed to demonstrate the target field life"},
+          {"name": "alloy-comparison", "desc": "Predicted life comparison for SAC305 vs SAC105 vs SnPb under the field conditions"}
+        ],
+        "process": [
+          "Calculate shear strain range for each critical joint: gamma = (alpha_substrate - alpha_component) x delta_T x L / h, where alpha is CTE, delta_T is temperature range, L is distance from neutral point, and h is joint height (standoff). This is the strain imposed on the solder each thermal cycle.",
+          "Apply the Coffin-Manson equation: Nf = C x (gamma)^(-n), where Nf is cycles to failure, gamma is the plastic strain range, and C and n are material constants. For SAC305: n is approximately 1.9-2.2, C depends on the specific joint geometry and test method. For SnPb: n is approximately 1.8-2.0. These constants are derived from cyclic shear testing of actual solder joints, not bulk material data.",
+          "To predict field life from accelerated test data, apply the Norris-Landzberg acceleration factor: AF = (delta_T_test / delta_T_field)^m x (f_field / f_test)^n x exp(Ea/k x (1/T_max_field - 1/T_max_test)), where m is approximately 2.0 for SAC, n is approximately 0.33, Ea is 0.122 eV (activation energy for SAC grain boundary sliding). This accounts for temperature range, cycling frequency, and maximum temperature effects.",
+          "Design the accelerated test to achieve the target field life in a reasonable test duration. For automotive (1000+ field cycles over 10 years), a test profile of -40 to +125C with 30-minute dwell provides an acceleration factor of approximately 3-5x over the mild field cycle. The test duration is: test cycles = field cycles / AF.",
+          "Compare alloys. SAC305 generally outperforms SnPb in thermal cycling at wide temperature ranges (automotive) but may underperform at narrow ranges with high dwell times (telecom). SAC105 has lower thermal fatigue resistance than SAC305 but better drop shock performance. Select the alloy that is best for the dominant failure mechanism.",
+          "Apply the Weibull distribution to test results. Thermal fatigue failures follow a Weibull distribution with shape parameter (beta) typically 3-6 for solder joints. Use maximum likelihood estimation to fit the Weibull parameters from accelerated test data and extrapolate to the target failure probability (e.g., 1% failure at 10 years)."
+        ],
+        "tags": ["reliability", "coffin-manson", "life-prediction"]
+      },
+      {
+        "flow_name": "pad-design-for-reliability",
+        "description": "Optimize pad geometry, via configuration, and solder mask design to maximize solder joint reliability for the critical components identified in the fatigue analysis.",
+        "inputs": [
+          {"name": "critical-joints", "desc": "Components and locations most susceptible to fatigue"},
+          {"name": "predicted-field-life", "desc": "Baseline life prediction to improve upon"},
+          {"name": "dominant-failure-mechanism", "desc": "Primary failure mode driving pad design choices"},
+          {"name": "component-package-types", "desc": "Package types requiring pad optimization"}
+        ],
+        "outputs": [
+          {"name": "pad-design-recommendations", "desc": "Optimized pad geometry for each critical component type with rationale"},
+          {"name": "solder-mask-defined-vs-copper-defined", "desc": "SMD vs NSMD (copper-defined) pad selection for BGA with reliability implications"},
+          {"name": "via-in-pad-specification", "desc": "Via-in-pad requirements for thermal or routing purposes with reliability impact"},
+          {"name": "reliability-improvement-estimate", "desc": "Estimated life improvement from pad design changes"}
+        ],
+        "process": [
+          "For BGA pads, choose between solder-mask-defined (SMD) and non-solder-mask-defined (NSMD/copper-defined) pads. NSMD pads allow the solder to wet the copper pad edge, creating a larger interface area and typically 20-30% better thermal fatigue life. However, SMD pads provide a larger copper area that resists pad cratering under mechanical shock. For automotive thermal cycling: NSMD. For consumer drop shock: SMD.",
+          "Optimize BGA pad diameter. The pad diameter affects the solder joint height (standoff) and volume. Larger pads reduce standoff (solder ball spreads more), increasing shear strain per cycle. Pad diameter of 80-100% of the ball diameter is typical. For maximum thermal fatigue life, target the largest standoff that still provides reliable alignment and self-centering during reflow.",
+          "For chip components (0201, 0402, 0603), pad length extension beyond the component end controls fillet size. Longer pads create larger fillets with lower peak stress at the fillet toe. IPC-7351 provides pad geometry recommendations by component size. For vibration-critical applications, extend pads 0.2-0.4mm beyond the component end.",
+          "Via-in-pad for BGA: if vias must be in the pad for routing, they must be filled and planarized (plugged with epoxy and copper-capped). Unfilled vias under BGA pads cause paste migration into the via during reflow, resulting in voids and reduced joint volume. Filled and capped vias add manufacturing cost but eliminate this failure mode.",
+          "For solder-mask opening on QFP/QFN pads, specify 1:1 or slight mask expansion (50-75um per side). Excessive mask opening allows solder to flow onto adjacent traces. Insufficient opening reduces the wetting area. For QFN (bottom-terminated), the thermal pad mask opening pattern controls voiding: a segmented opening (cross or window pattern) allows flux volatiles to escape."
+        ],
+        "tags": ["reliability", "pad-design", "pcb-layout"]
+      },
+      {
+        "flow_name": "reliability-test-execution",
+        "description": "Execute solder joint reliability testing per the life prediction model, including thermal cycling, drop shock, and vibration, with failure analysis at each readout interval.",
+        "inputs": [
+          {"name": "acceleration-factor", "desc": "Calculated acceleration factor for the test profile"},
+          {"name": "test-duration", "desc": "Required number of test cycles"},
+          {"name": "pad-design-recommendations", "desc": "Optimized pad designs to validate"},
+          {"name": "alloy-comparison", "desc": "Alloy options to compare in the test"}
+        ],
+        "outputs": [
+          {"name": "reliability-test-results", "desc": "Cycles to failure data for each component type with Weibull parameters"},
+          {"name": "failure-analysis-results", "desc": "Failure mode identification from cross-section analysis at each readout"},
+          {"name": "field-life-prediction", "desc": "Predicted field life from test data using the acceleration model"},
+          {"name": "design-qualification-status", "desc": "Pass/fail assessment against the target service life requirement"}
+        ],
+        "process": [
+          "Prepare test vehicles. For thermal cycling: daisy-chain test boards with resistance monitoring on each critical component. Continuity monitor logs resistance continuously during cycling. A resistance increase above 20% from baseline indicates crack initiation. A resistance increase to infinity (open circuit) indicates complete failure.",
+          "For thermal cycling: use IEC 60749-25 or JEDEC JESD22-A104. Set the chamber to the specified temperature range with transition time of 10-15 minutes between extremes and dwell time of 10-15 minutes at each extreme. Monitor all daisy chains continuously. Readout intervals at 250, 500, 1000, 1500, and 2000 cycles (or until target cycles are reached).",
+          "For drop shock testing: use JEDEC JESD22-B111 (board-level drop). Mount the test board on a drop table with specified weight and standoff. Drop conditions: 1500G peak, 0.5ms half-sine pulse. Monitor all daisy chains for intermittent opens. Continue drops until the specified number of drops (typically 30-100) or until failure criterion is met (3 consecutive events at any component).",
+          "At each readout interval, remove samples for cross-section analysis. Cross-section through the critical solder joints. Measure crack length as a fraction of the joint width. Identify crack location (bulk solder, intermetallic interface, pad interface) to determine the failure mode. Photograph the crack under SEM to characterize the fracture surface (intergranular fatigue, transgranular, intermetallic fracture).",
+          "Fit the failure data to a Weibull distribution using maximum likelihood estimation. Plot on Weibull probability paper. Extract the shape parameter (beta, indicating failure mode consistency) and characteristic life (eta, cycles at 63.2% failure). Apply the Norris-Landzberg acceleration factor to convert test life to field life. Compare to the target service life requirement.",
+          "Document the qualification results as a formal test report. Include the test conditions, sample sizes, failure distributions, failure analysis, and the field life prediction with confidence intervals. If the predicted field life meets or exceeds the target, the design is qualified."
+        ],
+        "tags": ["reliability", "testing", "qualification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "aoi-and-inspection-methodology",
+    "description": "Design and optimize an automated inspection strategy using AOI, SPI, and X-ray to maximize defect detection while minimizing false calls, with programming methodology and correlation analysis.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "inspection", "aoi", "quality"],
+    "steps": [
+      {
+        "flow_name": "inspection-strategy-design",
+        "description": "Define the inspection points, equipment allocation, and coverage targets for the SMT line based on product risk and defect escape cost.",
+        "inputs": [
+          {"name": "product-risk-level", "desc": "Consequence of a defect escape to the end customer (safety-critical, high-reliability, commercial)"},
+          {"name": "board-complexity", "desc": "Component count, BGA/QFN presence, finest pitch, double-sided assembly"},
+          {"name": "production-volume", "desc": "Annual volume affecting the economics of inspection equipment investment"},
+          {"name": "historical-defect-data", "desc": "Known defect types and rates from similar products or prototype builds"}
+        ],
+        "outputs": [
+          {"name": "inspection-point-map", "desc": "Where in the process each inspection occurs (post-print SPI, post-placement pre-reflow, post-reflow AOI, X-ray) with coverage scope at each point"},
+          {"name": "coverage-target", "desc": "Target defect coverage percentage for each defect type at each inspection point"},
+          {"name": "equipment-requirements", "desc": "AOI, SPI, and X-ray equipment specifications needed to achieve the coverage targets"},
+          {"name": "sampling-vs-100pct", "desc": "Decision on 100% inspection vs sampling at each point with statistical rationale"}
+        ],
+        "process": [
+          "Map each defect type to the earliest inspection point where it can be detected. Paste defects (insufficient, excess, bridging, offset) are detected at SPI. Placement defects (missing, shifted, wrong part, polarity) are detected at post-placement AOI. Solder defects (bridging, insufficient, tombstone, cold joint) are detected at post-reflow AOI. Hidden joint defects (BGA voids, head-in-pillow, QFN voiding) are detected only by X-ray.",
+          "For safety-critical and high-reliability products: 100% SPI + 100% post-reflow AOI + 100% X-ray for all BGA/QFN/hidden joints. For commercial products: 100% SPI + 100% post-reflow AOI + X-ray sampling (sample size based on AQL). For high-volume consumer: SPI on every board, AOI on every board, X-ray only on first articles and triggered by SPC out-of-control events.",
+          "Calculate the cost of a defect escape at each stage. Catching a paste defect at SPI costs pennies (rework before components are placed). Catching it at post-reflow AOI costs dollars (rework a soldered board). Missing it entirely costs hundreds to thousands (field return, warranty, safety recall). This cost ratio justifies early detection investment.",
+          "Define the false call target. A false call rate above 500ppm (0.05%) causes operator fatigue and leads to real defects being dismissed. Target <200ppm false calls for post-reflow AOI and <100ppm for SPI. Achieving low false call rates requires careful program optimization, not just accepting machine defaults."
+        ],
+        "tags": ["inspection", "strategy", "quality-planning"]
+      },
+      {
+        "flow_name": "aoi-program-development",
+        "description": "Develop the AOI inspection program with component library setup, algorithm selection, and threshold optimization to achieve the target detection rate with minimum false calls.",
+        "inputs": [
+          {"name": "inspection-point-map", "desc": "Inspection points and coverage scope"},
+          {"name": "board-complexity", "desc": "Component types and finest pitch"},
+          {"name": "coverage-target", "desc": "Detection rate targets per defect type"},
+          {"name": "historical-defect-data", "desc": "Known defect types for algorithm priority"}
+        ],
+        "outputs": [
+          {"name": "aoi-program", "desc": "Complete AOI program with component library, inspection regions, algorithms, and thresholds"},
+          {"name": "false-call-rate", "desc": "Measured false call rate from the verification run"},
+          {"name": "defect-detection-rate", "desc": "Demonstrated detection rate using known-defect test boards"},
+          {"name": "program-optimization-log", "desc": "Changes made during optimization with before/after false call data"}
+        ],
+        "process": [
+          "Build the component library entry for each unique component. Teach the machine the expected appearance: body outline, terminal locations, polarity marks, marking text. Use golden board images (known-good boards) as the reference. Teach from multiple boards to capture normal variation in component appearance, solder joint finish, and board color.",
+          "Select inspection algorithms per component type. For chip components (0201-0805): solder fillet presence, height, and wetting angle. For QFP/SOP: bridging detection between adjacent leads, solder volume on each lead. For BGA: check for missing balls using X-ray or peripheral ball inspection via AOI (AOI cannot inspect center balls). For passives: polarity mark verification. For connectors: pin coplanarity and solder fill.",
+          "Set initial thresholds conservatively (tight limits) and run 30+ boards through the AOI. Collect all defect calls and manually classify each as real defect or false call. For each false call, determine the cause: threshold too tight, reference image variation, lighting artifact, or component variation.",
+          "Loosen thresholds only for the specific algorithm generating false calls, not globally. Use multiple inspection windows per component: one for solder presence (tight threshold), another for cosmetic variation (looser threshold). This maintains high detection for real defects while tolerating normal cosmetic variation.",
+          "Validate the detection rate using a test board with known defects. Either create defect coupons (intentionally misplaced components, bridged pads, insufficient solder applied with syringe) or collect real defect samples during optimization. Verify that the AOI detects all planted defects. Repeat for each defect type.",
+          "Measure the final false call rate over 100+ production boards. Target < 200ppm (fewer than 1 false call per 5000 component inspections). Document the verification results and lock the program for production."
+        ],
+        "tags": ["aoi", "programming", "defect-detection"]
+      },
+      {
+        "flow_name": "spi-to-defect-correlation",
+        "description": "Correlate SPI measurements to post-reflow defect outcomes to set predictive SPI limits that prevent defects rather than just detecting paste anomalies.",
+        "inputs": [
+          {"name": "aoi-program", "desc": "Post-reflow AOI detection capability"},
+          {"name": "inspection-point-map", "desc": "SPI and AOI inspection coverage"},
+          {"name": "historical-defect-data", "desc": "Past defect data for correlation"}
+        ],
+        "outputs": [
+          {"name": "spi-defect-correlation", "desc": "Statistical correlation between SPI metrics (volume, height, area, offset) and post-reflow defect types"},
+          {"name": "predictive-spi-limits", "desc": "SPI alarm limits derived from correlation that predict defects rather than using arbitrary percentage limits"},
+          {"name": "spi-rejection-criteria", "desc": "Board-level and pad-level SPI criteria for rejection before placement to prevent known defect outcomes"}
+        ],
+        "process": [
+          "Collect paired data: SPI measurements (volume, height, area, offset for every pad) and post-reflow AOI results (defect/no-defect for every joint) for a minimum of 500 boards. This requires data export from both systems and matching by board serial number and pad location.",
+          "For each defect type, analyze the SPI distribution of defective vs non-defective joints. Bridging correlates with paste volume (excess) and paste offset. Insufficient solder correlates with paste volume (low) and paste area (small). Tombstoning correlates with paste volume asymmetry between the two pads of a chip component.",
+          "Set SPI limits based on the correlation data rather than using the default +/-50% volume limits. For example, if bridging on 0.5mm pitch QFP occurs when paste volume exceeds 140% of nominal but never below 130%, set the SPI upper alarm at 130% (with margin). If insufficient solder occurs below 60% volume, set the lower alarm at 65%.",
+          "Implement pad-level and board-level SPI rejection criteria. Pad-level: reject the board at the SPI stage if any pad exceeds the defect-correlated limit for a critical defect type. Board-level: reject if more than N pads are out of the process control limits (even if none individually exceed the defect limit). The board-level criterion catches systematic process drift.",
+          "Re-validate the correlation quarterly or when the process changes (new paste batch, new stencil, new board revision). Paste rheology variation and stencil wear change the SPI-to-defect relationship over time."
+        ],
+        "tags": ["spi", "correlation", "predictive-quality"]
+      },
+      {
+        "flow_name": "xray-inspection-methodology",
+        "description": "Apply X-ray inspection for hidden solder joints (BGA, QFN, bottom-terminated components) with void measurement, head-in-pillow detection, and acceptance criteria per IPC-7095.",
+        "inputs": [
+          {"name": "inspection-point-map", "desc": "X-ray inspection requirements from the strategy"},
+          {"name": "product-risk-level", "desc": "Quality class and void acceptance criteria"},
+          {"name": "board-complexity", "desc": "BGA count, BGA pitch, QFN count affecting X-ray throughput"}
+        ],
+        "outputs": [
+          {"name": "xray-inspection-program", "desc": "Inspection views, image processing algorithms, and void measurement methodology for each component type"},
+          {"name": "void-acceptance-criteria", "desc": "Maximum void area percentage per joint and per package with IPC-7095 class reference"},
+          {"name": "head-in-pillow-detection-method", "desc": "X-ray indicators for HiP defects and the inspection angle that reveals them"},
+          {"name": "xray-throughput-analysis", "desc": "Inspection time per board and impact on line throughput, with sampling strategy if 100% is not feasible"}
+        ],
+        "process": [
+          "For BGA solder joint inspection, capture a 2D top-down view. Each solder ball should appear as a consistent-density circle. Missing balls appear as absent circles. Bridges appear as connected adjacent circles. Voids appear as lighter areas within the ball image (less solder density). Head-in-pillow appears as a double-density ring (two spheres not coalescenced).",
+          "Measure void area using image processing. The void area ratio = total void area / total pad area x 100%. Per IPC-7095: Class 3 maximum is 25% void area per individual joint, with an additional package-level limit of 25% average void area. Class 2 is 30%. For power components where thermal performance depends on solder joint thermal resistance, specify <10% or <5% voiding.",
+          "For head-in-pillow detection, the 2D top-down view may show a double ring pattern (paste hemisphere and ball hemisphere side by side rather than merged). Oblique angle inspection (tilting the board 30-45 degrees to the X-ray beam) more clearly reveals HiP defects as the separation between the two hemispheres becomes visible as a shadow.",
+          "For QFN thermal pad inspection, capture a view centered on the thermal pad. Void distribution matters as much as total void area. One large central void is worse than multiple small distributed voids for thermal performance. Specify both total void area (<25%) and maximum single void size (<10% of pad area) for QFN thermal pads.",
+          "Assess X-ray throughput impact. 2D inspection of one BGA takes 5-15 seconds depending on automation level. A board with 4 BGAs takes 30-60 seconds for X-ray vs 5-10 seconds for AOI. For high-volume lines, 100% X-ray may limit throughput. Use statistical sampling (e.g., AQL level I or II) for production with 100% inspection reserved for first articles, lot starts, and SPC triggers."
+        ],
+        "tags": ["xray", "inspection", "bga", "void-analysis"]
+      }
+    ]
+  },
+  {
+    "chain_name": "yield-analysis-methodology",
+    "description": "Analyze and improve manufacturing yield using statistical methods from first-pass yield calculation through defect Pareto, root cause analysis, SPC, and yield learning curves for new product introduction.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "yield", "statistics", "quality"],
+    "steps": [
+      {
+        "flow_name": "yield-metric-calculation",
+        "description": "Calculate yield metrics from production data: first-pass yield, rolled throughput yield, DPMO, and sigma level, establishing the baseline for improvement.",
+        "inputs": [
+          {"name": "production-data", "desc": "Board count, defect count by type, rework count, scrap count for the analysis period"},
+          {"name": "component-count-per-board", "desc": "Total component count and opportunity count per defect type"},
+          {"name": "test-coverage-data", "desc": "Defect detection rates at each inspection and test stage"}
+        ],
+        "outputs": [
+          {"name": "first-pass-yield", "desc": "Percentage of boards passing all tests and inspections without rework on the first attempt"},
+          {"name": "rolled-throughput-yield", "desc": "Probability of a board passing through all process stages without requiring rework at any stage"},
+          {"name": "dpmo-and-sigma", "desc": "Defects per million opportunities and equivalent sigma level for the assembly process"},
+          {"name": "hidden-factory-cost", "desc": "Cost of rework and scrap as a percentage of production cost, representing the hidden factory"}
+        ],
+        "process": [
+          "Calculate first-pass yield (FPY): FPY = (boards passing first time) / (total boards started) x 100%. This is the simplest yield metric but hides rework. A line with 92% FPY and 7% rework appears to ship 99% but consumes significant hidden factory effort.",
+          "Calculate rolled throughput yield (RTY): RTY = Y_print x Y_placement x Y_reflow x Y_AOI x Y_test, where each Y is the first-pass yield at that stage. RTY is always lower than final yield because it compounds rework probability. A process with 98% yield at each of 5 stages has RTY = 0.98^5 = 90.4%, meaning only 90.4% of boards pass through without any rework.",
+          "Calculate DPMO: DPMO = (total defects / total opportunities) x 1,000,000. Define opportunities carefully: for a 500-component board, the minimum opportunity count is 500 (one per component). A more granular count counts each solder joint as an opportunity (a 500-component board with average 3 joints per component = 1500 opportunities). Use the same opportunity definition consistently for trending.",
+          "Convert DPMO to sigma level using the standard normal distribution. 3.4 DPMO = 6 sigma. 233 DPMO = 5 sigma. 6,210 DPMO = 4 sigma. 66,807 DPMO = 3 sigma. A typical SMT line operates at 4.0-4.5 sigma. World-class SMT is 5.0 sigma or better.",
+          "Calculate the hidden factory cost: sum of all rework labor, rework materials, scrap, and inspection operator time spent verifying false calls and diagnosing defects. This cost is often 5-15% of the direct production cost and is the target for yield improvement projects."
+        ],
+        "tags": ["yield", "metrics", "statistics"]
+      },
+      {
+        "flow_name": "defect-pareto-and-root-cause",
+        "description": "Construct a defect Pareto from inspection and test data, then apply structured root cause analysis to the top defect contributors to identify corrective actions.",
+        "inputs": [
+          {"name": "first-pass-yield", "desc": "Current yield baseline"},
+          {"name": "dpmo-and-sigma", "desc": "Current quality level"},
+          {"name": "production-data", "desc": "Detailed defect data by type, location, and time"},
+          {"name": "hidden-factory-cost", "desc": "Cost of each defect type for prioritization"}
+        ],
+        "outputs": [
+          {"name": "defect-pareto", "desc": "Ranked list of defect types by frequency and cost, showing cumulative percentage"},
+          {"name": "root-cause-analysis", "desc": "5-why and fishbone analysis results for the top 3 defect types"},
+          {"name": "corrective-action-plan", "desc": "Specific process changes to address each root cause with expected yield improvement"},
+          {"name": "verification-plan", "desc": "How to measure whether each corrective action was effective"}
+        ],
+        "process": [
+          "Build the defect Pareto chart. Rank defect types by frequency. Typically, 3-5 defect types account for 80% of all defects (Pareto principle). The top defect type is the first improvement target unless a lower-frequency defect has disproportionately high cost (e.g., a rare defect that causes field failure vs. a common cosmetic defect caught at AOI).",
+          "For each of the top 3 defect types, apply the 5-why method. Start with the defect observation and ask why it occurred. Each answer becomes the subject of the next why. Continue until you reach a root cause that is actionable (a process parameter, material property, or design characteristic that can be changed). Typically requires 3-5 levels of why.",
+          "Supplement the 5-why with a fishbone (Ishikawa) diagram organizing potential causes by the 6M categories: Machine (equipment settings, maintenance), Method (process procedure, recipe), Material (solder paste, components, board), Man (operator technique, training), Measurement (inspection criteria, calibration), and Environment (temperature, humidity, ESD). This ensures you do not miss contributing factors.",
+          "For each root cause, define a corrective action with a responsible person and target completion date. The corrective action must be specific and measurable. Not 'improve the print process' but 'reduce squeegee speed from 80mm/s to 60mm/s to increase paste volume transfer efficiency on 0201 pads from 72% to 85%.'",
+          "Define the verification method for each corrective action. Run a statistically significant quantity of boards after the change (minimum 30 boards, preferably 100+) and compare the defect rate to the baseline using a proportions test (chi-square or Fisher's exact). A p-value < 0.05 confirms the improvement is statistically significant, not random variation."
+        ],
+        "tags": ["yield", "pareto", "root-cause"]
+      },
+      {
+        "flow_name": "spc-chart-selection-and-setup",
+        "description": "Select and configure the appropriate statistical process control charts for each critical-to-quality parameter, with control limits calculated from process data rather than specification limits.",
+        "inputs": [
+          {"name": "defect-pareto", "desc": "Top defect types driving the need for SPC"},
+          {"name": "corrective-action-plan", "desc": "Process parameters to monitor after corrective actions"},
+          {"name": "production-data", "desc": "Historical process data for control limit calculation"}
+        ],
+        "outputs": [
+          {"name": "spc-chart-assignments", "desc": "Chart type and parameters for each monitored characteristic"},
+          {"name": "control-limits", "desc": "Calculated UCL, CL, LCL for each chart from process data"},
+          {"name": "out-of-control-rules", "desc": "Western Electric rules applied and the response procedure for each alarm type"},
+          {"name": "process-capability-baseline", "desc": "Cpk and Ppk values for each monitored parameter"}
+        ],
+        "process": [
+          "Select chart type by data type. For continuous measurements (paste volume, placement offset, reflow peak temperature): X-bar and R chart for subgroup data, Individuals and Moving Range (I-MR) chart for single measurements. For attribute data (defect counts): p-chart for fraction defective (constant or variable sample size), u-chart for defects per unit (when multiple defects per board are possible), c-chart for count of defects (constant sample size).",
+          "Calculate control limits from process data, never from specification limits. Collect 25 or more subgroups of data while the process is in control (no known assignable causes). Calculate the mean and control limits using standard formulas: UCL = X-bar + A2*R-bar, LCL = X-bar - A2*R-bar for X-bar charts. Control limits represent the voice of the process; specification limits represent the voice of the customer. They are different things.",
+          "Calculate process capability. Cp = (USL - LSL) / (6 x sigma), where sigma is estimated from R-bar/d2. Cpk = min((USL - X-bar) / (3*sigma), (X-bar - LSL) / (3*sigma)). Target Cpk > 1.33 for general processes, Cpk > 1.67 for safety-critical. If Cpk < 1.0, the process is not capable and will produce defects even when in statistical control.",
+          "Apply Western Electric rules for out-of-control detection: Rule 1 (one point beyond 3-sigma), Rule 2 (9 points in a row on the same side of the center line), Rule 3 (6 points in a row steadily increasing or decreasing), Rule 4 (14 points in a row alternating up and down). Each rule detects a different type of process shift.",
+          "Define the reaction plan for each alarm type. Rule 1 violation: stop production, investigate the assignable cause, correct and verify before restarting. Rule 2 violation (shift): investigate gradual drift (tool wear, material lot change). Rule 3 violation (trend): investigate progressive change (paste aging, temperature drift). Document the reaction plan as part of the control plan."
+        ],
+        "tags": ["spc", "control-charts", "process-capability"]
+      },
+      {
+        "flow_name": "yield-learning-curve-npi",
+        "description": "Model and accelerate the yield learning curve during new product introduction, setting realistic yield targets and ramp milestones from prototype through volume production.",
+        "inputs": [
+          {"name": "process-capability-baseline", "desc": "Current process capability for each parameter"},
+          {"name": "first-pass-yield", "desc": "Current baseline yield"},
+          {"name": "board-complexity", "desc": "Component count and mix for the new product"},
+          {"name": "historical-defect-data", "desc": "Yield ramp data from similar past product introductions"}
+        ],
+        "outputs": [
+          {"name": "yield-ramp-model", "desc": "Predicted yield trajectory from first build through steady-state production with milestones"},
+          {"name": "yield-targets-by-build", "desc": "Yield target for each production build phase (proto, pilot, ramp, steady-state)"},
+          {"name": "acceleration-actions", "desc": "Specific actions to accelerate the learning curve (pre-production DFM fixes, test vehicle builds, process tuning)"},
+          {"name": "steady-state-yield-prediction", "desc": "Predicted mature yield based on process capability and board complexity"}
+        ],
+        "process": [
+          "Estimate steady-state yield from process capability and component count. If the process DPMO is 50 (approximately 4.8 sigma) and the board has 1500 solder joint opportunities, expected defect rate per board = 1500 x 50/1,000,000 = 0.075 defects/board. FPY = e^(-0.075) = 92.8% (Poisson approximation). This is the theoretical steady-state yield if no new defect modes are introduced.",
+          "Model the yield learning curve. Wright's learning curve model: Y(n) = Y_mature x (1 - b x e^(-n/tau)), where n is cumulative boards built, b is the initial yield gap (typically 0.15-0.30 for SMT), and tau is the learning rate constant (depends on process maturity and improvement effort). A typical SMT yield ramp reaches 80% of mature yield by 500 boards and 95% by 2000 boards.",
+          "Set yield targets by build phase. Prototype (first 10-50 boards): target 70-80% of mature yield, focus on defect discovery and design corrections. Pilot (50-500 boards): target 85-90% of mature yield, focus on process optimization and SPC setup. Ramp (500-5000 boards): target 95% of mature yield, focus on fine-tuning and sustained improvement. Steady-state (5000+): target 100% of mature yield with continuous improvement beyond.",
+          "Identify acceleration actions. Pre-production DFM review catches design-related yield losses before the first build. Process tuning using SPI and AOI data from the prototype build corrects parameter settings early. Test vehicle builds (unpopulated or partially populated boards run through the line) tune the process without consuming production material.",
+          "Track actual yield against the learning curve model after each build. If actual yield lags the model, investigate: are new defect modes appearing that were not in the model? Is the process drifting? Are incoming materials (paste, components, boards) varying? Update the model with actual data to improve prediction accuracy for future NPI programs."
+        ],
+        "tags": ["yield", "npi", "learning-curve"]
+      }
+    ]
+  },
+  {
+    "chain_name": "new-product-introduction-method",
+    "description": "Execute a manufacturing new product introduction from DFM review through prototype builds, process qualification, and production release, with quality gates at each phase.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "npi", "product-launch", "process-qualification"],
+    "steps": [
+      {
+        "flow_name": "dfm-review-by-capability",
+        "description": "Review the PCB design against specific manufacturing process capabilities, flagging features that exceed process limits or reduce yield, with quantified risk for each item.",
+        "inputs": [
+          {"name": "pcb-design-data", "desc": "Gerber files, BOM, assembly drawings, and pick-and-place centroid data"},
+          {"name": "process-capability-data", "desc": "Documented capabilities of the target assembly line (finest pitch, smallest component, minimum annular ring, etc.)"},
+          {"name": "ipc-class-requirement", "desc": "Target IPC-610 class level (1, 2, or 3) for the product"}
+        ],
+        "outputs": [
+          {"name": "dfm-issues-list", "desc": "Each DFM issue with severity (critical/major/minor), affected components, and recommended design change"},
+          {"name": "yield-risk-assessment", "desc": "Estimated yield impact of each DFM issue if not addressed"},
+          {"name": "design-change-requests", "desc": "Formal requests to the design team for DFM corrections before prototype build"},
+          {"name": "process-deviation-list", "desc": "Issues that will require non-standard process parameters if the design is not changed"}
+        ],
+        "process": [
+          "Check component pitch against stencil printing capability. If the process is qualified for 0.5mm pitch QFP but the design uses 0.4mm pitch, this requires a thinner stencil or step-down stencil and finer paste. Quantify: expected yield loss for 0.4mm pitch with existing 0.1mm stencil vs. required 0.08mm stencil.",
+          "Check component-to-component spacing against placement machine accuracy and rework access. Minimum spacing for machine placement is typically 0.3mm between bodies. For rework, minimum 1.5mm between tall components. Flag any spacing violations with the specific component reference designators.",
+          "Check pad design against IPC-7351 and the process capability. Verify annular ring meets IPC class requirement (Class 2: 0.05mm min, Class 3: 0.05mm min external, 0.025mm internal). Check via-in-pad requirements for BGA fanout. Verify thermal relief connections on large pads to prevent wicking.",
+          "Check for tombstoning risk on small passive components. Asymmetric copper connections to a pad pair (one pad connected to a ground plane, the other to a narrow trace) cause unequal reflow heating and tombstoning. Recommend thermal relief on the ground-connected pad or increasing trace width to the other pad.",
+          "Check testability. Are test points accessible for ICT/flying probe? Is the board panelized with breakaway tabs that do not damage components? Are fiducials present for machine alignment (minimum 3, not obscured by components)? Flag each missing testability feature.",
+          "Compile the DFM report sorted by severity. Critical issues (will cause defects or are unmanufacturable) must be resolved before prototype build. Major issues (will reduce yield or increase cost) should be resolved before pilot production. Minor issues (cosmetic or best-practice) are tracked for the next design revision."
+        ],
+        "tags": ["npi", "dfm", "design-review"]
+      },
+      {
+        "flow_name": "prototype-build-management",
+        "description": "Plan and execute the prototype build with process documentation, deviation tracking, and structured defect collection to feed back into design and process improvements.",
+        "inputs": [
+          {"name": "dfm-issues-list", "desc": "Known DFM issues and their resolution status"},
+          {"name": "process-deviation-list", "desc": "Required process deviations for this build"},
+          {"name": "pcb-design-data", "desc": "Latest design revision"},
+          {"name": "ipc-class-requirement", "desc": "Quality class for workmanship acceptance"}
+        ],
+        "outputs": [
+          {"name": "build-report", "desc": "Detailed report of the prototype build: quantities, yields, defect log, and process observations"},
+          {"name": "design-feedback", "desc": "Design issues discovered during assembly that were not caught in DFM review"},
+          {"name": "process-parameter-baseline", "desc": "Documented process parameters used for the prototype build as the starting point for optimization"},
+          {"name": "bill-of-process", "desc": "Assembly sequence, tooling requirements, and special handling instructions documented from the prototype experience"}
+        ],
+        "process": [
+          "Before the build, prepare a build traveler documenting: board revision, BOM revision, quantity, required process deviations from standard, inspection requirements, and test requirements. Each deviation must have an engineering justification and an owner responsible for resolving it before pilot production.",
+          "During the build, log every defect with: type, location (reference designator), root cause (if known), and corrective action taken (rework method, scrap). Use a structured defect log, not informal notes. This data feeds the yield prediction model.",
+          "Capture process parameters for each stage. Print: paste type, stencil ID, printer settings. Placement: program revision, feeder assignments, nozzle assignments. Reflow: profile data file, oven recipe. These parameters become the starting point for process optimization. Any changes made during the build are documented as deviations.",
+          "After the build, perform a structured build review. Compare actual yield to prediction. Classify each defect as design-related (DFM issue), process-related (parameter optimization needed), material-related (component or board quality), or operator-related (training gap). Each classification drives a different corrective action path.",
+          "Issue design change requests for any design-related defects discovered during the build. These must be resolved before the pilot build. Track resolution of each DCR and verify the fix in the next build revision."
+        ],
+        "tags": ["npi", "prototype", "build-management"]
+      },
+      {
+        "flow_name": "process-qualification-method",
+        "description": "Qualify the assembly process for volume production through process capability studies, equipment qualification, and documentation of the standard operating procedures.",
+        "inputs": [
+          {"name": "process-parameter-baseline", "desc": "Parameters from prototype build"},
+          {"name": "build-report", "desc": "Prototype build results for baseline"},
+          {"name": "bill-of-process", "desc": "Assembly sequence and tooling list"},
+          {"name": "ipc-class-requirement", "desc": "Quality class for qualification criteria"}
+        ],
+        "outputs": [
+          {"name": "process-qualification-report", "desc": "Capability studies for each critical process parameter demonstrating Cpk > 1.33 (or 1.67 for Class 3)"},
+          {"name": "standard-operating-procedures", "desc": "Documented SOPs for each assembly process stage with parameter settings and operator instructions"},
+          {"name": "control-plan", "desc": "Control plan linking process parameters to inspection methods, control limits, and reaction plans"},
+          {"name": "production-readiness-assessment", "desc": "Checklist of qualification criteria met and any open items for production release"}
+        ],
+        "process": [
+          "Run a process capability study on the pilot build (minimum 30 boards, preferably 100). Measure critical parameters: SPI paste volume on critical pads, placement accuracy on finest pitch components, reflow peak temperature and TAL on profiled boards. Calculate Cpk for each parameter. All critical parameters must demonstrate Cpk > 1.33 for Class 2, Cpk > 1.67 for Class 3.",
+          "Qualify the equipment: verify that each machine (printer, pick-and-place, oven, AOI, test) meets its specification under production conditions. This is not a machine acceptance test (which happens at installation) but a confirmation that the machine produces conforming output with the specific product at production speed.",
+          "Write standard operating procedures for each process stage. Each SOP contains: purpose, equipment settings (exact parameters), material requirements, operator steps, inspection criteria, and reaction to out-of-spec conditions. SOPs are the production floor reference; they must be specific enough that a trained operator can set up and run the process without engineering support.",
+          "Build the control plan. For each process step, the control plan specifies: what is controlled (parameter), how it is measured (method and equipment), how often (frequency), what are the limits (control and specification), and what to do when limits are exceeded (reaction plan). The control plan is the bridge between the process qualification data and the ongoing production monitoring.",
+          "Conduct the production readiness assessment. Checklist includes: all DFM issues resolved or accepted with risk documentation, process capability demonstrated, SOPs released, control plan in place, SPC charts set up, operators trained and certified, materials qualified and in stock, test equipment correlated to design verification results. Any open item is a condition for limited production release."
+        ],
+        "tags": ["npi", "process-qualification", "production-readiness"]
+      },
+      {
+        "flow_name": "production-release-decision",
+        "description": "Make the formal production release decision based on qualification data, yield trajectory, and risk assessment, with conditions for limited vs full release.",
+        "inputs": [
+          {"name": "process-qualification-report", "desc": "All capability study results"},
+          {"name": "production-readiness-assessment", "desc": "Qualification checklist status"},
+          {"name": "control-plan", "desc": "Monitoring plan for ongoing production"},
+          {"name": "standard-operating-procedures", "desc": "SOP release status"}
+        ],
+        "outputs": [
+          {"name": "production-release-authorization", "desc": "Formal go/no-go/conditional decision with signatures and conditions"},
+          {"name": "open-item-tracker", "desc": "Any open items from qualification with owners, due dates, and interim risk mitigations"},
+          {"name": "lessons-learned-log", "desc": "Process and design lessons from the NPI that apply to future products"},
+          {"name": "npi-closure-report", "desc": "Summary of the NPI project: timeline, yield progression, cost, and recommendations for future NPI improvements"}
+        ],
+        "process": [
+          "Review all qualification evidence. If all criteria are met (Cpk targets, yield targets, documentation complete, training complete), issue a full production release. If most criteria are met with minor open items, issue a conditional release with specific limitations (e.g., increased inspection frequency, limited lot size, engineering monitoring of the first N production lots).",
+          "For a conditional release, define the conditions clearly: what must be resolved, by when, and what happens if the conditions are not met by the deadline. Assign an owner for each condition. Track conditions in the open item tracker. Escalate if conditions are not resolved on schedule.",
+          "Capture lessons learned while they are fresh. Categorize by: design lessons (DFM issues that should be added to the design checklist), process lessons (parameter windows that were tighter than expected), material lessons (component or board quality issues), and project management lessons (timeline, resource, or communication issues).",
+          "Issue the NPI closure report. This document summarizes the entire NPI from initial DFM review through production release: timeline vs plan, yield progression vs model, total NPI cost, and recommendations. This becomes the reference for future NPI programs of similar complexity.",
+          "Hand off to production. Transfer ownership of the control plan, SOPs, and open items from the NPI engineering team to the production engineering team. The first 3-5 production lots should have engineering review of all quality data to verify that the transition is smooth and no new issues emerge."
+        ],
+        "tags": ["npi", "production-release", "decision"]
+      }
+    ]
+  },
+  {
+    "chain_name": "conformal-coating-process",
+    "description": "Select, apply, and verify conformal coating on electronic assemblies for environmental protection, covering coating type selection, masking, application, cure, inspection, and rework.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "conformal-coating", "protection", "reliability"],
+    "steps": [
+      {
+        "flow_name": "coating-type-selection",
+        "description": "Select the conformal coating chemistry from application requirements: operating environment, temperature range, rework needs, and regulatory compliance.",
+        "inputs": [
+          {"name": "operating-environment", "desc": "Temperature range, humidity, chemical exposure, salt spray, altitude, condensation cycling"},
+          {"name": "rework-requirements", "desc": "Frequency and method of field rework or depot repair expected"},
+          {"name": "thermal-management-needs", "desc": "Whether the coating will affect component cooling (coating acts as thermal insulator)"},
+          {"name": "regulatory-requirements", "desc": "UL, MIL-I-46058C, IPC-CC-830, RoHS, or customer-specific requirements"}
+        ],
+        "outputs": [
+          {"name": "coating-selection", "desc": "Selected coating type (acrylic AR, silicone SR, urethane UR, epoxy ER, parylene XY) with key properties"},
+          {"name": "thickness-specification", "desc": "Target thickness range in microns with rationale from insulation resistance and environmental protection requirements"},
+          {"name": "cure-specification", "desc": "Cure method (air dry, UV, thermal, room temperature) with time and temperature requirements"},
+          {"name": "compatibility-assessment", "desc": "Compatibility with board materials, components, solder mask, and any other coatings or adhesives on the assembly"}
+        ],
+        "process": [
+          "Acrylic (AR): easiest to apply and rework (soluble in IPA or acetone). Good moisture and fungus resistance. Temperature range -65 to +125C. Use for commercial products requiring field rework. Does not withstand chemical solvents in the field environment.",
+          "Silicone (SR): widest temperature range (-65 to +200C), excellent moisture resistance, good flexibility for thermal cycling. Difficult to rework (requires specialized solvents or mechanical removal). Use for automotive, aerospace, or any application with wide temperature excursions. Does not provide hard abrasion resistance.",
+          "Urethane (UR): excellent chemical and abrasion resistance, good moisture barrier, temperature range -65 to +125C. Difficult to rework (requires hot solvents or burnthrough). Use for harsh chemical environments or where physical durability is needed. Stiff at low temperatures; not ideal for extreme thermal cycling.",
+          "Parylene (XY): vapor-deposited, ultra-thin (5-25um), pin-hole-free coverage including under components and sharp edges. Exceptional moisture barrier at minimal thickness. Temperature range -65 to +150C (type C up to 200C). Extremely difficult to rework (requires plasma etching or mechanical removal). Use for medical devices, mil-aero, or any application requiring maximum protection with minimum thickness. Highest cost per board.",
+          "Select thickness based on the protection requirement. IPC-CC-830 specifies 25-75um for most chemistries (25-50um for parylene). Thicker coatings provide better insulation resistance and moisture barrier but increase thermal resistance and cost. For most commercial applications, 50um target is sufficient. For high-voltage applications, increase thickness per the insulation resistance vs voltage requirement."
+        ],
+        "tags": ["conformal-coating", "material-selection", "reliability"]
+      },
+      {
+        "flow_name": "masking-and-application",
+        "description": "Design the masking strategy and apply conformal coating using the method matched to the coating type, board volume, and coverage requirements.",
+        "inputs": [
+          {"name": "coating-selection", "desc": "Selected coating chemistry"},
+          {"name": "thickness-specification", "desc": "Target thickness range"},
+          {"name": "board-assembly-drawing", "desc": "Assembly drawing showing keep-out areas (connectors, test points, heat sinks, switches, optical sensors)"}
+        ],
+        "outputs": [
+          {"name": "masking-plan", "desc": "Keep-out areas with masking method for each (tape, boots, liquid mask, fixture)"},
+          {"name": "application-method", "desc": "Selected application method (spray, selective, dip, brush) with equipment settings"},
+          {"name": "application-procedure", "desc": "Step-by-step application procedure including surface preparation, application, and cure"},
+          {"name": "coverage-specification", "desc": "Required coverage areas and acceptable exclusion zones defined on a marked-up assembly drawing"}
+        ],
+        "process": [
+          "Identify all areas that must remain uncoated: connectors (mating surfaces), test points (for ICT access), adjustment components (potentiometers, switches), heat sinks (coating insulates), LEDs (coating changes light transmission), sensors (coating affects sensitivity), and any areas requiring post-coating soldering.",
+          "Select masking method by area type. Polyimide tape (Kapton) for straight-edge masking of flat areas. Custom boots (silicone or latex) for connectors that need repeated masking. Liquid latex mask (peelable) for irregular shapes. Dedicated masking fixture for high-volume production with many keep-outs.",
+          "Select application method. Spray coating: good for medium to high volume, uniform thickness over flat surfaces, requires spray booth. Selective coating (robotic dispensing): programmable path avoids keep-outs without masking, best for high-volume with many keep-outs. Dip coating: uniform coverage including under components, high material usage, suitable for high-reliability where 100% coverage including component undersides is required. Brush: for touch-up and small-batch prototype only.",
+          "Prepare the board surface before coating. The surface must be clean and dry. Any flux residue, fingerprints, or contamination will reduce coating adhesion. For no-clean solder paste, verify that the flux residue is compatible with the coating chemistry (some coatings do not adhere well to no-clean residues). If required, clean with IPA or aqueous wash and verify cleanliness per IPC-J-STD-001 (ionic contamination < 1.56 ug NaCl eq/cm2).",
+          "Apply the coating per the selected method. For spray: maintain 20-30cm nozzle distance, 50% overlap between passes, fan pattern perpendicular to board travel. Apply in 2-3 light coats rather than one heavy coat to avoid runs and bubbles. Between coats, allow flash-off time (30-60 seconds) for solvent evaporation."
+        ],
+        "tags": ["conformal-coating", "masking", "application"]
+      },
+      {
+        "flow_name": "coating-cure-and-inspection",
+        "description": "Verify coating cure completeness and inspect for coverage defects using visual, UV fluorescence, and thickness measurement methods.",
+        "inputs": [
+          {"name": "cure-specification", "desc": "Cure method, time, and temperature"},
+          {"name": "thickness-specification", "desc": "Target thickness range"},
+          {"name": "coverage-specification", "desc": "Required coverage and exclusion zones"},
+          {"name": "application-method", "desc": "Application method used"}
+        ],
+        "outputs": [
+          {"name": "cure-verification-results", "desc": "Confirmation of complete cure by the specified method (tack-free test, hardness test, FTIR)"},
+          {"name": "coverage-inspection-results", "desc": "Visual and UV fluorescence inspection results documenting coverage completeness"},
+          {"name": "thickness-measurement-results", "desc": "Measured thickness at specified locations compared to the specification"},
+          {"name": "coating-defect-log", "desc": "Any coating defects found (bubbles, pinholes, thin spots, contamination under coating) with disposition"}
+        ],
+        "process": [
+          "Cure the coating per the specification. Air-dry acrylics: 24 hours at room temperature or 30 minutes at 80C for accelerated cure. UV-cure coatings: exposure per the vendor specification (intensity and time), noting that shadow areas under components do not receive UV and may require a secondary thermal or moisture cure. Thermal cure urethanes: 60-90 minutes at 80-100C. Verify oven temperature uniformity.",
+          "Verify cure completeness. The simplest test is the tack-free test: press a clean finger on the coating and verify no material transfers. For quantitative verification, use a Shore A durometer hardness measurement compared to the vendor's fully-cured specification. For critical applications, use FTIR spectroscopy to verify the cure chemistry is complete (no unreacted functional groups).",
+          "Inspect coverage using UV fluorescence. Most conformal coatings contain UV-fluorescent additives. Under a UV lamp (365nm wavelength), coated areas fluoresce blue-green and uncoated areas appear dark. Inspect 100% of the board surface under UV to verify complete coverage in required areas and no coating in keep-out areas. Document any discrepancies.",
+          "Measure thickness at specified locations. Use an eddy current thickness gauge (for conductive substrates) or a magnetic thickness gauge. Measure at minimum 3 locations per board: one on a flat area, one on a component lead, and one on a board edge. All measurements must fall within the specified range. Thickness less than the minimum indicates insufficient protection; thickness greater than the maximum may indicate processing issues.",
+          "Inspect for coating defects. Bubbles: trapped air or solvent, caused by too-thick application or insufficient flash-off time. Pinholes: tiny holes that breach the coating, caused by surface contamination or outgassing from the substrate. Dewetting: coating pulling away from the surface, caused by contamination or incompatible substrate. Each defect type has a specific corrective action."
+        ],
+        "tags": ["conformal-coating", "inspection", "cure-verification"]
+      },
+      {
+        "flow_name": "coating-rework-procedure",
+        "description": "Develop rework procedures for conformal-coated assemblies including coating removal methods, component replacement, and re-coating techniques.",
+        "inputs": [
+          {"name": "coating-selection", "desc": "Coating type determining removal method"},
+          {"name": "application-method", "desc": "Original application method for re-coating consistency"},
+          {"name": "rework-requirements", "desc": "Types of rework expected (component replacement, jumper wires, ECO modifications)"}
+        ],
+        "outputs": [
+          {"name": "removal-procedure", "desc": "Step-by-step coating removal method for each coating type with chemical and thermal options"},
+          {"name": "re-coating-procedure", "desc": "Method to re-coat after rework, matching the original coating quality"},
+          {"name": "rework-inspection-criteria", "desc": "Inspection requirements after rework to verify coating integrity"},
+          {"name": "rework-limitation-list", "desc": "Any rework operations that are not feasible or not recommended for the selected coating type"}
+        ],
+        "process": [
+          "Acrylic removal: apply IPA or a dedicated acrylic stripper to the target area using a brush or swab. Allow the solvent to soften the coating (1-2 minutes). Carefully peel or scrape the softened coating from the work area. Repeat as needed until the copper/solder surface is exposed. Acrylics are the easiest coating to rework.",
+          "Urethane removal: requires hot solvent (dedicated urethane stripper at 50-60C) or mechanical removal (scraping with a non-metallic tool to avoid board damage). Urethane does not dissolve easily at room temperature. Allow extended soak time (5-10 minutes). Be aware of the chemical hazards of hot strippers and ensure adequate ventilation.",
+          "Silicone removal: use a dedicated silicone stripper or a micro-abrasive tool. Silicone is flexible and does not respond well to solvents. Mechanical removal (cutting, peeling) works for thick applications. For thin silicone coatings, a solvent soak followed by gentle scraping is more practical.",
+          "Parylene removal: cannot be chemically dissolved at room temperature. Options are: oxygen plasma etching (requires plasma equipment), micro-abrasive blasting (localized removal), or thermal removal (heating above decomposition temperature, but this risks component damage). Parylene rework is inherently difficult and should be avoided by design (ensure the design is correct before parylene application).",
+          "After component replacement, re-coat the reworked area. For spray-applied coatings, use a touch-up spray or brush application. Feather the new coating into the existing coating with at least 5mm overlap to avoid a discontinuous boundary. Cure the touch-up per the original cure specification. Inspect under UV to verify continuous fluorescence across the rework boundary."
+        ],
+        "tags": ["conformal-coating", "rework", "repair"]
+      }
+    ]
+  },
+  {
+    "chain_name": "lead-free-transition-methodology",
+    "description": "Plan and execute a transition from tin-lead to lead-free soldering across the manufacturing process, addressing alloy selection, process requalification, component compatibility, reliability validation, and regulatory compliance.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "lead-free", "rohs", "transition"],
+    "steps": [
+      {
+        "flow_name": "lead-free-alloy-evaluation",
+        "description": "Evaluate lead-free solder alloy candidates for the specific product application, comparing thermal, mechanical, and manufacturing properties against tin-lead baseline.",
+        "inputs": [
+          {"name": "product-application", "desc": "End-use environment (consumer, automotive, industrial, aerospace, medical) affecting alloy selection"},
+          {"name": "current-snpb-process", "desc": "Current tin-lead process parameters as the baseline for comparison"},
+          {"name": "component-compatibility", "desc": "Component terminal finish and maximum temperature ratings"},
+          {"name": "board-laminate", "desc": "Board material Tg and Td (decomposition temperature) limiting peak reflow temperature"}
+        ],
+        "outputs": [
+          {"name": "alloy-comparison-matrix", "desc": "Side-by-side comparison of SAC305, SAC105, SN100C, and specialty alloys on all relevant properties"},
+          {"name": "selected-alloy", "desc": "Recommended lead-free alloy with rationale from the comparison matrix"},
+          {"name": "process-impact-assessment", "desc": "Changes required to the existing process for the selected alloy (temperatures, flux, stencil, profile)"},
+          {"name": "component-requalification-list", "desc": "Components requiring requalification for the higher reflow temperature"}
+        ],
+        "process": [
+          "SAC305 (Sn96.5/Ag3.0/Cu0.5): industry standard lead-free alloy. Liquidus 217-220C. Good mechanical strength, good thermal fatigue resistance. Higher cost due to silver content. Slightly higher melting point than SnPb (183C) requires process changes. Recommended for general-purpose applications.",
+          "SAC105 (Sn98.5/Ag1.0/Cu0.5): lower cost (less silver), lower mechanical strength than SAC305 but better ductility. Better drop shock performance (more compliant joints). Recommended for portable electronics where drop is the primary failure mode.",
+          "SN100C (Sn/Cu0.7/Ni0.05/Ge): silver-free, lowest cost lead-free option. Liquidus 227C (slightly higher than SAC). Good wetting with the nickel and germanium additions. Recommended for wave soldering where the solder pot cost of SAC is prohibitive.",
+          "Assess peak reflow temperature impact. SAC305 requires 235-245C peak vs 210-225C for SnPb. This 20-30C increase affects: component survival (check maximum temperature ratings; many components are rated to 260C for 10 seconds per J-STD-020), board laminate (standard FR-4 with Tg 130C and Td 300C is adequate; low-Tg materials may delaminate), and process energy cost.",
+          "Identify components requiring requalification. Any component rated below 260C peak temperature for 10 seconds must be evaluated. Electrolytic capacitors, some connectors with plastic housings, and components with internal solder joints that may reflow at the higher temperature are primary concerns. Contact component vendors for lead-free compatibility declarations."
+        ],
+        "tags": ["lead-free", "alloy-selection", "rohs"]
+      },
+      {
+        "flow_name": "lead-free-process-requalification",
+        "description": "Requalify each assembly process stage for lead-free soldering, adjusting parameters to account for the higher liquidus temperature and different wetting characteristics.",
+        "inputs": [
+          {"name": "selected-alloy", "desc": "Selected lead-free alloy and its properties"},
+          {"name": "process-impact-assessment", "desc": "Process changes required for the transition"},
+          {"name": "current-snpb-process", "desc": "Current tin-lead process parameters"}
+        ],
+        "outputs": [
+          {"name": "lead-free-process-parameters", "desc": "Qualified process parameters for each assembly stage with the lead-free alloy"},
+          {"name": "equipment-modifications", "desc": "Equipment changes required (higher temperature capability, nitrogen, flux compatibility)"},
+          {"name": "process-capability-comparison", "desc": "Cpk comparison between SnPb and lead-free for each critical parameter"},
+          {"name": "requalification-report", "desc": "Formal process qualification report for the lead-free conversion"}
+        ],
+        "process": [
+          "Solder paste printing: lead-free paste (SAC305) has different rheology than SnPb paste. Stencil life may be shorter (lead-free flux is more active and degrades faster on the stencil). Re-optimize print parameters: speed, pressure, separation may need adjustment. Verify transfer efficiency with SPI.",
+          "Reflow profile: increase peak temperature from 210-225C (SnPb) to 235-245C (SAC305). Time above liquidus must be recalculated for the higher liquidus (217C vs 183C). The process window is narrower: the gap between minimum peak (227C for adequate wetting) and maximum component temperature (260C) is only 33C, compared to 50C+ for SnPb. Nitrogen atmosphere may be required to achieve reliable wetting at the lower end of the peak temperature range.",
+          "Wave soldering: increase pot temperature from 245-250C (SnPb) to 255-265C (SAC305). Higher temperature increases copper dissolution rate from board pads and component leads. Monitor copper content in the pot more frequently. Dross formation increases at higher temperature; nitrogen blanket becomes more cost-justified.",
+          "Rework: lead-free rework requires higher tip temperatures (370-400C vs 315-350C for SnPb). The higher temperature increases the risk of pad lifting and laminate damage during rework. Rework operators must be retrained on technique and heat management. Consider using a lower-melting-point alloy for rework (such as SnBi) if the product allows it.",
+          "Run the full process qualification (capability studies, SPC setup, FAI) with the lead-free parameters. Compare the Cpk values to the SnPb baseline. If Cpk is lower for lead-free, identify the parameter driving the reduction and optimize further. The lead-free process is inherently narrower in process window, so achieving the same Cpk may require tighter equipment control."
+        ],
+        "tags": ["lead-free", "process-qualification", "reflow"]
+      },
+      {
+        "flow_name": "mixed-assembly-management",
+        "description": "Manage the transition period where both SnPb and lead-free components and boards coexist in the supply chain and on the production floor.",
+        "inputs": [
+          {"name": "lead-free-process-parameters", "desc": "Qualified lead-free parameters"},
+          {"name": "component-requalification-list", "desc": "Components being transitioned to lead-free finish"},
+          {"name": "selected-alloy", "desc": "Target lead-free alloy"}
+        ],
+        "outputs": [
+          {"name": "component-finish-tracking", "desc": "System for tracking which components are SnPb-finished vs lead-free-finished in inventory"},
+          {"name": "mixed-assembly-rules", "desc": "Rules for handling mixed solder alloy situations (SnPb component on lead-free board and vice versa)"},
+          {"name": "cross-contamination-prevention", "desc": "Procedures to prevent SnPb contamination of lead-free processes and materials"},
+          {"name": "transition-timeline", "desc": "Phased timeline for completing the full transition from SnPb to lead-free"}
+        ],
+        "process": [
+          "During the transition, the supply chain may deliver components with either SnPb or lead-free terminal finishes. Track component finish in the ERP system. Lead-free components are typically marked with the 'e' or leaf symbol per JEDEC/IPC J-STD-609. Verify incoming component finish by visual inspection (lead-free SAC is typically matte vs shiny SnPb) or by XRF analysis for high-reliability applications.",
+          "Define rules for mixed situations. Lead-free (SAC-finished) components soldered with SnPb paste at SnPb temperatures: generally acceptable. The SAC finish dissolves into the SnPb solder and the joint is predominately SnPb. SnPb-finished components soldered with lead-free (SAC) paste at lead-free temperatures: the SnPb finish melts and mixes with SAC, creating a mixed-metallurgy joint. This is acceptable per J-STD-001 but may have different reliability characteristics.",
+          "Prevent cross-contamination between SnPb and lead-free production. If using the same equipment for both: purge the solder pot completely when switching (lead contamination in a lead-free pot above 0.1% changes the alloy properties and may violate RoHS). Use separate stencils, separate paste containers, and separate wave solder pallets. Label all lead-free materials and tooling distinctly.",
+          "Phase the transition by product line rather than attempting all products simultaneously. Start with new designs (design for lead-free from the start). Transition existing products during planned redesigns. Products with military or medical exemptions may remain on SnPb indefinitely.",
+          "Validate the reliability of the lead-free assembly for each product category. The reliability characteristics of SAC are different from SnPb: better thermal fatigue life at wide temperature ranges, worse at narrow ranges with long dwells. Worse drop shock performance for SAC305 vs SnPb. Each product must be validated for its specific use environment."
+        ],
+        "tags": ["lead-free", "mixed-assembly", "transition"]
+      },
+      {
+        "flow_name": "whisker-and-long-term-reliability",
+        "description": "Address tin whisker risk and long-term reliability differences between lead-free and tin-lead solder joints for the product lifetime requirement.",
+        "inputs": [
+          {"name": "selected-alloy", "desc": "Lead-free alloy in use"},
+          {"name": "product-application", "desc": "End-use environment and service life"},
+          {"name": "component-finish-tracking", "desc": "Terminal finishes on all components"}
+        ],
+        "outputs": [
+          {"name": "whisker-risk-assessment", "desc": "Tin whisker risk classification for each component finish and mitigation measures"},
+          {"name": "reliability-comparison-data", "desc": "Thermal cycling, drop, and vibration reliability comparison between lead-free and SnPb for this product"},
+          {"name": "long-term-degradation-model", "desc": "Intermetallic growth and aging model for the lead-free joints over the product service life"},
+          {"name": "mitigation-plan", "desc": "Specific actions to mitigate any reliability gaps identified in the comparison"}
+        ],
+        "process": [
+          "Assess tin whisker risk. Pure tin finishes on component leads are the primary whisker risk. Whiskers are conductive filaments that grow from tin surfaces under compressive stress, potentially causing shorts. SAC solder alloy joints have low whisker risk because the silver and copper additions relieve internal stress. Component lead finishes of pure tin (matte or bright) on closely spaced leads (<0.5mm pitch) in high-reliability applications require mitigation.",
+          "Whisker mitigation options: conformal coating (prevents whisker bridging even if whiskers grow), hot-solder-dipped component leads (replaces pure tin finish with SnPb or SAC), specifying NiPdAu or SnBi component finish (inherently low whisker risk), or component requalification testing per JEDEC JESD201 (environmental stress testing for whisker growth over 3000-4000 hours).",
+          "Compare thermal fatigue reliability. SAC305 has approximately 2-3x better thermal fatigue life than SnPb at wide temperature ranges (-40 to +125C) due to its higher creep resistance. At narrow temperature ranges (0 to +60C) with long dwell times (>4 hours), SAC305 may underperform SnPb because the high-temperature dwell allows microstructural coarsening that reduces fatigue resistance.",
+          "Compare mechanical shock (drop) reliability. SnPb is generally more ductile and absorbs shock energy better than SAC305. SAC305 BGA joints are susceptible to pad cratering (fracture in the board laminate under the pad) under high-G shock. SAC105 or SnBiAg alloys provide better drop performance than SAC305 if drop is the dominant failure mode.",
+          "Model long-term intermetallic compound (IMC) growth. Cu6Sn5 and Cu3Sn IMC layers grow at the solder-copper interface over time, following Arrhenius kinetics: thickness = sqrt(D0 x exp(-Ea/kT) x t), where D0 is the diffusivity constant, Ea is the activation energy, T is temperature, and t is time. For SAC305 on copper at 100C continuous operation, IMC thickness reaches approximately 5-8 microns after 10 years. IMC layers above 10 microns may reduce joint ductility and fatigue resistance."
+        ],
+        "tags": ["lead-free", "whisker", "reliability", "long-term"]
+      }
+    ]
+  },
+  {
+    "chain_name": "process-fmea-methodology",
+    "description": "Conduct a process FMEA from process flow diagram through failure mode identification, risk assessment, and control plan development, using the AIAG/VDA PFMEA method for electronics manufacturing.",
+    "domain": "hardware",
+    "tags": ["manufacturing", "fmea", "risk-assessment", "quality"],
+    "steps": [
+      {
+        "flow_name": "process-flow-to-fmea-input",
+        "description": "Decompose the manufacturing process flow into discrete steps with function descriptions that serve as the starting point for failure mode identification.",
+        "inputs": [
+          {"name": "assembly-process-flow", "desc": "Step-by-step manufacturing process from incoming material through final test and packaging"},
+          {"name": "bill-of-process", "desc": "Equipment, tooling, and materials at each process step"},
+          {"name": "product-requirements", "desc": "Customer requirements and specifications that the process must satisfy"}
+        ],
+        "outputs": [
+          {"name": "process-step-list", "desc": "Each process step with its function described as: verb + object + specification (e.g., 'print solder paste within +/-50% volume tolerance')"},
+          {"name": "step-function-mapping", "desc": "Each step's function mapped to the product requirement it fulfills"},
+          {"name": "process-boundaries", "desc": "Clear definition of PFMEA scope: starting point, ending point, and interfaces with other processes"}
+        ],
+        "process": [
+          "Start with the process flow diagram. Each box in the flow is a process step. Include all steps: receiving inspection, storage, kitting, print, placement, reflow, AOI, X-ray, manual insertion, wave solder, cleaning, coating, ICT, functional test, final inspection, packaging.",
+          "For each step, write the function in the form: verb + object + specification. Examples: 'Apply solder paste to PCB pads with volume within +/-30% of nominal.' 'Place components at specified locations with offset < 50% of pad width.' 'Reflow solder joints with peak temperature 235-245C and TAL 40-90 seconds.' The function must be specific enough that a failure to achieve it is clearly identifiable.",
+          "Map each function to the product requirement it serves. 'Apply solder paste within specification' serves the requirement of 'solder joints meet IPC-A-610 Class 2 criteria.' This mapping ensures that every product requirement has at least one process step responsible for achieving it. Gaps indicate missing process steps.",
+          "Define the PFMEA scope boundaries. The PFMEA covers from the first manufacturing step (incoming materials receiving) to the last step (packaged product ready for shipment). It does not cover design issues (those belong in the DFMEA) or field use issues. Interface points with other processes (e.g., incoming material from the board fabricator, outgoing product to the customer's receiving dock) are boundary conditions."
+        ],
+        "tags": ["fmea", "process-flow", "function-analysis"]
+      },
+      {
+        "flow_name": "failure-mode-identification",
+        "description": "Systematically identify potential failure modes for each process step by asking how the step function could fail, what effect the failure has on the product, and what causes each failure mode.",
+        "inputs": [
+          {"name": "process-step-list", "desc": "Process steps with functions"},
+          {"name": "step-function-mapping", "desc": "Requirements mapping"},
+          {"name": "historical-defect-data", "desc": "Past defect data informing known failure modes"}
+        ],
+        "outputs": [
+          {"name": "failure-mode-table", "desc": "Each failure mode with its process step, function, effect on product, and potential causes"},
+          {"name": "effect-severity-mapping", "desc": "Each effect classified by severity to the end customer"},
+          {"name": "cause-mechanism-mapping", "desc": "Each cause linked to the physical or process mechanism that produces the failure mode"}
+        ],
+        "process": [
+          "For each process step, ask: 'In what ways can this step fail to achieve its function?' The failure mode is the opposite of the function. Function: 'Apply paste within +/-30% volume.' Failure modes: paste volume too high, paste volume too low, paste offset from pad, paste bridging adjacent pads, no paste on pad, paste on solder mask.",
+          "For each failure mode, determine the effect on the end customer. Paste volume too low -> insufficient solder joint -> potential open circuit in the field -> product failure. The effect chain traces from the immediate process defect to the final customer impact. The severity rating will be based on the worst reasonable customer effect.",
+          "For each failure mode, identify the potential causes. A single failure mode may have multiple causes. Paste volume too low may be caused by: clogged stencil aperture, paste not replenished on stencil, squeegee speed too fast, stencil worn (aperture enlarged), paste viscosity too high (cold paste). Each cause is a separate line in the PFMEA because each has its own prevention and detection controls.",
+          "Use historical defect data to inform the failure mode list but do not limit it to past failures. Ask 'what else could go wrong?' for each step. Include failure modes from similar products, industry literature (IPC defect databases), and process engineering experience. The goal is to be thorough; a failure mode not identified in the PFMEA cannot be prevented.",
+          "Classify each cause by its mechanism. Equipment-related (printer malfunction, oven temperature drift), material-related (paste lot variation, component finish issue), method-related (inadequate procedure, wrong recipe loaded), operator-related (setup error, loading error), environmental (temperature, humidity), measurement-related (inspection system miscalibrated). The mechanism guides the type of control needed."
+        ],
+        "tags": ["fmea", "failure-modes", "risk-identification"]
+      },
+      {
+        "flow_name": "risk-assessment-and-rating",
+        "description": "Rate each failure mode for severity, occurrence, and detection using process-specific rating scales anchored to electronics manufacturing evidence.",
+        "inputs": [
+          {"name": "failure-mode-table", "desc": "Complete failure mode, effect, and cause listing"},
+          {"name": "effect-severity-mapping", "desc": "Customer effect for severity rating"},
+          {"name": "production-data", "desc": "Defect rate data for occurrence estimation"},
+          {"name": "inspection-strategy-design", "desc": "Current detection methods and their capabilities"}
+        ],
+        "outputs": [
+          {"name": "rated-fmea-table", "desc": "FMEA table with severity, occurrence, and detection ratings for each cause"},
+          {"name": "action-priority-ranking", "desc": "Causes ranked by action priority (AIAG/VDA high/medium/low) or by RPN for prioritization"},
+          {"name": "high-priority-items", "desc": "Failure modes requiring immediate action based on severity threshold or action priority"}
+        ],
+        "process": [
+          "Rate Severity (S) on a 1-10 scale anchored to electronics manufacturing effects. S=10: safety or regulatory non-compliance (product catches fire, regulatory recall). S=9: product fails in the field with no warning. S=8: product function degraded; customer dissatisfied. S=7: product appearance defect visible to customer. S=5-6: defect caught at customer incoming inspection. S=3-4: defect caught at our final test. S=1-2: defect caught at in-process inspection with minimal rework. Severity is based on the worst effect; it cannot be reduced by detection.",
+          "Rate Occurrence (O) on a 1-10 scale anchored to process defect rates. O=10: defect rate > 100,000 ppm (10% or higher). O=8: 10,000-50,000 ppm (1-5%). O=6: 1,000-5,000 ppm (0.1-0.5%). O=4: 100-500 ppm (0.01-0.05%). O=2: 1-10 ppm (< 0.001%). O=1: defect is eliminated by design (physically impossible). Use actual defect data where available; estimate from similar processes where not.",
+          "Rate Detection (D) on a 1-10 scale anchored to inspection capability. D=10: no inspection or detection method for this failure mode. D=9: visual inspection only (operator-dependent, variable). D=7: manual measurement (caliper, multimeter). D=5: automated inspection (AOI, SPI) with demonstrated detection rate > 95%. D=3: automated inspection with detection rate > 99%. D=1: failure mode is physically prevented by mistake-proofing (poka-yoke) such that it cannot occur.",
+          "The AIAG/VDA FMEA method (4th edition, 2019) replaces RPN with an Action Priority (AP) matrix that separately considers S, O, and D combinations. High priority: any item with S >= 9 and O >= 4, or S >= 9 and D >= 7. Medium priority: moderate risk combinations. Low priority: adequately controlled. Use AP instead of RPN because RPN can rank a S=3/O=5/D=10 (AP:Low, no safety risk) equally with S=10/O=3/D=5 (AP:High, safety concern).",
+          "Identify all items with AP=High for immediate action. These are the items where the combination of severity, occurrence, and detection creates unacceptable risk. Also flag any item with severity of 9 or 10 regardless of occurrence and detection, because the consequence of escape is too severe to accept any detection gap."
+        ],
+        "tags": ["fmea", "risk-assessment", "rating"]
+      },
+      {
+        "flow_name": "control-plan-from-pfmea",
+        "description": "Translate the PFMEA action priorities into a production control plan that links each critical process parameter to its measurement method, frequency, control limit, and reaction plan.",
+        "inputs": [
+          {"name": "rated-fmea-table", "desc": "Complete rated PFMEA"},
+          {"name": "high-priority-items", "desc": "Items requiring immediate action"},
+          {"name": "action-priority-ranking", "desc": "Full ranked list for control plan coverage"}
+        ],
+        "outputs": [
+          {"name": "control-plan-document", "desc": "Production control plan with one row per controlled characteristic, following AIAG format"},
+          {"name": "prevention-controls", "desc": "Prevention measures for each high-priority item (mistake-proofing, parameter control, maintenance schedules)"},
+          {"name": "detection-controls", "desc": "Detection measures for each item where prevention alone is insufficient (inspection, test, SPC)"},
+          {"name": "reaction-procedures", "desc": "Out-of-control response procedures for each controlled parameter"}
+        ],
+        "process": [
+          "For each PFMEA item rated High priority, define a prevention control (reduces occurrence) and/or a detection control (improves detection). Prevention is always preferred over detection. Example: for 'clogged stencil aperture causing low paste volume,' the prevention control is 'scheduled under-stencil cleaning every 3 prints' and the detection control is '100% SPI with volume alarm at -30% of nominal.'",
+          "Build the control plan document. Each row contains: process step, controlled characteristic (the specific thing being monitored), specification (the acceptance criteria), measurement method (the tool and technique), sample size and frequency, control method (SPC chart type, go/no-go gauge, automated alarm), and reaction plan (what to do when the limit is exceeded).",
+          "Ensure flow-down from PFMEA to control plan to work instruction. Every high-priority PFMEA item must appear in the control plan. Every control plan measurement must appear in the operator work instruction with specific instructions for how to perform the measurement and what to do with the result.",
+          "For safety-related items (Severity 9 or 10), the control plan must include mistake-proofing (poka-yoke) wherever feasible. Example: component polarity error on a safety-critical circuit -> poka-yoke: the pick-and-place program verifies component polarity using vision; a wrong-polarity component is rejected before placement. The detection method for poka-yoke is verification that the mistake-proofing device is functioning correctly.",
+          "Review the control plan with the production team before release. The people who will execute the plan must understand it, agree that it is achievable, and have the training and equipment to perform each measurement. A control plan that exists on paper but is not executed on the floor provides no protection.",
+          "Schedule regular PFMEA and control plan reviews. The PFMEA is a living document. Review whenever: a new defect type is discovered, a process change is made, a customer complaint is received, or at a minimum annual interval. Update the ratings based on current data and adjust the control plan accordingly."
+        ],
+        "tags": ["fmea", "control-plan", "prevention"]
+      }
+    ]
+  }
+]

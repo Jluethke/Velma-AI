@@ -1,0 +1,1028 @@
+[
+  {
+    "chain_name": "fmea-methodology",
+    "description": "Execute a failure mode and effects analysis from system decomposition through risk priority scoring to corrective action tracking, covering functional, design, and process FMEA variants with interface and common cause considerations.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "reliability", "fmea", "failure-analysis", "risk"],
+    "steps": [
+      {
+        "flow_name": "fmea-scope-and-type-selection",
+        "description": "Define the FMEA boundary and select the correct variant (functional, design, or process) based on the system lifecycle stage and available data.",
+        "inputs": [
+          {"name": "system-description", "desc": "Block diagram or functional description of the system under analysis"},
+          {"name": "lifecycle-stage", "desc": "Current phase: concept, detailed design, prototype, production, or field return"}
+        ],
+        "outputs": [
+          {"name": "fmea-type", "desc": "Selected variant: functional FMEA (concept stage, function-level), design FMEA (detailed design, component-level), or process FMEA (manufacturing, process-step-level)"},
+          {"name": "analysis-boundary", "desc": "Defined scope: which subsystems, interfaces, and operating conditions are included"},
+          {"name": "ground-rules", "desc": "Assumptions about single vs multiple failures, environmental conditions, and maintenance state"}
+        ],
+        "process": [
+          "Identify whether the goal is to analyze intended functions (functional FMEA), physical implementation (design FMEA), or manufacturing/assembly steps (process FMEA). Functional FMEA works from a functional block diagram. Design FMEA works from schematics and BOMs. Process FMEA works from a process flow diagram.",
+          "Define the analysis boundary by listing every subsystem, interface, and operating mode in scope. Exclude items already covered by a lower-level FMEA unless their failure propagates across the boundary.",
+          "State ground rules: assume single-point failures unless the system has no redundancy, in which case common cause failures become primary. Document assumed environmental conditions (temperature range, vibration profile, EMI environment) and maintenance intervals.",
+          "Select the FMEA standard to follow: SAE J1739 for automotive, ARP5580 for aerospace, IEC 60812 for general. Each defines different column sets and rating scales."
+        ],
+        "tags": ["fmea", "scoping", "systems-engineering"]
+      },
+      {
+        "flow_name": "fmea-function-and-failure-identification",
+        "description": "Decompose the system into functions and identify all credible failure modes for each function, with mechanism and cause tracing.",
+        "inputs": [
+          {"name": "fmea-type", "desc": "The FMEA variant selected"},
+          {"name": "analysis-boundary", "desc": "Defined scope of the analysis"},
+          {"name": "ground-rules", "desc": "Assumptions for the analysis"}
+        ],
+        "outputs": [
+          {"name": "function-list", "desc": "Every function (or component or process step) within the analysis boundary, with its performance requirement"},
+          {"name": "failure-mode-list", "desc": "Each function mapped to its credible failure modes: complete loss, partial degradation, intermittent, unintended activation, wrong timing, wrong magnitude"},
+          {"name": "mechanism-cause-map", "desc": "Each failure mode traced to physical mechanism (corrosion, fatigue, overstress, wear, drift) and root cause (design margin, material defect, manufacturing variation, user misuse)"}
+        ],
+        "process": [
+          "List every function within the boundary. For functional FMEA, these are black-box functions (e.g., 'regulate voltage to 3.3V +/- 5%'). For design FMEA, list each component and its function. For process FMEA, list each manufacturing step.",
+          "For each function, enumerate failure modes systematically: no output, degraded output, intermittent output, unintended output, output at wrong time, output of wrong magnitude. Use field return data and prior FMEA databases to avoid missing known modes.",
+          "Trace each failure mode to its physical mechanism. A resistor open circuit might be caused by solder joint fatigue (mechanism) due to thermal cycling (environmental cause) or sulfur contamination (material cause). Document the chain: cause -> mechanism -> failure mode.",
+          "For interface FMEA, add failure modes at each boundary: signal corruption, timing mismatch, impedance mismatch, protocol violation, missing handshake. Interface failures are the most frequently missed category."
+        ],
+        "tags": ["fmea", "failure-modes", "root-cause"]
+      },
+      {
+        "flow_name": "fmea-effect-and-severity-rating",
+        "description": "Determine the local, next-higher, and end effects of each failure mode, then assign severity ratings with anchored scales.",
+        "inputs": [
+          {"name": "failure-mode-list", "desc": "All identified failure modes"},
+          {"name": "mechanism-cause-map", "desc": "Mechanisms and causes for each mode"}
+        ],
+        "outputs": [
+          {"name": "effect-chain", "desc": "For each failure mode: local effect (at the component), next-higher effect (at the subsystem), and end effect (at the system or user level)"},
+          {"name": "severity-ratings", "desc": "Severity score (1 to 10) for each failure mode, anchored to concrete examples: 1 = no perceivable effect, 4 = minor degradation user notices, 7 = subsystem inoperable but no safety impact, 9 = potential safety issue with warning, 10 = potential safety issue without warning"}
+        ],
+        "process": [
+          "For each failure mode, trace the effect chain upward. Local effect: what happens at the component (e.g., 'capacitor shorts, bypassing the filter'). Next-higher effect: what the subsystem experiences (e.g., 'unfiltered noise on the power rail'). End effect: what the user or system experiences (e.g., 'intermittent data errors in sensor readings').",
+          "Assign severity based on the worst end effect, not the local effect. Use anchored scales specific to the product type. Automotive uses a different scale than industrial equipment. The anchoring prevents score inflation where everything becomes a 7 or 8.",
+          "Severity 9 and 10 are reserved for safety and regulatory compliance. If a failure mode can cause injury with prior warning, it is a 9. Without warning, it is a 10. These ratings trigger mandatory design action regardless of occurrence or detection scores.",
+          "Document which operating modes produce the worst severity. A failure mode might be severity 3 in normal operation but severity 9 during emergency shutdown. Rate against the worst credible operating condition within the ground rules."
+        ],
+        "tags": ["fmea", "severity", "effects-analysis"]
+      },
+      {
+        "flow_name": "fmea-occurrence-and-detection-rating",
+        "description": "Rate the probability of occurrence for each failure cause and the effectiveness of current detection controls, using field data where available.",
+        "inputs": [
+          {"name": "effect-chain", "desc": "Effect chains for all failure modes"},
+          {"name": "severity-ratings", "desc": "Severity scores for all failure modes"},
+          {"name": "mechanism-cause-map", "desc": "Mechanisms and causes for each mode"}
+        ],
+        "outputs": [
+          {"name": "occurrence-ratings", "desc": "Occurrence score (1 to 10) for each failure cause, anchored to failure rate ranges: 1 = less than 1 in 1,000,000, 3 = 1 in 100,000, 5 = 1 in 10,000, 7 = 1 in 1,000, 10 = 1 in 10 or higher"},
+          {"name": "detection-ratings", "desc": "Detection score (1 to 10) for each failure mode: 1 = design prevents the failure (error-proofed), 2 = automatic detection and correction, 5 = inspection or test catches it, 8 = only manual audit might find it, 10 = no current control exists"},
+          {"name": "current-controls", "desc": "List of existing prevention and detection controls for each failure mode"}
+        ],
+        "process": [
+          "Rate occurrence from field data when available. If the same component or process has been used before, pull failure rates from warranty databases or reliability test results. When no data exists, use handbook rates (MIL-HDBK-217, FIDES) as a starting point, adjusted for the operating environment.",
+          "Distinguish between prevention controls (design features that reduce occurrence) and detection controls (tests, inspections, or monitors that catch the failure after it occurs). Rate detection based on the best current control, not a planned future control.",
+          "Detection rating must reflect when the failure is caught relative to the customer. A test that catches it at incoming inspection is better (lower score) than a test at final assembly, which is better than a field monitor. If detection relies on the customer reporting it, the score is 9 or 10.",
+          "For process FMEA, occurrence maps to process capability (Cpk): Cpk > 1.67 corresponds to occurrence 1-2, Cpk 1.33-1.67 is 3-4, Cpk 1.0-1.33 is 5-6, and Cpk < 1.0 is 7+. Tie the rating to measurable process data, not opinions."
+        ],
+        "tags": ["fmea", "occurrence", "detection", "controls"]
+      },
+      {
+        "flow_name": "fmea-risk-priority-and-action-planning",
+        "description": "Calculate risk priority numbers, apply action priority as an alternative ranking, identify high-risk items, and assign corrective actions with owners and deadlines.",
+        "inputs": [
+          {"name": "severity-ratings", "desc": "Severity scores"},
+          {"name": "occurrence-ratings", "desc": "Occurrence scores"},
+          {"name": "detection-ratings", "desc": "Detection scores"},
+          {"name": "current-controls", "desc": "Existing prevention and detection controls"}
+        ],
+        "outputs": [
+          {"name": "rpn-rankings", "desc": "Risk priority number (S x O x D) for each failure mode, sorted highest first, with known RPN limitations documented"},
+          {"name": "action-priority-rankings", "desc": "Action priority level (High/Medium/Low) using the AIAG-VDA severity-occurrence matrix as an alternative to RPN threshold"},
+          {"name": "corrective-action-plan", "desc": "For each high-priority item: recommended action (design change, added control, or test), responsible owner, target completion date, and expected new S/O/D after action"}
+        ],
+        "process": [
+          "Calculate RPN = Severity x Occurrence x Detection for every failure mode. RPN ranges from 1 to 1,000. Document that RPN has known limitations: it treats all factors as equally important, and two failure modes with RPN 180 (e.g., 9x2x10 vs 6x5x6) have very different risk profiles. A severity-9 item with occurrence-2 and detection-10 needs a different action than a severity-6 item with occurrence-5 and detection-6.",
+          "Apply the AIAG-VDA Action Priority method as a supplement: items with severity 9-10 and occurrence above 4 are always High priority regardless of detection. Items with severity 5-8 and occurrence above 6 are Medium. This captures the cases where RPN ranking alone would miss a safety-critical item with good detection.",
+          "Assign corrective actions that target the right factor. If severity is the driver, redesign to eliminate the failure mode or add redundancy. If occurrence is the driver, improve the design margin or process capability. If detection is the driver, add a test or monitor. The most effective actions reduce occurrence (prevention), not detection (after the fact).",
+          "Each action must have a single responsible owner, a target date, and a measurable success criterion. 'Improve the design' is not an action. 'Add current limiting to U3 output per schematic revision B, verified by short-circuit test at final test station' is an action. Track actions to closure and re-score after implementation."
+        ],
+        "tags": ["fmea", "rpn", "corrective-action", "risk-priority"]
+      },
+      {
+        "flow_name": "fmea-common-cause-and-interface-analysis",
+        "description": "Extend the FMEA to cover common cause failures that defeat redundancy and interface failures at system boundaries.",
+        "inputs": [
+          {"name": "rpn-rankings", "desc": "RPN scores for all failure modes"},
+          {"name": "corrective-action-plan", "desc": "Actions already assigned"}
+        ],
+        "outputs": [
+          {"name": "common-cause-failures", "desc": "List of failure causes that can simultaneously affect redundant paths: shared power supply, shared environment, shared software, shared manufacturing lot, shared maintenance action"},
+          {"name": "interface-failure-modes", "desc": "Failure modes at each system interface: electrical, mechanical, thermal, data, and timing boundaries"},
+          {"name": "updated-action-plan", "desc": "Corrective action plan amended with common cause and interface mitigations"}
+        ],
+        "process": [
+          "Identify every pair of redundant elements in the design. For each pair, ask: do they share a power source, a clock source, a physical environment (same board area, same enclosure zone), a software function, a manufacturing process, or a maintenance procedure? Each shared element is a common cause path.",
+          "Rate common cause exposure using the beta factor method: beta is the fraction of failures that affect both channels simultaneously. For physically separated, independently powered, dissimilar implementations, beta is 0.01 to 0.05. For co-located, same-design, same-power channels, beta can be 0.1 to 0.3. This directly multiplies the system failure probability.",
+          "For every interface identified in the analysis boundary, add failure modes specific to the boundary: impedance mismatch causing signal reflection, protocol timeout from clock drift, thermal expansion causing connector intermittent, data format change from software update incompatibility, and ground potential difference causing common mode noise.",
+          "Amend the corrective action plan with mitigations for common cause and interface failures. Common cause mitigations: physical separation, diverse implementations, independent power domains, staggered maintenance. Interface mitigations: defined tolerance bands, protocol checksums, watchdog timers across boundaries."
+        ],
+        "tags": ["fmea", "common-cause", "interface-analysis", "redundancy"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fault-tree-analysis-method",
+    "description": "Construct and analyze a fault tree from top event definition through gate logic modeling to quantitative probability calculation with minimal cut sets and importance measures.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "reliability", "fault-tree", "safety", "probability"],
+    "steps": [
+      {
+        "flow_name": "fta-top-event-definition",
+        "description": "Define the undesired top event precisely and establish the boundary conditions for the fault tree analysis.",
+        "inputs": [
+          {"name": "system-hazard", "desc": "The hazard or undesired outcome to analyze"},
+          {"name": "system-architecture", "desc": "Block diagram or schematic of the system showing redundancy, dependencies, and operating modes"}
+        ],
+        "outputs": [
+          {"name": "top-event-statement", "desc": "Precise, unambiguous statement of the undesired event including magnitude, duration, and conditions (e.g., 'Loss of braking force below 50% of nominal for more than 200ms during any driving condition')"},
+          {"name": "boundary-conditions", "desc": "Physical boundary (which hardware is in scope), initial conditions (system state at analysis start), environmental conditions, and what is assumed to work correctly"},
+          {"name": "resolution-level", "desc": "The lowest level of decomposition: replaceable unit, component, or failure mechanism"}
+        ],
+        "process": [
+          "Write the top event as a specific, measurable, time-bounded statement. 'System fails' is too vague. 'Output voltage exceeds 5.5V for more than 10ms while load current is between 0 and 3A' is precise enough to analyze. The wording determines what gets included in the tree.",
+          "Define the physical boundary: list every hardware element, software function, human action, and external input within scope. Everything outside the boundary is either assumed working (favorable assumption) or assumed failed (unfavorable assumption). Document which assumption applies to each excluded item.",
+          "Set the resolution level based on available data. If you have component failure rates, decompose to the component level. If you only have subsystem failure rates from testing, stop at the subsystem level. Going below the data resolution creates false precision.",
+          "Identify the initial conditions: is the system starting from a known good state, or are pre-existing dormant failures possible? For safety systems that are tested periodically, dormant failures between test intervals are a primary contributor."
+        ],
+        "tags": ["fault-tree", "top-event", "boundary-conditions"]
+      },
+      {
+        "flow_name": "fta-tree-construction",
+        "description": "Build the fault tree structure using AND, OR, and voting gates, decomposing from the top event to basic events representing component failures or human errors.",
+        "inputs": [
+          {"name": "top-event-statement", "desc": "The precisely defined top event"},
+          {"name": "boundary-conditions", "desc": "Scope and assumptions"},
+          {"name": "resolution-level", "desc": "Target decomposition depth"}
+        ],
+        "outputs": [
+          {"name": "fault-tree-structure", "desc": "Complete tree with all gates (AND, OR, k-of-n voting, PAND for sequence-dependent), intermediate events, and basic events at leaves"},
+          {"name": "basic-event-list", "desc": "Every leaf node: component failure, human error, or external event, with its description and initial failure rate estimate"},
+          {"name": "undeveloped-events", "desc": "Events that could not be decomposed further due to data or scope limitations, marked with diamond symbols"}
+        ],
+        "process": [
+          "Start from the top event and ask: what immediate causes can produce this event? If ALL causes must occur simultaneously, connect them with an AND gate. If ANY single cause is sufficient, use an OR gate. For k-of-n redundancy (e.g., 2-of-3 voting), use a voting gate.",
+          "Decompose each intermediate event the same way, working downward. At each gate, verify the logic: cover an AND gate output and check that uncovering any single input does not produce the top event. For OR gates, each input alone must be sufficient.",
+          "Stop decomposition when you reach a basic event: a component failure with a known or estimable failure rate, a human error with a known probability, or an external event (lightning, power loss) with a known frequency. Mark events you cannot decompose as undeveloped (diamond symbol) and document why.",
+          "For systems where failure sequence matters (e.g., standby redundancy where detection of the first failure is required to switch), use priority AND (PAND) gates or sequence-dependent gates. Document the timing assumption: how long between the first failure and the detection/switching action.",
+          "Review the completed tree for logical completeness. Check that every basic event appears in at least one minimal cut set. Check that no gate has only one input (a single-input gate is either unnecessary or indicates a missing failure mode)."
+        ],
+        "tags": ["fault-tree", "gate-logic", "tree-construction"]
+      },
+      {
+        "flow_name": "fta-minimal-cut-set-analysis",
+        "description": "Determine minimal cut sets by Boolean reduction and use them to identify single points of failure and critical failure combinations.",
+        "inputs": [
+          {"name": "fault-tree-structure", "desc": "The complete fault tree"},
+          {"name": "basic-event-list", "desc": "All leaf nodes with descriptions"}
+        ],
+        "outputs": [
+          {"name": "minimal-cut-sets", "desc": "All minimal cut sets sorted by order (number of events): order-1 (single points of failure), order-2, order-3, etc."},
+          {"name": "single-point-failures", "desc": "Every order-1 cut set, which represents a basic event whose failure alone causes the top event"},
+          {"name": "critical-combinations", "desc": "Order-2 and order-3 cut sets that represent the most likely failure combinations, ranked by estimated probability"}
+        ],
+        "process": [
+          "Convert the fault tree to a Boolean expression. Each OR gate becomes addition (union). Each AND gate becomes multiplication (intersection). Replace gate outputs with their input expressions, working bottom-up until the top event is expressed entirely in basic events.",
+          "Apply Boolean reduction rules to simplify: absorption (A + AB = A), idempotent (AA = A), and complementation. The reduced expression is the union of minimal cut sets. Each product term is one minimal cut set.",
+          "For large trees, use the MOCUS (Method of Obtaining Cut Sets) algorithm: start from the top gate, replace each OR gate by listing inputs as separate rows, replace each AND gate by combining inputs on the same row. Remove non-minimal sets (any set that contains another set as a subset).",
+          "List all order-1 cut sets first. Each one is a single point of failure that must be eliminated or mitigated. The existence of order-1 cut sets means no amount of redundancy elsewhere prevents the top event. This is the most actionable output of the entire FTA.",
+          "Rank higher-order cut sets by estimated probability (product of constituent basic event probabilities). This identifies which failure combinations are most credible despite requiring multiple simultaneous failures."
+        ],
+        "tags": ["fault-tree", "cut-sets", "boolean-reduction", "single-point-failure"]
+      },
+      {
+        "flow_name": "fta-quantitative-analysis",
+        "description": "Calculate the top event probability from basic event failure rates and use importance measures to identify which basic events contribute most to system risk.",
+        "inputs": [
+          {"name": "minimal-cut-sets", "desc": "All minimal cut sets"},
+          {"name": "basic-event-list", "desc": "Basic events with failure rate estimates"}
+        ],
+        "outputs": [
+          {"name": "top-event-probability", "desc": "Calculated probability of the top event per mission time or per demand, with uncertainty bounds"},
+          {"name": "importance-rankings", "desc": "Basic events ranked by Fussell-Vesely importance (contribution to top event probability), Birnbaum importance (sensitivity of top event to this event), and Risk Achievement Worth (how much top event increases if this event is certain to fail)"},
+          {"name": "dominant-cut-sets", "desc": "The cut sets contributing 90% or more of the top event probability"}
+        ],
+        "process": [
+          "Assign failure probabilities to each basic event. For hardware: convert failure rate (lambda) to probability using P = 1 - exp(-lambda * t) where t is mission time. For repairable systems with periodic testing: P = 1 - exp(-lambda * tau/2) where tau is the test interval. For human errors, use HRA techniques or published error probability data.",
+          "Calculate cut set probabilities. For an AND cut set: P(cut set) = product of constituent event probabilities. For rare events (P < 0.1), this product approximation is accurate. For higher probabilities, use the exact calculation: P(A AND B) = P(A) * P(B|A).",
+          "Calculate top event probability using the inclusion-exclusion formula or the rare event approximation. Rare event: P(top) = sum of all cut set probabilities. For better accuracy, subtract the pairwise intersections of cut sets (second-order inclusion-exclusion). Verify that the rare event approximation error is below 10% by checking if the sum exceeds 0.1.",
+          "Calculate importance measures. Fussell-Vesely: FV(i) = sum of probabilities of all cut sets containing event i, divided by top event probability. This tells you what fraction of risk is removed if event i is guaranteed not to occur. Birnbaum: BI(i) = P(top | event i certain) - P(top | event i impossible). This measures sensitivity. Risk Achievement Worth: RAW(i) = P(top | event i certain) / P(top baseline).",
+          "Identify dominant cut sets: sort by probability and find the set contributing 90% of the top event probability. In most real systems, 5 to 10 cut sets dominate. These are where design improvement investment has the highest return."
+        ],
+        "tags": ["fault-tree", "probability", "importance-measures", "quantitative"]
+      },
+      {
+        "flow_name": "fta-common-cause-and-uncertainty",
+        "description": "Account for common cause failures using the beta factor model and propagate parameter uncertainty through the fault tree using Monte Carlo simulation.",
+        "inputs": [
+          {"name": "top-event-probability", "desc": "Point estimate of top event probability"},
+          {"name": "importance-rankings", "desc": "Basic event importance measures"},
+          {"name": "dominant-cut-sets", "desc": "Cut sets contributing most to risk"}
+        ],
+        "outputs": [
+          {"name": "common-cause-adjusted-probability", "desc": "Top event probability after accounting for common cause failures in redundant channels"},
+          {"name": "uncertainty-distribution", "desc": "5th, 50th, and 95th percentile of top event probability from Monte Carlo propagation of basic event uncertainty"},
+          {"name": "sensitivity-results", "desc": "Which basic event uncertainties contribute most to the output uncertainty, guiding where to invest in better failure rate data"}
+        ],
+        "process": [
+          "Identify all redundant pairs or groups in the tree (basic events under AND gates that represent identical or similar components). For each group, apply the beta factor model: split the failure rate into independent (1-beta)*lambda and common cause beta*lambda. Add a new basic event representing the common cause failure to each AND gate containing the redundant group.",
+          "Select beta values from IEC 61508 tables or nuclear industry data (NUREG/CR-5497). Typical values: identical hardware in same environment beta = 0.05 to 0.10, identical hardware in different environments beta = 0.02 to 0.05, diverse hardware beta = 0.01 to 0.02. Document the basis for each beta selection.",
+          "Recalculate the top event probability with common cause events included. For a 1oo2 (one out of two) redundant system: P(fail) = 2*(1-beta)*lambda*tau * (1-beta)*lambda*tau + beta*lambda*tau. The common cause term often dominates, especially when independent reliability is high.",
+          "Propagate uncertainty using Monte Carlo simulation. Assign lognormal distributions to each basic event failure rate (mean from handbook, error factor 3 to 10 depending on data quality). Run 10,000 to 100,000 samples, calculating the top event probability each time. Report the 5th, 50th, and 95th percentiles.",
+          "Perform uncertainty importance analysis: for each basic event, calculate the correlation between its sampled values and the top event probability across all Monte Carlo trials. Events with high correlation and high variance are where better data collection reduces output uncertainty most."
+        ],
+        "tags": ["fault-tree", "common-cause", "uncertainty", "monte-carlo"]
+      }
+    ]
+  },
+  {
+    "chain_name": "requirements-decomposition-method",
+    "description": "Decompose stakeholder needs into verifiable system requirements, allocate to subsystems with performance budgets, and maintain traceability from need through verification.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "requirements", "decomposition", "traceability", "allocation"],
+    "steps": [
+      {
+        "flow_name": "stakeholder-needs-capture",
+        "description": "Elicit and document stakeholder needs in operational language, separating true needs from proposed solutions.",
+        "inputs": [
+          {"name": "stakeholder-list", "desc": "All parties with a stake in the system: end users, maintainers, operators, regulators, manufacturing, business"},
+          {"name": "concept-of-operations", "desc": "High-level operational scenarios describing how the system will be used"}
+        ],
+        "outputs": [
+          {"name": "needs-register", "desc": "Each need stated in operational language (what the system must do or how it must behave), with source stakeholder, priority, and rationale"},
+          {"name": "operational-scenarios", "desc": "Detailed usage scenarios covering normal operation, degraded modes, maintenance, startup, shutdown, and emergency"},
+          {"name": "constraint-list", "desc": "Non-negotiable boundaries: regulatory requirements, interface constraints from existing systems, budget and schedule limits, environmental operating conditions"}
+        ],
+        "process": [
+          "Interview each stakeholder group separately. Use operational scenarios as conversation anchors: 'Walk me through a typical day using this system.' Capture what they need the system to do, not how they think it should work. When a stakeholder says 'I need a button that does X,' record the need as 'operator must be able to X' and note the proposed solution separately.",
+          "Identify conflicting needs across stakeholder groups. Manufacturing wants fewer variants. Field service wants modular replaceable units. End users want minimum weight. Regulatory wants redundancy. Document each conflict explicitly and flag for resolution during requirement derivation.",
+          "Capture constraints separately from needs. Constraints are non-negotiable (regulatory, physics, existing interface specs). Needs have flexibility. Mixing them causes teams to treat everything as fixed, preventing trade-offs on needs that should be traded.",
+          "Validate the needs register by reviewing operational scenarios end-to-end. For each scenario step, verify at least one need covers the required system behavior. Gaps in coverage indicate missing needs."
+        ],
+        "tags": ["requirements", "stakeholder", "needs-capture", "elicitation"]
+      },
+      {
+        "flow_name": "system-requirement-derivation",
+        "description": "Transform stakeholder needs into verifiable system-level requirements with measurable acceptance criteria.",
+        "inputs": [
+          {"name": "needs-register", "desc": "Documented stakeholder needs"},
+          {"name": "operational-scenarios", "desc": "Usage scenarios"},
+          {"name": "constraint-list", "desc": "Fixed boundaries"}
+        ],
+        "outputs": [
+          {"name": "system-requirements", "desc": "Each requirement with unique ID, 'shall' statement, measurable acceptance criterion, verification method (test, analysis, inspection, demonstration), source need traceability, and rationale for derived requirements"},
+          {"name": "derived-requirements", "desc": "Requirements not directly traceable to a stakeholder need but necessary for the system to function (e.g., internal interface requirements, built-in-test requirements)"},
+          {"name": "tbd-list", "desc": "Requirements where the acceptance criterion cannot yet be quantified, with the plan and deadline to resolve each"}
+        ],
+        "process": [
+          "Convert each need to one or more 'shall' statements with measurable criteria. 'System must be reliable' becomes 'System shall achieve MTBF greater than 5,000 hours as demonstrated by reliability prediction per MIL-HDBK-217F Parts Stress method at 40 degrees C ambient.' Every requirement must be verifiable by at least one method.",
+          "Identify derived requirements: requirements that no stakeholder asked for but are necessary. If the system must operate at -40C, and the display technology selected does not work below -20C, a derived requirement for display heating is needed. Trace each derived requirement to the parent requirement and the design decision that created it.",
+          "Apply the INCOSE good requirement checklist: necessary (traceable to a need), unambiguous (single interpretation), achievable (within state of the art), verifiable (measurable acceptance criterion), singular (one requirement per statement), complete (no TBD values without a resolution plan).",
+          "Resolve conflicts between requirements by trade study or by escalating to the stakeholder who owns the conflicting needs. Document the resolution rationale. A resolved conflict becomes a design decision that may generate additional derived requirements."
+        ],
+        "tags": ["requirements", "derivation", "verification", "traceability"]
+      },
+      {
+        "flow_name": "subsystem-allocation-and-budgeting",
+        "description": "Allocate system requirements to subsystems and create performance budgets that sum to the system-level requirement with margin.",
+        "inputs": [
+          {"name": "system-requirements", "desc": "Verified system-level requirements"},
+          {"name": "derived-requirements", "desc": "Requirements derived from design decisions"}
+        ],
+        "outputs": [
+          {"name": "allocation-matrix", "desc": "Each system requirement mapped to the subsystem(s) responsible for meeting it, with allocated performance values"},
+          {"name": "performance-budgets", "desc": "Quantitative budgets for error, power, weight, latency, and reliability allocated across subsystems such that the sum (RSS for uncorrelated, arithmetic for correlated) meets the system requirement with defined margin"},
+          {"name": "interface-requirements", "desc": "Requirements on the interactions between subsystems, derived from the allocation: signal levels, data formats, timing, mechanical interfaces"}
+        ],
+        "process": [
+          "Map each system requirement to the subsystem architecture. Some requirements allocate to a single subsystem (e.g., 'display brightness shall exceed 500 nits' goes to the display subsystem). Others span multiple subsystems and must be budgeted (e.g., system latency budget split across sensor, processor, and actuator subsystems).",
+          "Create performance budgets using the appropriate combination method. For independent error sources, use root-sum-square (RSS): if system accuracy is 1%, allocate subsystems 0.5%, 0.5%, 0.5%, 0.5% which RSS to 1.0%. For correlated sources (e.g., temperature drift in the same direction), use arithmetic sum. For power and weight, arithmetic sum is always correct.",
+          "Include margin in every budget. Margin policy depends on program phase: conceptual design holds 20-30% margin, preliminary design holds 10-20%, detailed design holds 5-10%. As the design matures and uncertainties resolve, margin is consumed by actual performance. Track margin remaining as a program health metric.",
+          "Derive interface requirements from the allocation. If subsystem A must pass sensor data to subsystem B within 10ms, the interface requirement specifies the communication protocol, data format, update rate, latency allocation for the link itself, and error handling for missed messages."
+        ],
+        "tags": ["requirements", "allocation", "budgeting", "margin"]
+      },
+      {
+        "flow_name": "traceability-matrix-construction",
+        "description": "Build and maintain the requirements traceability matrix linking stakeholder needs to system requirements to subsystem requirements to verification events.",
+        "inputs": [
+          {"name": "allocation-matrix", "desc": "System to subsystem requirement mapping"},
+          {"name": "performance-budgets", "desc": "Allocated performance values"},
+          {"name": "interface-requirements", "desc": "Inter-subsystem requirements"}
+        ],
+        "outputs": [
+          {"name": "traceability-matrix", "desc": "Bidirectional trace: each stakeholder need links forward to system requirements, to subsystem requirements, to design elements, to verification events. Each verification event links backward to the requirement it verifies."},
+          {"name": "orphan-report", "desc": "Requirements with no parent need (potential scope creep) and needs with no child requirement (potential gap)"},
+          {"name": "verification-plan-skeleton", "desc": "For each requirement, the assigned verification method, the verification level (component, subsystem, system, operational), and the verification event where it will be checked"}
+        ],
+        "process": [
+          "Construct the forward trace: need -> system requirement -> subsystem requirement -> design element -> verification event. Use unique IDs at every level. A good ID scheme encodes the hierarchy: SYS-001 allocates to SUB-A-001 and SUB-B-003, verified by TEST-SYS-001.",
+          "Construct the backward trace: start from each verification event and confirm it traces to at least one requirement. A test with no requirement traceability is waste (unless it is an exploratory test explicitly labeled as such). A requirement with no verification event is unverifiable.",
+          "Run the orphan analysis. Forward orphans: requirements that do not trace to any stakeholder need are either derived requirements (which should be labeled as such with their derivation rationale) or scope creep (which should be removed). Backward orphans: needs with no requirement coverage indicate a gap in the requirements set.",
+          "Assign verification methods: Test (measure performance against criteria), Analysis (calculate from models or simulations), Inspection (visual or dimensional check), Demonstration (operate the system and observe behavior). Prefer test for performance requirements and analysis for requirements that cannot be tested economically. Every requirement must have at least one method assigned."
+        ],
+        "tags": ["requirements", "traceability", "verification", "orphan-analysis"]
+      },
+      {
+        "flow_name": "requirements-change-impact-analysis",
+        "description": "Assess the ripple effects of a proposed requirement change across the system hierarchy, budgets, interfaces, and verification plan.",
+        "inputs": [
+          {"name": "traceability-matrix", "desc": "Current bidirectional traceability"},
+          {"name": "orphan-report", "desc": "Known gaps and scope issues"},
+          {"name": "verification-plan-skeleton", "desc": "Verification assignments"}
+        ],
+        "outputs": [
+          {"name": "impact-assessment", "desc": "For the proposed change: every requirement, design element, interface, budget, and verification event affected, with the nature of the impact (tightened, relaxed, invalidated, new)"},
+          {"name": "cost-schedule-estimate", "desc": "Engineering effort, retest scope, procurement changes, and schedule impact of implementing the change"},
+          {"name": "change-recommendation", "desc": "Accept, reject, or modify the change request, with rationale grounded in the impact assessment"}
+        ],
+        "process": [
+          "Starting from the changed requirement, trace forward through the traceability matrix to find every child requirement, design element, and verification event affected. Also trace backward: if a system requirement changes, check whether the parent need still supports the change, or whether the need itself has changed.",
+          "For each affected item, classify the impact: tightened (harder to meet, may require redesign), relaxed (easier to meet, potential cost savings), invalidated (no longer applicable, can be removed), or new (the change creates a requirement that did not exist). For budgets, recalculate whether the allocation still closes with margin.",
+          "Estimate the cost of each impact. Hardware redesign has different cost depending on the phase: a change during detailed design costs 10x what it costs during conceptual design. A change after qualification testing can cost 100x. Include retest scope: if a verified requirement changes, the verification event must be repeated.",
+          "Present the impact assessment to the change control board with a recommendation. The recommendation should balance technical risk, cost, and schedule impact against the value of the change. Some changes are mandatory (regulatory update) regardless of cost. Others are discretionary and should be evaluated against the program baseline."
+        ],
+        "tags": ["requirements", "change-management", "impact-analysis", "configuration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "interface-control-document-method",
+    "description": "Define, document, and verify system interfaces using structured interface control documents covering physical, electrical, data, thermal, and mechanical boundaries.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "interfaces", "icd", "integration", "boundary"],
+    "steps": [
+      {
+        "flow_name": "interface-identification-and-mapping",
+        "description": "Identify all interfaces from the system architecture, classify them by type, and assign ownership for each boundary.",
+        "inputs": [
+          {"name": "system-architecture", "desc": "Block diagram showing all subsystems, external systems, operators, and environment"},
+          {"name": "requirements-set", "desc": "System and subsystem requirements that involve interactions across boundaries"}
+        ],
+        "outputs": [
+          {"name": "interface-register", "desc": "Every interface identified with unique ID, the two entities it connects, interface type (electrical, mechanical, data, thermal, optical, RF, fluid, human), and the owning organization for each side"},
+          {"name": "interface-priority-ranking", "desc": "Interfaces ranked by risk: high risk for cross-organization, safety-critical, or novel interfaces; low risk for standard, single-organization, well-characterized interfaces"},
+          {"name": "n-squared-diagram", "desc": "N-squared chart showing all entity-to-entity interactions, with each cell containing the interface ID and type"}
+        ],
+        "process": [
+          "Draw the N-squared diagram: list all subsystems and external entities along both axes. Each cell (i,j) contains the outputs from entity i to entity j. Each cell (j,i) contains the outputs from entity j to entity i. Every non-empty cell is an interface to document.",
+          "Classify each interface by type. Most physical interfaces have multiple types simultaneously: a connector interface is mechanical (form factor, mounting), electrical (pin assignments, voltage levels), and environmental (sealing, temperature). List each type that applies.",
+          "Assign ownership. Each side of the interface has an owner responsible for meeting the ICD specification at their boundary. For cross-organization interfaces, assign a single interface manager responsible for the ICD document itself, distinct from the owners of each side.",
+          "Rank interfaces by risk. Cross-organization interfaces are highest risk because changes require negotiation and each side may have different verification equipment. Safety-critical interfaces where a failure causes a hazard are next. Novel or first-time interfaces with no heritage data follow. Standard interfaces with proven heritage are lowest risk."
+        ],
+        "tags": ["interfaces", "n-squared", "identification", "classification"]
+      },
+      {
+        "flow_name": "icd-content-specification",
+        "description": "Define the complete technical content of each interface control document, covering all physical, electrical, and data parameters with tolerances.",
+        "inputs": [
+          {"name": "interface-register", "desc": "All identified interfaces with types"},
+          {"name": "interface-priority-ranking", "desc": "Risk ranking of interfaces"}
+        ],
+        "outputs": [
+          {"name": "icd-specifications", "desc": "For each interface: physical (connector type, pin count, mounting, keying), electrical (voltage levels with tolerances, current limits, impedance, rise/fall times, EMI limits), data (message format, byte order, update rate, latency, error detection), thermal (heat transfer across boundary, temperature limits at connector), mechanical (loads, vibration isolation, alignment tolerances)"},
+          {"name": "tolerance-analysis", "desc": "Worst-case analysis showing that both sides of each interface remain compatible across the full tolerance range of all parameters"},
+          {"name": "derating-requirements", "desc": "Derated operating limits at the interface (e.g., connector rated for 5A derated to 3.5A per MIL-STD-975 or project derating criteria)"}
+        ],
+        "process": [
+          "For electrical interfaces, specify both the driving side and the receiving side parameters independently. The driver specifies its output voltage range, output impedance, rise/fall time, and drive strength. The receiver specifies its input voltage thresholds, input impedance, and input capacitance. Verify compatibility by checking that the driver can deliver the required voltage into the receiver's load across temperature.",
+          "For data interfaces, specify the protocol completely: message format (header, payload, checksum), byte order (big-endian or little-endian), update rate and allowed jitter, maximum latency from event to message, and error handling (retransmit, ignore, default value). Define the behavior for every abnormal condition: missed message, corrupted message, unexpected message, message out of sequence.",
+          "For mechanical interfaces, specify the mounting method, fastener type and torque, alignment tolerance, thermal expansion differential, vibration isolation, and connector mate/demate force. Include the installation sequence if order matters (e.g., mechanical alignment before electrical connection).",
+          "Perform worst-case tolerance analysis. At each interface, both sides operate at their worst-case tolerance simultaneously. For voltage: minimum driver output into maximum receiver threshold. For timing: maximum propagation delay plus maximum clock tolerance. If the worst case does not have margin, either tighten tolerances (more expensive) or add margin by design."
+        ],
+        "tags": ["icd", "specification", "tolerance", "electrical", "mechanical"]
+      },
+      {
+        "flow_name": "interface-verification-design",
+        "description": "Design the verification approach for each interface, including test methods, pass/fail criteria, and integration test sequence.",
+        "inputs": [
+          {"name": "icd-specifications", "desc": "Complete interface specifications"},
+          {"name": "tolerance-analysis", "desc": "Worst-case compatibility analysis"}
+        ],
+        "outputs": [
+          {"name": "interface-test-procedures", "desc": "For each interface: the measurement method, required equipment, pass/fail criteria traceable to ICD parameters, and the test environment (bench, subsystem integration, system integration)"},
+          {"name": "integration-sequence", "desc": "The order in which interfaces should be verified during system integration, starting with the most critical and building up to the complete system"},
+          {"name": "interface-maturity-tracker", "desc": "Tracking document showing each interface's maturity: defined, agreed, tested at bench, tested at integration, qualified"}
+        ],
+        "process": [
+          "For each ICD parameter, define how it will be measured. Electrical parameters: specify the measurement point (at the connector, at the IC pin, at the test pad), the instrument (oscilloscope bandwidth, multimeter accuracy), and the setup (loaded or unloaded, hot or cold). The measurement uncertainty must be less than 25% of the tolerance band.",
+          "Design interface tests that verify both sides independently before connecting them. A subsystem interface test verifies that the subsystem meets the ICD at its boundary using a test fixture that simulates the other side at its worst-case tolerance. This catches interface violations before the expensive system integration step.",
+          "Plan the integration sequence. Start with the most critical interface (highest risk from the ranking). Connect subsystems incrementally, verifying each interface as it is made. Do not connect everything at once and hope it works. If interface A must work before interface B can be tested, schedule A first.",
+          "Track interface maturity through defined states. Level 1: interface identified and documented. Level 2: ICD agreed by both sides. Level 3: each side verified independently at bench. Level 4: interface verified at integration. Level 5: interface qualified under environmental conditions. Schedule gates at each level transition."
+        ],
+        "tags": ["icd", "verification", "integration", "testing"]
+      },
+      {
+        "flow_name": "interface-change-and-configuration-control",
+        "description": "Manage interface changes across organizations using formal change control, impact assessment, and re-verification planning.",
+        "inputs": [
+          {"name": "interface-test-procedures", "desc": "Defined test procedures"},
+          {"name": "integration-sequence", "desc": "Planned integration order"},
+          {"name": "interface-maturity-tracker", "desc": "Current maturity of each interface"}
+        ],
+        "outputs": [
+          {"name": "interface-change-process", "desc": "Formal process for proposing, evaluating, approving, and implementing interface changes, with escalation paths for cross-organization disagreements"},
+          {"name": "icd-configuration-baseline", "desc": "Controlled baseline of all ICDs with revision history, showing which hardware and software versions are compatible with which ICD revision"},
+          {"name": "requalification-scope", "desc": "For each potential interface change, the minimum set of tests that must be re-run to verify the change did not break compatibility"}
+        ],
+        "process": [
+          "Establish the interface change process before any ICDs are baselined. Every interface change request must include: the proposed change, the reason, the impact on both sides, the impact on integration schedule, and the retest scope. Both sides must concur before the change is implemented.",
+          "Baseline each ICD at Level 2 (agreed by both sides). After baselining, changes require formal change requests. Track the revision history showing what changed, who approved it, and which hardware/software versions are affected. Never allow informal 'handshake' changes after baselining.",
+          "For each interface change, determine the requalification scope. A change to a connector pin assignment requires re-running all electrical interface tests. A change to message timing requires re-running timing tests but not electrical tests. A change to mechanical mounting requires re-running vibration tests. Document the minimum retest set for common change types.",
+          "Maintain an interface compatibility matrix showing which revision of each subsystem's hardware and software is compatible with which ICD revision. When a subsystem is upgraded, verify that all its interfaces still comply with the current ICD baseline. Incompatibilities discovered in the field are the most expensive to fix."
+        ],
+        "tags": ["icd", "change-control", "configuration", "baseline"]
+      }
+    ]
+  },
+  {
+    "chain_name": "reliability-prediction-methodology",
+    "description": "Predict system reliability using component failure rate data, reliability modeling, and allocation to drive design decisions and support logistics planning.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "reliability", "prediction", "mtbf", "failure-rate"],
+    "steps": [
+      {
+        "flow_name": "reliability-model-construction",
+        "description": "Build the reliability block diagram from the system architecture, capturing series, parallel, standby, and voting redundancy relationships.",
+        "inputs": [
+          {"name": "system-architecture", "desc": "Block diagram showing all functional elements and their redundancy relationships"},
+          {"name": "reliability-target", "desc": "System-level reliability requirement (MTBF, probability of success for a mission, or availability)"}
+        ],
+        "outputs": [
+          {"name": "reliability-block-diagram", "desc": "RBD showing each functional block, its redundancy type (series, active parallel, standby, k-of-n voting), and the switching/detection mechanisms for redundant paths"},
+          {"name": "block-to-hardware-mapping", "desc": "Each RBD block mapped to the physical hardware that implements it, including shared hardware that appears in multiple functional paths"},
+          {"name": "failure-definition", "desc": "For each block, the failure criteria: what constitutes block failure in terms of performance parameters"}
+        ],
+        "process": [
+          "Start from the functional architecture, not the physical architecture. Two physically separate boards might be functionally in series (both must work) or parallel (either can perform the function). Draw the functional paths from input to output.",
+          "For each functional path, identify whether elements are in series (all must work) or parallel (any one sufficient). For k-of-n voting redundancy, note k and n. For standby redundancy, identify the detection mechanism and switching time, because standby reliability depends on the probability of detecting the primary failure.",
+          "Identify shared elements that appear in multiple functional paths. A shared power supply that serves both redundant channels is a common point. In the RBD, it appears in series with the parallel combination, revealing that it defeats the redundancy. This is the most common reliability modeling error.",
+          "Define failure for each block quantitatively. 'Power supply fails' is insufficient. 'Output voltage deviates more than 5% from nominal under any load condition within the specified range' is a failure definition. This determines which failure modes from the FMEA count toward the reliability prediction."
+        ],
+        "tags": ["reliability", "rbd", "modeling", "redundancy"]
+      },
+      {
+        "flow_name": "component-failure-rate-estimation",
+        "description": "Estimate failure rates for each component using handbook methods, field data, and test data, applying environmental and quality factors.",
+        "inputs": [
+          {"name": "reliability-block-diagram", "desc": "RBD with all functional blocks"},
+          {"name": "block-to-hardware-mapping", "desc": "Hardware implementing each block"}
+        ],
+        "outputs": [
+          {"name": "component-failure-rates", "desc": "Failure rate (lambda, in failures per million hours) for each component, with source (handbook, field data, test data), environmental factors applied, and confidence level"},
+          {"name": "failure-rate-method-selection", "desc": "For each component: whether parts count (less accurate, less effort) or parts stress (more accurate, requires operating point data) was used, and why"},
+          {"name": "environmental-profile", "desc": "Operating environment definition for each component: temperature, vibration, humidity, altitude, power cycling frequency"}
+        ],
+        "process": [
+          "Select the prediction method based on the design phase and available data. Parts count method uses generic failure rates from handbooks, suitable for early design trade studies. Parts stress method adjusts for actual operating conditions (temperature, electrical stress, vibration), required for detailed design. When field data from identical or similar equipment exists, it supersedes handbook predictions.",
+          "For MIL-HDBK-217F parts stress: look up the base failure rate for each component type and quality level. Apply pi factors for temperature (pi_T from the Arrhenius model), electrical stress (pi_S from voltage/current derating), environment (pi_E from ground fixed to airborne fighter), and quality (pi_Q from commercial to military grade). Lambda = lambda_base * pi_T * pi_S * pi_E * pi_Q.",
+          "For FIDES methodology (European alternative to 217F): the failure rate is lambda = lambda_physical * pi_process * pi_induced. The physical contribution uses the same stress-based model. The process contribution accounts for the manufacturer's quality system, and the induced contribution covers failures caused by other components or external events. FIDES typically predicts higher failure rates than 217F for commercial components.",
+          "Apply a sanity check by comparing the prediction to field data from similar products. If the prediction differs from field experience by more than a factor of 3, investigate the source of the discrepancy: is the operating environment different, is the component quality different, or is the handbook model inaccurate for this component type?"
+        ],
+        "tags": ["reliability", "failure-rate", "mil-hdbk-217", "fides", "components"]
+      },
+      {
+        "flow_name": "system-reliability-calculation",
+        "description": "Calculate system reliability metrics from the RBD and component failure rates, producing MTBF, mission reliability, and availability predictions.",
+        "inputs": [
+          {"name": "component-failure-rates", "desc": "Lambda values for all components"},
+          {"name": "reliability-block-diagram", "desc": "System RBD with redundancy"},
+          {"name": "failure-rate-method-selection", "desc": "Method used for each component"}
+        ],
+        "outputs": [
+          {"name": "system-mtbf", "desc": "Mean time between failures for the system, with confidence interval"},
+          {"name": "mission-reliability", "desc": "Probability of completing a defined mission duration without failure"},
+          {"name": "availability-prediction", "desc": "Steady-state availability A = MTBF / (MTBF + MTTR), with MTTR estimated from repair procedures and spare parts availability"}
+        ],
+        "process": [
+          "For series elements: lambda_system = sum of all lambda_i. MTBF = 1/lambda_system. This applies when every element must work for the system to work. It is the baseline before redundancy credit.",
+          "For active parallel redundancy (both running, either sufficient): for two identical elements, lambda_parallel = 2 * lambda^2 * tau / (2*lambda*tau + 1), where tau is the repair or mission time. For rare events, this simplifies to lambda_parallel = lambda^2 * tau. The improvement over series is dramatic only when the detection and repair time is short relative to the failure interval.",
+          "For standby redundancy: the standby element has a dormant failure rate (often 10% of active rate) and a switching failure probability. System failure rate = lambda_active * (lambda_dormant * tau + P_switch_fail). If the standby unit is not tested periodically, the dormant failure accumulates.",
+          "For k-of-n voting: use the binomial distribution. P(fewer than k working) = sum from i=0 to k-1 of C(n,i) * R^i * (1-R)^(n-i). This is the system failure probability. For 2oo3 with identical elements: P(fail) = 3*q^2 - 2*q^3 where q = 1 - exp(-lambda*t).",
+          "Combine the subsystem results according to the RBD structure. Report MTBF, mission reliability for the specified mission duration, and steady-state availability. Include a Pareto chart showing which subsystems contribute most to the system failure rate."
+        ],
+        "tags": ["reliability", "mtbf", "availability", "calculation", "redundancy"]
+      },
+      {
+        "flow_name": "reliability-allocation-method",
+        "description": "Allocate the system reliability target to subsystems using methods that account for complexity, criticality, and achievability.",
+        "inputs": [
+          {"name": "system-mtbf", "desc": "Predicted system MTBF"},
+          {"name": "mission-reliability", "desc": "Mission reliability prediction"},
+          {"name": "availability-prediction", "desc": "Availability prediction"}
+        ],
+        "outputs": [
+          {"name": "subsystem-allocations", "desc": "MTBF or failure rate allocated to each subsystem, with rationale for the allocation method used"},
+          {"name": "allocation-feasibility", "desc": "Assessment of whether each allocation is achievable with current technology, based on comparison with similar fielded equipment"},
+          {"name": "improvement-priorities", "desc": "Ranked list of subsystems where reliability improvement investment has the highest system-level return, based on Birnbaum importance from the RBD"}
+        ],
+        "process": [
+          "Choose the allocation method. Equal allocation (divide the system failure rate equally among n subsystems) is the simplest but ignores that some subsystems are inherently more reliable than others. AGREE allocation weights by complexity, criticality, operating time, and environmental severity. Feasibility-of-objectives allocation weights by the ratio of achievable to required reliability for similar equipment.",
+          "For AGREE allocation: weight_i = (complexity_i * operating_time_i * environment_severity_i * criticality_i) / sum of all weights. Allocated failure rate for subsystem i = system_failure_rate * weight_i / sum_weights. This gives a larger share of the failure budget to complex, continuously operating subsystems in harsh environments.",
+          "Check each allocation against the state of the art. If a subsystem is allocated an MTBF of 50,000 hours but similar fielded equipment achieves only 20,000 hours, the allocation is infeasible without a technology advancement. Flag infeasible allocations and either redistribute the budget or identify the design changes needed.",
+          "Calculate Birnbaum importance for each subsystem from the RBD: the partial derivative of system reliability with respect to subsystem reliability. Subsystems with high Birnbaum importance and low current reliability are the highest-return improvement targets. A subsystem with Birnbaum importance of 0.8 improves system reliability 4x faster per unit of subsystem improvement than one with importance 0.2."
+        ],
+        "tags": ["reliability", "allocation", "agree", "improvement", "priorities"]
+      },
+      {
+        "flow_name": "accelerated-life-test-design",
+        "description": "Design accelerated life tests that compress the failure distribution in time by applying elevated stress levels, enabling reliability demonstration within practical test durations.",
+        "inputs": [
+          {"name": "subsystem-allocations", "desc": "Reliability targets for each subsystem"},
+          {"name": "allocation-feasibility", "desc": "Feasibility assessment"},
+          {"name": "improvement-priorities", "desc": "Priority list for reliability improvement"}
+        ],
+        "outputs": [
+          {"name": "test-plan", "desc": "For each accelerated test: stress type(s), stress levels, number of units, test duration, expected acceleration factor, pass/fail criteria"},
+          {"name": "acceleration-model", "desc": "The physical model relating stress to failure rate: Arrhenius (temperature), Coffin-Manson (thermal cycling), Peck (temperature + humidity), inverse power law (voltage, vibration)"},
+          {"name": "sample-size-calculation", "desc": "Number of test units needed to demonstrate the target MTBF at the required confidence level, using the chi-squared distribution for time-terminated tests"}
+        ],
+        "process": [
+          "Select the acceleration model based on the dominant failure mechanism. For temperature-dependent mechanisms (corrosion, diffusion, chemical degradation): Arrhenius model, AF = exp(Ea/k * (1/T_use - 1/T_test)). Activation energy Ea depends on the mechanism: 0.3-0.5 eV for solder joint fatigue, 0.7-1.0 eV for corrosion, 1.0-1.2 eV for electromigration.",
+          "For thermal cycling: Coffin-Manson model, AF = (delta_T_test / delta_T_use)^n * (f_use / f_test)^m where n is typically 2-3 for solder joints and m is 0.3-0.5. The acceleration factor depends on the temperature range, not the absolute temperature.",
+          "Calculate sample size for reliability demonstration. For a time-terminated test with zero failures: MTBF_demonstrated = 2*T*n / chi_squared(alpha, 2) where T is test hours per unit, n is number of units, and alpha is 1 minus the confidence level. To demonstrate 10,000 hours MTBF at 90% confidence with zero failures: total test hours needed = 23,026 hours (2*10000*chi_squared_inv(0.10, 2)/2).",
+          "Validate the acceleration model before relying on it. Run a series of tests at multiple stress levels and verify that the failure rate follows the predicted model. If the acceleration model is wrong (e.g., a different failure mechanism dominates at the elevated stress), the test results are meaningless. Plot failure rate vs stress on the appropriate scale (Arrhenius: log rate vs 1/T) and verify linearity."
+        ],
+        "tags": ["reliability", "accelerated-testing", "arrhenius", "coffin-manson", "sample-size"]
+      }
+    ]
+  },
+  {
+    "chain_name": "environmental-testing-methodology",
+    "description": "Design and execute environmental qualification and screening tests including thermal, vibration, and combined-environment profiles calibrated to the product's actual operating conditions.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "testing", "environmental", "qualification", "halt-hass"],
+    "steps": [
+      {
+        "flow_name": "environmental-profile-definition",
+        "description": "Define the operational, storage, and transportation environments the product must survive, with measured or estimated severity levels.",
+        "inputs": [
+          {"name": "deployment-environment", "desc": "Where and how the product will be used, stored, and transported"},
+          {"name": "product-lifetime", "desc": "Required operating hours, storage duration, and number of transportation cycles"}
+        ],
+        "outputs": [
+          {"name": "thermal-profile", "desc": "Operating temperature range, rate of change, number of cycles over lifetime, storage temperature extremes"},
+          {"name": "vibration-profile", "desc": "Random vibration PSD in g-squared/Hz at the mounting point, sine vibration frequencies and amplitudes, shock levels"},
+          {"name": "combined-environment", "desc": "Conditions that occur simultaneously: temperature plus vibration, humidity plus temperature, altitude plus temperature"}
+        ],
+        "process": [
+          "Measure the actual environment whenever possible. Mount accelerometers and temperature loggers at the product mounting location during representative operating conditions. Field-measured data is always more accurate than handbook values or estimates.",
+          "When measurement is not possible, use environmental standards as starting points. MIL-STD-810 defines environments by platform type (ground mobile, shipboard, airborne). IEC 60068 defines standard test severities. ETSI EN 300 019 defines environments for telecom equipment. Apply the standard that matches the actual deployment, not the one that is easiest to pass.",
+          "Account for the entire lifecycle, not just operation. Transportation vibration (truck, rail, air cargo) often produces higher vibration levels than the operating environment. Storage in an uncontrolled warehouse can expose the product to wider temperature and humidity ranges than operation. Include these phases in the environmental profile.",
+          "Define the combined environment profile. Real environments are not one stress at a time. A product in an engine compartment experiences high temperature and high vibration simultaneously. The combined effect is often worse than either stress alone because material properties degrade at elevated temperature, reducing vibration fatigue strength."
+        ],
+        "tags": ["environmental", "profile", "thermal", "vibration", "measurement"]
+      },
+      {
+        "flow_name": "qualification-test-design",
+        "description": "Design qualification tests that demonstrate the product can survive the defined environment with margin, using the correct test levels and durations.",
+        "inputs": [
+          {"name": "thermal-profile", "desc": "Operational and storage thermal environment"},
+          {"name": "vibration-profile", "desc": "Vibration and shock environment"},
+          {"name": "combined-environment", "desc": "Simultaneous stress conditions"}
+        ],
+        "outputs": [
+          {"name": "thermal-test-plan", "desc": "Thermal cycling test: temperature range, ramp rate, dwell time, number of cycles, functional test points during cycling"},
+          {"name": "vibration-test-plan", "desc": "Random vibration: PSD profile, axes, duration per axis. Sine vibration: sweep rate, amplitude, frequency range. Shock: pulse shape, amplitude, number of pulses per axis"},
+          {"name": "qualification-test-sequence", "desc": "The order in which environmental tests should be run on the same units to capture cumulative damage effects"}
+        ],
+        "process": [
+          "Set thermal cycling test parameters. The temperature range is the operational range plus a qualification margin (typically 10C on each end for commercial, 5C for military where the specified range is already wide). Ramp rate: 5 to 15 C/min is typical; faster rates produce more stress but may not be achievable uniformly in a large product. Dwell time: long enough for the product to reach thermal equilibrium, verified by a thermocouple on the slowest-responding component.",
+          "Calculate the number of thermal cycles from the product lifetime. If the product sees 2 cycles per day for 10 years, that is 7,300 cycles. For qualification, apply a test acceleration factor using Coffin-Manson: fewer cycles at wider temperature range. Document the acceleration model and the assumed activation energy.",
+          "Set random vibration test parameters. The PSD shape matches the measured or specified environment. The test level includes margin: typically 3dB (factor of 2 in power) above the maximum measured level for qualification, 0dB for acceptance. Duration: 1 hour per axis is common for qualification when the lifetime environment is not well characterized. When it is characterized, use fatigue damage equivalence to calculate the test duration.",
+          "Sequence the tests to capture cumulative effects. A common sequence: initial functional test, thermal cycling, random vibration, mechanical shock, humidity (if applicable), final functional test. Running thermal before vibration captures weakened solder joints that then fail under vibration. The sequence matters because qualification is a destructive test of margins."
+        ],
+        "tags": ["qualification", "thermal-cycling", "vibration-testing", "test-sequence"]
+      },
+      {
+        "flow_name": "halt-test-execution",
+        "description": "Execute a Highly Accelerated Life Test to find design weaknesses by stepping stress levels until failures occur, then analyzing and fixing each failure before continuing.",
+        "inputs": [
+          {"name": "thermal-test-plan", "desc": "Thermal test parameters"},
+          {"name": "vibration-test-plan", "desc": "Vibration test parameters"}
+        ],
+        "outputs": [
+          {"name": "operating-limits", "desc": "Upper and lower temperature operating limits (where the product fails functionally but recovers) and destruct limits (where permanent damage occurs)"},
+          {"name": "vibration-limits", "desc": "The vibration level at which the first failure occurs, both at room temperature and at the temperature extremes"},
+          {"name": "failure-modes-found", "desc": "Each failure discovered: the stress level, the failure mode, root cause analysis, and whether it is relevant to the field environment or only to the extreme test conditions"}
+        ],
+        "process": [
+          "Start with cold step stress: begin at the lower operating specification and step down 10C at a time, dwelling at each step for 10 minutes and running a functional test. Record the temperature where the product first fails functionally (lower operating limit) and the temperature where it does not recover after returning to room temperature (lower destruct limit).",
+          "Repeat for hot step stress: start at the upper operating specification and step up 10C at a time. Find the upper operating limit and upper destruct limit. The margin between the specification limit and the operating limit is the thermal design margin.",
+          "Run vibration step stress at room temperature, then at the temperature extremes found above. Start at 5 Grms and increase in 5 Grms steps, dwelling 10 minutes at each level. The combined thermal and vibration step stress almost always finds failures that neither stress alone reveals.",
+          "For each failure found, perform root cause analysis before continuing the HALT. Fix the root cause, verify the fix, and then continue stepping from where the failure occurred. The goal is to find and fix as many failure modes as possible in a short time. HALT is a qualitative test to find weaknesses, not a quantitative test to demonstrate reliability. Document every failure even if it occurs far beyond the specification, because field experience may eventually reach stress levels not originally anticipated."
+        ],
+        "tags": ["halt", "stress-testing", "design-margins", "failure-discovery"]
+      },
+      {
+        "flow_name": "hass-screen-design",
+        "description": "Design a production screening profile (HASS) that detects manufacturing defects without consuming product life, based on the design margins found in HALT.",
+        "inputs": [
+          {"name": "operating-limits", "desc": "Design margins from HALT"},
+          {"name": "vibration-limits", "desc": "Vibration margins from HALT"},
+          {"name": "failure-modes-found", "desc": "Failure modes and root causes from HALT"}
+        ],
+        "outputs": [
+          {"name": "screening-profile", "desc": "HASS profile: temperature range (within operating limits, not destruct limits), ramp rate, vibration level, number of cycles, and functional test points during screening"},
+          {"name": "proof-of-screen", "desc": "Evidence that the screen detects the target defect types without damaging good units: based on HALT margins, the screen stress is above the defect precipitation threshold but below the design destruct limit"},
+          {"name": "screen-effectiveness-measurement", "desc": "Method to measure ongoing screen effectiveness: track defect escape rate in the field, yield at screening, and whether screen-induced failures occur"}
+        ],
+        "process": [
+          "Set the HASS temperature range between the specification limits and the operating limits found in HALT. A typical screen uses 80% of the difference between the specification and the operating limit. If HALT found the upper operating limit at +95C and the specification is +70C, the HASS upper temperature might be +90C. This stresses defective units past their weakened threshold while remaining below the design margin.",
+          "Set the vibration level similarly: below the level that caused the first relevant failure in HALT, but above the level that would stress manufacturing defects (typically solder defects, connector issues, cracked components). Start at 50% of the HALT first-failure vibration level and adjust based on defect detection results.",
+          "Limit the number of thermal cycles to avoid consuming product fatigue life. Calculate the fatigue damage of the screen profile using Coffin-Manson and verify it consumes less than 2-5% of the total fatigue life. A screen that damages good product is worse than no screen.",
+          "Run a proof-of-screen by intentionally introducing known defects into sample units and verifying the HASS profile detects them. Seed defects that represent the most common manufacturing issues: cold solder joints, cracked ceramic capacitors, contamination under BGAs, loose fasteners. If the screen does not catch a seeded defect, increase the stress level or duration for that defect type."
+        ],
+        "tags": ["hass", "production-screening", "defect-detection", "manufacturing"]
+      }
+    ]
+  },
+  {
+    "chain_name": "configuration-management-method",
+    "description": "Implement configuration management for hardware systems from item identification through baseline control, change evaluation, and audit to maintain product integrity across the lifecycle.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "configuration-management", "change-control", "baseline", "audit"],
+    "steps": [
+      {
+        "flow_name": "configuration-item-identification",
+        "description": "Select which system elements become configuration items based on criteria that balance control overhead against risk of uncontrolled changes.",
+        "inputs": [
+          {"name": "system-architecture", "desc": "System decomposition showing all hardware assemblies, software components, and firmware"},
+          {"name": "program-risk-profile", "desc": "Risk areas: safety-critical elements, cross-organization interfaces, long-lead items, items with known reliability concerns"}
+        ],
+        "outputs": [
+          {"name": "ci-list", "desc": "Every configuration item with unique identifier, description, CI level (system, subsystem, unit), managing organization, and the criteria that qualified it as a CI"},
+          {"name": "ci-naming-convention", "desc": "Part numbering scheme encoding the product, variant, revision, and dash number for hardware, and the equivalent versioning scheme for software and firmware"},
+          {"name": "document-ci-list", "desc": "Configuration-controlled documents: specifications, drawings, ICDs, test procedures, with their document numbers and revision control method"}
+        ],
+        "process": [
+          "Apply CI selection criteria. An item should be a CI if it: interfaces with another organization's product, is safety-critical, is a separately deliverable end item, requires its own qualification testing, has interchangeability requirements, or is a long-lead procurement item. Not everything needs to be a CI. Over-controlling increases overhead without reducing risk.",
+          "Assign unique identifiers that encode useful information. A typical hardware part number: PPP-SSS-UUU-VVV-RR where PPP = product, SSS = subsystem, UUU = unit, VVV = variant, RR = revision. The revision field changes with every engineering change that affects form, fit, or function. A dash number tracks changes that do not affect interchangeability.",
+          "Identify software and firmware CIs separately from hardware. Software changes faster than hardware and requires its own versioning scheme (typically semantic versioning: major.minor.patch). Maintain a hardware-to-software compatibility matrix showing which software versions run on which hardware revisions.",
+          "Identify document CIs: every specification, drawing, ICD, and test procedure that defines or verifies a hardware or software CI must itself be configuration-controlled. A change to a test procedure can change whether a product passes or fails without changing the product itself."
+        ],
+        "tags": ["configuration-management", "ci-identification", "part-numbering"]
+      },
+      {
+        "flow_name": "baseline-management",
+        "description": "Establish and maintain configuration baselines at key program milestones, providing a controlled reference point for all subsequent changes.",
+        "inputs": [
+          {"name": "ci-list", "desc": "All configuration items identified"},
+          {"name": "ci-naming-convention", "desc": "Naming and versioning scheme"}
+        ],
+        "outputs": [
+          {"name": "functional-baseline", "desc": "System-level specifications approved at system design review: what the system must do (performance requirements, interface requirements)"},
+          {"name": "allocated-baseline", "desc": "Subsystem and unit specifications approved at preliminary design review: how the system will achieve the functional requirements"},
+          {"name": "product-baseline", "desc": "Detailed design documents approved at critical design review: the complete definition of the as-designed product (drawings, software source, firmware images)"}
+        ],
+        "process": [
+          "Establish the functional baseline at the system design review. This captures the top-level 'what': system performance specifications, system interface requirements, and the concept of operations. After this baseline, any change to what the system must do requires formal change control.",
+          "Establish the allocated baseline at the preliminary design review. This captures the 'how at subsystem level': subsystem specifications, interface control documents, and the allocated performance budgets. Changes below the functional baseline but above the allocated baseline are managed within the design team. Changes to the allocated baseline require a broader review.",
+          "Establish the product baseline at the critical design review. This captures the complete as-designed product: detail drawings, software source code, firmware binaries, manufacturing procedures, and test procedures. After this point, every change to the product definition goes through the change control board.",
+          "Maintain baseline traceability: every CI revision traces back to the baseline it was released against and the engineering change(s) that modified it. At any point, it must be possible to reconstruct the exact product definition at any baseline or any subsequent revision. This is the foundation for fielded-product support and failure investigation."
+        ],
+        "tags": ["configuration-management", "baselines", "milestones", "design-review"]
+      },
+      {
+        "flow_name": "change-request-evaluation",
+        "description": "Evaluate proposed engineering changes for technical impact, cost, schedule, and interchangeability, and present them to the configuration control board for disposition.",
+        "inputs": [
+          {"name": "functional-baseline", "desc": "Current functional baseline"},
+          {"name": "allocated-baseline", "desc": "Current allocated baseline"},
+          {"name": "product-baseline", "desc": "Current product baseline"}
+        ],
+        "outputs": [
+          {"name": "change-impact-analysis", "desc": "For each proposed change: affected CIs, affected baselines, interchangeability impact (Class I: form/fit/function change; Class II: no interchangeability impact), retest scope, cost, and schedule"},
+          {"name": "ccb-package", "desc": "Complete change request package for the configuration control board: problem statement, proposed solution, impact analysis, alternatives considered, recommendation"},
+          {"name": "change-disposition", "desc": "CCB decision: approve, approve with modifications, defer, or reject, with rationale and implementation instructions"}
+        ],
+        "process": [
+          "Classify the change. Class I changes affect form, fit, or function: the changed unit is not interchangeable with the unchanged unit. These require customer notification (if applicable), spare parts updates, retrofit decisions for fielded units, and updated technical manuals. Class II changes do not affect interchangeability: process improvements, documentation corrections, alternative component selections that meet the same specification.",
+          "Perform technical impact analysis. Trace the changed CI through the requirements traceability matrix and interface control documents to identify every affected element. If changing a component value on a circuit board, check: does it affect the interface to any other board? Does it change the thermal dissipation? Does it change the reliability prediction? Does it require a new revision of the schematic, layout, BOM, and assembly drawing?",
+          "Estimate cost and schedule impact. Include: engineering effort to implement the change, procurement of new materials, tooling changes, rework of existing inventory (WIP, finished goods, fielded units), requalification testing, documentation updates, and the schedule impact of each. Compare against the cost of not making the change.",
+          "Present the complete package to the CCB. The CCB includes representatives from engineering, manufacturing, quality, logistics, and program management. The recommendation should be clear: approve and implement at the next production lot, approve and retrofit all fielded units, approve for new production only, or defer to a future product upgrade."
+        ],
+        "tags": ["configuration-management", "change-control", "ccb", "interchangeability"]
+      },
+      {
+        "flow_name": "configuration-audit-execution",
+        "description": "Execute functional and physical configuration audits to verify that the product matches its documentation and that all requirements are verified.",
+        "inputs": [
+          {"name": "change-impact-analysis", "desc": "Change history and impact records"},
+          {"name": "ccb-package", "desc": "CCB decisions and implementation records"}
+        ],
+        "outputs": [
+          {"name": "functional-audit-results", "desc": "Verification that every requirement in the functional and allocated baselines has been tested and the results documented, with all discrepancies resolved"},
+          {"name": "physical-audit-results", "desc": "Verification that the as-built product matches the as-designed documentation: every component on the board matches the BOM, every software module matches the released version, every drawing reflects the actual product"},
+          {"name": "audit-discrepancy-list", "desc": "Every discrepancy found, classified as documentation error (update the docs) or product nonconformance (fix the product), with resolution status"}
+        ],
+        "process": [
+          "Conduct the functional configuration audit (FCA) by reviewing the verification cross-reference matrix. For every requirement in the baseline, confirm that a test or analysis exists, that it was executed, and that the result meets the requirement. Flag any requirement that was not verified, verified with a deviation, or verified with an open discrepancy.",
+          "Conduct the physical configuration audit (PCA) by comparing the as-built product to its released documentation. For hardware: verify the BOM against the actual board (every component matches part number, value, and revision). For software: verify the build matches the released source code and configuration (reproducible build). For firmware: verify the programmed image matches the released binary.",
+          "For each discrepancy, determine whether the documentation is wrong (the product is correct but the drawing needs updating) or the product is wrong (the product was built or configured incorrectly). Documentation errors are corrected by engineering change. Product nonconformances go through the material review board (MRB) for disposition: use as is, rework, repair, scrap, or return to vendor.",
+          "Close the audit by confirming all discrepancies are resolved and the product baseline accurately reflects the product being delivered. The audit is the gate between development and production: passing it means the product definition is complete and controlled."
+        ],
+        "tags": ["configuration-management", "audit", "fca", "pca", "verification"]
+      }
+    ]
+  },
+  {
+    "chain_name": "trade-study-methodology",
+    "description": "Conduct a structured trade study from alternative generation through weighted evaluation to sensitivity analysis, producing a defensible, traceable design decision.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "trade-study", "decision-analysis", "ahp", "pugh-matrix"],
+    "steps": [
+      {
+        "flow_name": "trade-study-alternative-generation",
+        "description": "Generate a broad set of candidate solutions using morphological analysis to ensure the trade study does not prematurely converge on a narrow set of options.",
+        "inputs": [
+          {"name": "design-problem", "desc": "The design decision to be made, stated as a function to be achieved with specific performance requirements"},
+          {"name": "constraints", "desc": "Hard constraints that any acceptable solution must satisfy: regulatory, physical, interface, cost ceiling"}
+        ],
+        "outputs": [
+          {"name": "morphological-chart", "desc": "Function decomposition into sub-functions, with multiple implementation options for each sub-function. Combinations of options across sub-functions generate candidate architectures."},
+          {"name": "candidate-list", "desc": "3 to 7 candidate solutions, each described at sufficient detail to evaluate against the criteria, with infeasible combinations eliminated"},
+          {"name": "pugh-matrix-results", "desc": "Quick screening using a Pugh matrix (one candidate as baseline, others rated better/same/worse on each criterion) to reduce candidates to the most promising 3 to 5 for detailed evaluation"}
+        ],
+        "process": [
+          "Decompose the design function into independent sub-functions. For a power supply: voltage conversion, regulation, protection, thermal management, monitoring. For each sub-function, list at least 3 implementation options independent of the others. This is the morphological chart.",
+          "Generate candidate solutions by selecting one option per sub-function. Not all combinations are feasible (e.g., a topology that requires magnetic isolation is incompatible with a non-isolated thermal management approach). Eliminate physically impossible combinations and retain 5 to 10 candidates.",
+          "Run a Pugh matrix as a quick screen. Select one candidate as the baseline (usually the most conventional option). Rate every other candidate against the baseline on each evaluation criterion as better (+), same (S), or worse (-). Candidates with mostly worse ratings are eliminated. This reduces the field to 3 to 5 for detailed analysis.",
+          "Resist the temptation to start the trade study with only 2 candidates. Two-candidate studies degenerate into advocacy battles. The morphological approach forces consideration of architectures the team would not otherwise conceive."
+        ],
+        "tags": ["trade-study", "morphological", "pugh-matrix", "alternatives"]
+      },
+      {
+        "flow_name": "trade-study-criteria-and-weighting",
+        "description": "Define evaluation criteria and assign weights using the Analytic Hierarchy Process or swing weight method to make value judgments explicit and traceable.",
+        "inputs": [
+          {"name": "candidate-list", "desc": "Screened candidate solutions"},
+          {"name": "pugh-matrix-results", "desc": "Quick screening results"}
+        ],
+        "outputs": [
+          {"name": "evaluation-criteria", "desc": "Complete list of criteria (performance, cost, schedule, risk, manufacturability, maintainability, growth potential) with definitions precise enough that two evaluators would assess the same candidate the same way"},
+          {"name": "criteria-weights", "desc": "Normalized weights (summing to 1.0) derived from AHP pairwise comparison or swing weight method, with consistency check"},
+          {"name": "scoring-scales", "desc": "For each criterion, a 1 to 5 or 1 to 10 scale with anchored descriptions at each level (not just 'good' to 'bad,' but specific technical thresholds)"}
+        ],
+        "process": [
+          "Define criteria from the requirements and stakeholder priorities. Typical categories: technical performance, cost (development + production + lifecycle), schedule risk, manufacturing complexity, reliability/maintainability, and growth potential. Each criterion must be independent (no double-counting: if reliability is a criterion, do not also have 'quality' as a separate criterion covering the same ground).",
+          "Assign weights using the Analytic Hierarchy Process: compare every pair of criteria and rate which is more important on a 1-9 scale (1 = equally important, 3 = moderately more important, 5 = strongly more important, 9 = extremely more important). Construct the pairwise comparison matrix, compute the principal eigenvector for weights, and check consistency (CI/RI < 0.10).",
+          "Alternative: use swing weight method. Imagine the worst score on every criterion. Now imagine improving one criterion from worst to best. Which improvement matters most? That criterion gets the highest weight. Continue ranking improvements to derive weights. This is faster than AHP and avoids the consistency problem.",
+          "Define anchored scoring scales. For a cost criterion: 1 = over $500, 2 = $300-$500, 3 = $150-$300, 4 = $75-$150, 5 = under $75. For a reliability criterion: 1 = MTBF below 5,000 hours, 3 = 10,000-20,000, 5 = above 50,000. Anchoring prevents score compression where everything gets a 3 or 4."
+        ],
+        "tags": ["trade-study", "criteria", "ahp", "weighting", "scoring"]
+      },
+      {
+        "flow_name": "trade-study-scoring-and-ranking",
+        "description": "Score each candidate against the criteria using independent evaluators, compute weighted scores, and identify the recommended alternative.",
+        "inputs": [
+          {"name": "evaluation-criteria", "desc": "Defined criteria with precise definitions"},
+          {"name": "criteria-weights", "desc": "Normalized weights"},
+          {"name": "scoring-scales", "desc": "Anchored scales for each criterion"},
+          {"name": "candidate-list", "desc": "Candidates to evaluate"}
+        ],
+        "outputs": [
+          {"name": "score-matrix", "desc": "Each candidate scored on each criterion by each evaluator, with the scoring rationale documented"},
+          {"name": "weighted-rankings", "desc": "Weighted sum for each candidate, ranked from highest to lowest, with the score breakdown showing which criteria drove the ranking"},
+          {"name": "consensus-scores", "desc": "Where evaluators disagreed by more than 2 points, the resolution discussion and agreed score"}
+        ],
+        "process": [
+          "Have each evaluator score candidates independently before any group discussion. This prevents anchoring to the first opinion voiced. Each evaluator sees the same candidate data package and uses the same anchored scales. Record individual scores.",
+          "Score criteria first, then candidates. Score all candidates on criterion 1 before moving to criterion 2. This prevents the halo effect where a generally preferred candidate gets inflated scores on every criterion. The order criterion-then-candidate is the single most effective bias mitigation.",
+          "Compute the weighted score for each candidate: sum of (weight_i * score_i) across all criteria. Rank candidates by weighted score. Examine the score breakdown: a candidate that wins overall but scores poorly on a high-weight criterion may not be the right choice if that criterion represents a safety or regulatory requirement.",
+          "Resolve scoring disagreements. Where evaluators differ by more than 2 points on the same criterion, discuss the evidence each used. The goal is not to average the scores but to identify whether the disagreement reflects different information (one evaluator has data the other does not) or different judgment (legitimate difference in interpretation). Document the resolution."
+        ],
+        "tags": ["trade-study", "scoring", "evaluation", "ranking", "bias-mitigation"]
+      },
+      {
+        "flow_name": "trade-study-sensitivity-and-documentation",
+        "description": "Test the robustness of the recommendation by varying weights and scores, then document the decision for traceability.",
+        "inputs": [
+          {"name": "weighted-rankings", "desc": "Candidate rankings"},
+          {"name": "score-matrix", "desc": "All scores with rationale"},
+          {"name": "criteria-weights", "desc": "Weights used"}
+        ],
+        "outputs": [
+          {"name": "sensitivity-results", "desc": "Tornado chart showing how much each criterion weight must change to reverse the recommendation. Monte Carlo results showing the probability that the recommended alternative remains best under weight and score uncertainty."},
+          {"name": "trade-study-report", "desc": "Complete documentation: problem statement, alternatives considered, criteria and weights with rationale, scores with evidence, sensitivity analysis, recommendation with rationale, and dissenting opinions"},
+          {"name": "decision-record", "desc": "One-page summary: what was decided, why, what alternatives were rejected, and under what conditions the decision should be revisited"}
+        ],
+        "process": [
+          "Run one-at-a-time sensitivity: for each criterion, vary the weight from 0 to its maximum and plot how the ranking changes. Identify the crossover point where the runner-up overtakes the winner. If the crossover requires only a small weight change (e.g., less than 10% of the total weight), the decision is sensitive to that criterion and merits extra scrutiny.",
+          "Run Monte Carlo sensitivity: assign distributions to weights (e.g., +/- 20% of nominal) and scores (e.g., +/- 1 point). Run 10,000 trials. Report the percentage of trials where each candidate wins. If the recommended alternative wins in more than 70% of trials, the decision is solid. Below 50%, the result is too close to call and additional data is needed.",
+          "Document the complete trade study. Future engineers will revisit this decision when requirements change. They need to understand not just what was decided but why, what alternatives were considered, and what would have to change for a different alternative to be preferred. Include dissenting opinions: if an evaluator disagreed with the recommendation, document their reasoning.",
+          "Write the decision record as a one-page summary for management and downstream teams who need to know the outcome without reading the full study. State the decision, the two strongest reasons supporting it, the main risk of the decision, and the trigger conditions that should cause the team to revisit it (e.g., if the cost of component X increases by more than 30%)."
+        ],
+        "tags": ["trade-study", "sensitivity", "documentation", "decision-record"]
+      }
+    ]
+  },
+  {
+    "chain_name": "verification-validation-methodology",
+    "description": "Plan and execute system verification and validation following the V-model, from test procedure development through execution to anomaly resolution, distinguishing between proving the build and proving the design.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "verification", "validation", "v-model", "testing"],
+    "steps": [
+      {
+        "flow_name": "verification-planning",
+        "description": "Create the verification plan mapping each requirement to its verification method, level, and event using the V-model structure.",
+        "inputs": [
+          {"name": "requirements-set", "desc": "Complete set of system, subsystem, and component requirements with traceability"},
+          {"name": "system-architecture", "desc": "Architecture showing test access points, built-in test capabilities, and integration sequence"}
+        ],
+        "outputs": [
+          {"name": "verification-cross-reference-matrix", "desc": "Each requirement mapped to: verification method (test, analysis, inspection, demonstration), verification level (component, subsystem, system, operational), and the specific test or analysis that verifies it"},
+          {"name": "test-architecture", "desc": "How the test environment is structured at each level: what is real hardware, what is simulated, what instrumentation is needed, and what the test environment fidelity is relative to the operational environment"},
+          {"name": "verification-schedule", "desc": "When each verification event occurs in the program schedule, with predecessor dependencies (component tests complete before subsystem integration)"}
+        ],
+        "process": [
+          "Assign a verification method to every requirement. Test: measure actual performance under controlled conditions. Analysis: calculate or simulate when testing is impractical or uneconomical (e.g., lifetime reliability, radiation hardness). Inspection: verify physical characteristics by examination (dimensions, labels, workmanship). Demonstration: operate the system and observe that it performs the required function (less rigorous than test, suitable for qualitative requirements).",
+          "Assign a verification level using the V-model. Component-level verification catches issues earliest and cheapest. Subsystem-level catches integration issues. System-level catches end-to-end issues. Operational-level catches environment and user-interaction issues. Verify at the lowest level possible: a voltage accuracy requirement is verified at the component bench, not at system integration.",
+          "Define the test environment fidelity at each level. At component bench, only the unit under test is real; everything else is test equipment. At subsystem integration, neighboring subsystems may be real or simulated. Document what is simulated and the fidelity of the simulation relative to the real system. Low-fidelity simulations can mask integration problems.",
+          "Build the verification schedule from the bottom up. Component tests complete before subsystem integration begins. Subsystem tests complete before system integration. System tests complete before operational testing. Include buffer time for anomaly investigation: historically, 20 to 30% of test time is consumed by anomaly resolution."
+        ],
+        "tags": ["verification", "v-model", "planning", "test-architecture"]
+      },
+      {
+        "flow_name": "test-procedure-development",
+        "description": "Develop test procedures that are repeatable, measurable, and traceable to requirements, with explicit pass/fail criteria and measurement uncertainty accounted for.",
+        "inputs": [
+          {"name": "verification-cross-reference-matrix", "desc": "Requirements to test mapping"},
+          {"name": "test-architecture", "desc": "Test environment definitions"}
+        ],
+        "outputs": [
+          {"name": "test-procedures", "desc": "Step-by-step procedures for each verification event: setup, preconditions, step sequence, measurements, pass/fail criteria with tolerances, data recording requirements, and teardown"},
+          {"name": "measurement-uncertainty-analysis", "desc": "For each quantitative measurement: instrument accuracy, calibration status, measurement technique uncertainty, and the test tolerance accounting for measurement uncertainty (guardband)"},
+          {"name": "test-readiness-checklist", "desc": "Conditions that must be true before test execution: calibration current, test fixture verified, test article configuration confirmed, environmental conditions within limits, personnel qualified"}
+        ],
+        "process": [
+          "Write each test step so that two different test engineers would execute it identically and obtain the same result within measurement uncertainty. Avoid ambiguous instructions like 'adjust until satisfactory.' Specify exact settings, wait times, measurement points, and acceptance thresholds.",
+          "Account for measurement uncertainty in pass/fail criteria. If the requirement is 'output voltage shall be 5.0V +/- 0.1V' and the measurement system has +/- 0.02V uncertainty, the test pass band should be 4.92V to 5.08V (guard-banded inward by the measurement uncertainty). This prevents accepting a product that might actually be out of specification.",
+          "Include acceptance criteria for the test itself (not just the product). The test is valid only if: environmental conditions were within specified ranges during the test, all instruments were within their calibration period, the test fixture was verified within its calibration interval, and no deviations from the procedure occurred. Invalid test results must be discarded and the test re-run.",
+          "Define the data package required from each test: raw measurements, calculated results, pass/fail status for each requirement, anomaly reports for any failures or deviations, environmental conditions during the test, and the configuration of the test article (serial number, hardware revision, software version). This package is the evidence that the requirement was verified."
+        ],
+        "tags": ["verification", "test-procedures", "measurement-uncertainty", "pass-fail"]
+      },
+      {
+        "flow_name": "test-execution-and-anomaly-resolution",
+        "description": "Execute verification tests, handle anomalies through structured investigation, and determine retest scope after anomaly resolution.",
+        "inputs": [
+          {"name": "test-procedures", "desc": "Approved test procedures"},
+          {"name": "measurement-uncertainty-analysis", "desc": "Measurement uncertainty budgets"},
+          {"name": "test-readiness-checklist", "desc": "Pre-test conditions"}
+        ],
+        "outputs": [
+          {"name": "test-results", "desc": "Complete test data package with pass/fail status for each requirement, signed by the test engineer and witnessed by quality"},
+          {"name": "anomaly-reports", "desc": "For each failure or anomaly: detailed description, conditions at time of occurrence, immediate containment action, root cause investigation results, corrective action, and retest plan"},
+          {"name": "retest-scope", "desc": "After each anomaly resolution, the minimum set of tests that must be re-run to verify the fix without regressing other capabilities"}
+        ],
+        "process": [
+          "Execute the test procedure step by step, recording all data in real time. Do not go back and fill in data from memory. If a step cannot be executed as written, stop and process a procedure deviation. Deviations may invalidate the test depending on their nature.",
+          "When a failure occurs, stop the test sequence and contain the anomaly. Record everything: what was measured, what was expected, the exact conditions (temperature, input stimulus, time into test), and any unusual observations (noise, smell, visual). Do not attempt to 'fix it and continue' without formal anomaly disposition.",
+          "Investigate the root cause using the 5-why method or fault tree analysis. The root cause must explain the observed failure completely. If the root cause is 'component X failed,' ask why it failed: was it overstressed, was it a manufacturing defect, was it a design margin issue? The corrective action must address the root cause, not the symptom.",
+          "Determine retest scope after the corrective action is implemented. If the fix changes only the failed function, retest only that function and any function that shares the changed hardware or software. If the fix changes a component that affects multiple functions (e.g., a power supply component), retest all functions that depend on that component. Err on the side of more retest rather than less."
+        ],
+        "tags": ["verification", "test-execution", "anomaly", "root-cause", "retest"]
+      },
+      {
+        "flow_name": "validation-through-operational-scenarios",
+        "description": "Validate the system by operating it in representative scenarios to confirm it meets the stakeholder needs, distinct from verification which confirms it meets the written requirements.",
+        "inputs": [
+          {"name": "test-results", "desc": "Completed verification results"},
+          {"name": "anomaly-reports", "desc": "Resolved anomaly records"}
+        ],
+        "outputs": [
+          {"name": "validation-results", "desc": "For each operational scenario: whether the system met the stakeholder's actual need (not just the written requirement), user feedback, and any gaps between what was specified and what was needed"},
+          {"name": "requirements-gaps", "desc": "Requirements that were met (verified) but did not actually satisfy the need, and needs that have no corresponding requirement"},
+          {"name": "acceptance-recommendation", "desc": "Recommendation to accept the system, accept with conditions, or reject, based on the combined verification and validation evidence"}
+        ],
+        "process": [
+          "Distinguish validation from verification. Verification asks: 'Did we build the product right?' (does it meet the specification). Validation asks: 'Did we build the right product?' (does it meet the need). A product can pass every verification test and still fail validation if the requirements did not capture the real need.",
+          "Execute operational scenarios from the concept of operations. Use real or representative users in realistic environments. Observe how they interact with the system, not just whether the system performs to specification. Note workarounds, confusions, and unintended use patterns. These are validation findings even if no requirement is technically violated.",
+          "Identify requirements gaps: needs that were not captured in requirements (and therefore not verified) but are clearly important when the system is used in context. Also identify over-specified requirements: cases where the written requirement was stricter than necessary and drove unnecessary cost or complexity.",
+          "Compile the acceptance recommendation. Acceptance does not require zero deficiencies. It requires that all safety and mission-critical requirements are verified, all significant operational scenarios are validated, and any open deficiencies have an acceptable mitigation plan. Document the residual risks accepted by the decision authority."
+        ],
+        "tags": ["validation", "operational-testing", "user-feedback", "acceptance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "safety-analysis-methodology",
+    "description": "Execute a system safety analysis from preliminary hazard identification through safety integrity level determination to safety case construction, supporting aerospace (ARP4761), automotive (ISO 26262), and industrial (IEC 61508) frameworks.",
+    "domain": "hardware",
+    "tags": ["systems-engineering", "safety", "hazard-analysis", "sil", "safety-case"],
+    "steps": [
+      {
+        "flow_name": "preliminary-hazard-analysis",
+        "description": "Identify system-level hazards, assess their severity, and establish the safety requirements that the design must satisfy.",
+        "inputs": [
+          {"name": "system-description", "desc": "Functional description and concept of operations"},
+          {"name": "safety-standard", "desc": "Applicable safety standard: ARP4754A/ARP4761 (aerospace), ISO 26262 (automotive), IEC 61508 (general), DO-178C (software), or MIL-STD-882 (defense)"}
+        ],
+        "outputs": [
+          {"name": "hazard-list", "desc": "Every identified hazard with description, causal factors, affected population, and severity classification per the applicable standard"},
+          {"name": "safety-requirements", "desc": "Design requirements derived from each hazard: what the system must do (or must not do) to prevent or mitigate the hazard"},
+          {"name": "hazard-tracking-log", "desc": "Living document tracking each hazard through analysis, mitigation, verification, and residual risk acceptance"}
+        ],
+        "process": [
+          "Identify hazards by systematic methods: brainstorming with domain experts, checklist-based analysis from prior similar systems, HAZOP (deviation analysis: what if the output is too high, too low, absent, intermittent, untimely), and energy-based analysis (identify all energy sources that could cause harm if uncontrolled).",
+          "Classify each hazard severity per the applicable standard. ARP4761: Catastrophic (loss of aircraft), Hazardous (large reduction in safety margins), Major (significant reduction), Minor (nuisance), No Safety Effect. ISO 26262: S3 (life-threatening, survival uncertain), S2 (life-threatening, survival probable), S1 (light to moderate injuries), S0 (no injuries). IEC 61508: uses consequence categories tied to the specific application.",
+          "For each hazard, derive safety requirements. These are 'shall not' or 'shall limit' requirements: 'The system shall not produce output exceeding X under any single failure condition.' Safety requirements are non-negotiable and cannot be traded against performance or cost. They are verified with the same rigor as functional requirements but with additional independence (IV&V).",
+          "Establish the hazard tracking log as a living document. Each hazard entry includes: ID, description, severity, causal factors, safety requirements derived, design mitigations applied, verification evidence, residual risk, and acceptance authority. The log is reviewed at every design review and updated whenever the design changes."
+        ],
+        "tags": ["safety", "hazard-analysis", "pha", "severity-classification"]
+      },
+      {
+        "flow_name": "safety-integrity-level-determination",
+        "description": "Determine the required safety integrity level for each safety function based on hazard severity, exposure, and controllability using the applicable standard's method.",
+        "inputs": [
+          {"name": "hazard-list", "desc": "Classified hazards"},
+          {"name": "safety-requirements", "desc": "Safety requirements for each hazard"}
+        ],
+        "outputs": [
+          {"name": "safety-functions", "desc": "Each safety function defined: what it does, what hazard it mitigates, its required performance (response time, reliability), and its independence from the function it monitors"},
+          {"name": "integrity-levels", "desc": "SIL (IEC 61508: SIL 1 to SIL 4), ASIL (ISO 26262: ASIL A to ASIL D), or DAL (ARP4754A: DAL A to DAL E) assigned to each safety function, with the derivation showing severity, exposure, and controllability inputs"},
+          {"name": "target-failure-rates", "desc": "Maximum allowable dangerous failure rate for each safety function at its integrity level: SIL 1 = 1E-5 to 1E-6 per hour, SIL 2 = 1E-6 to 1E-7, SIL 3 = 1E-7 to 1E-8, SIL 4 = 1E-8 to 1E-9"}
+        ],
+        "process": [
+          "Define safety functions: a safety function is a specific function that prevents or mitigates a hazard. It is not the entire system. 'Emergency braking' is a safety function. 'Brake system' is a subsystem that may contain multiple safety functions and non-safety functions.",
+          "For ISO 26262, determine ASIL using the three-factor method: Severity (S0-S3, from the PHA), Exposure (E1-E4: E1 = very low probability of operating scenario, E4 = high probability), and Controllability (C1-C3: C1 = simply controllable, C3 = difficult to control). The combination table yields ASIL A through D or QM (quality management, no safety integrity requirement).",
+          "For IEC 61508, determine SIL using risk graphs or LOPA (Layers of Protection Analysis). The risk graph considers consequence severity, frequency of exposure, avoidance possibility, and demand rate. LOPA is more quantitative: start with the unmitigated event frequency, subtract the risk reduction from each independent protection layer, and verify the residual risk meets the tolerable risk target.",
+          "Map the integrity level to design requirements. Higher SIL/ASIL requires: more rigorous development process (V-model at all levels), higher diagnostic coverage (the fraction of dangerous failures detected by self-test), architectural constraints (redundancy at SIL 3 and above), and independent assessment. The integrity level drives the engineering effort and must be determined early."
+        ],
+        "tags": ["safety", "sil", "asil", "dal", "integrity-level"]
+      },
+      {
+        "flow_name": "diagnostic-coverage-calculation",
+        "description": "Calculate the diagnostic coverage of the safety system's self-test mechanisms and verify that the architecture meets the target dangerous failure rate.",
+        "inputs": [
+          {"name": "safety-functions", "desc": "Defined safety functions"},
+          {"name": "integrity-levels", "desc": "SIL/ASIL assignments"},
+          {"name": "target-failure-rates", "desc": "Maximum dangerous failure rates"}
+        ],
+        "outputs": [
+          {"name": "failure-mode-classification", "desc": "Each component failure mode classified as: safe (system goes to safe state), dangerous detected (self-test catches it), dangerous undetected (self-test misses it), or no effect"},
+          {"name": "diagnostic-coverage-ratio", "desc": "DC = (dangerous detected) / (dangerous detected + dangerous undetected) for each safety function, compared against the SIL requirement (SIL 2 requires DC >= 60%, SIL 3 >= 90%)"},
+          {"name": "proof-test-interval", "desc": "The required interval between comprehensive tests that can detect the dangerous undetected failures, calculated from the SIL target and the lambda_DU rate"}
+        ],
+        "process": [
+          "Classify every failure mode of every component in the safety function. For each failure mode, determine: does it cause the safety function to fail dangerously (output wrong when needed)? If so, is the failure detected by any automatic diagnostic (watchdog, comparator, self-test, redundancy check)? If detected, it is dangerous detected (DD). If not, it is dangerous undetected (DU).",
+          "Calculate the diagnostic coverage ratio: DC = lambda_DD / (lambda_DD + lambda_DU). Compare against the architectural constraints from the standard. IEC 61508 Type A (simple) subsystem at SIL 2 with 1oo1D architecture requires DC >= 60%. SIL 3 with 1oo2D requires DC >= 90%. If DC is insufficient, add diagnostics or change the architecture.",
+          "For dangerous undetected failures, calculate the required proof test interval. The probability of failure on demand (PFD) for a single channel with proof test interval T is approximately PFD = lambda_DU * T / 2. For the system to meet SIL 2 (PFD < 1E-2), the proof test interval must be T < 2 * PFD_target / lambda_DU. If the required interval is shorter than operationally practical, add diagnostics to convert DU failures to DD.",
+          "Account for common cause failures between redundant channels. For a 1oo2 architecture, the PFD including common cause is PFD = beta * lambda_DU * T / 2 + (1-beta)^2 * (lambda_DU * T)^2 / 3. The common cause beta factor often dominates the PFD for high-SIL systems, meaning that adding more redundancy has diminishing returns without addressing common cause."
+        ],
+        "tags": ["safety", "diagnostics", "coverage", "proof-test", "pfd"]
+      },
+      {
+        "flow_name": "safety-case-construction",
+        "description": "Build the safety case as a structured argument that the system is acceptably safe, using goal structuring notation to link claims to evidence.",
+        "inputs": [
+          {"name": "diagnostic-coverage-ratio", "desc": "DC calculations for all safety functions"},
+          {"name": "failure-mode-classification", "desc": "Classified failure modes"},
+          {"name": "proof-test-interval", "desc": "Required proof test intervals"}
+        ],
+        "outputs": [
+          {"name": "safety-case-structure", "desc": "Goal Structuring Notation (GSN) diagram: top goal (system is acceptably safe), sub-goals (each hazard mitigated to acceptable level), strategies (how sub-goals are argued), solutions (the evidence: test results, analyses, field data)"},
+          {"name": "evidence-index", "desc": "Every piece of evidence referenced in the safety case: test reports, analysis reports, design documents, process certifications, field data, with location and revision"},
+          {"name": "residual-risk-register", "desc": "Every residual risk after mitigation, with its probability and severity, the risk acceptance rationale, and the authority that accepted it"}
+        ],
+        "process": [
+          "Define the top claim: 'System X is acceptably safe for its intended use in environment Y.' This is the goal the entire safety case must support. 'Acceptably safe' means residual risk is below the tolerable risk threshold defined by the applicable standard or regulations.",
+          "Decompose the top claim using strategies. Strategy 1: argue over each identified hazard (show that each hazard is mitigated to an acceptable level). Strategy 2: argue over the development process (show that the process was rigorous enough for the integrity level). Strategy 3: argue over operational constraints (show that the operational procedures maintain safety). Each strategy decomposes into sub-goals.",
+          "Link each leaf-level goal to evidence. A claim like 'braking force meets the minimum threshold under single-fault conditions' must be supported by: the test report showing the measured braking force during the single-fault test, the test procedure traceability to the requirement, and the fault injection method used. Evidence must be objective and reproducible.",
+          "Identify and document assumptions and limitations. The safety case is valid under the stated assumptions (operating environment, maintenance schedule, user training). If any assumption is violated, the safety argument may not hold. List every assumption explicitly and assign monitoring responsibility to ensure they remain valid in operation."
+        ],
+        "tags": ["safety", "safety-case", "gsn", "evidence", "residual-risk"]
+      },
+      {
+        "flow_name": "common-cause-avoidance-techniques",
+        "description": "Apply systematic techniques to prevent common cause failures from defeating redundancy in safety-critical architectures.",
+        "inputs": [
+          {"name": "safety-case-structure", "desc": "Current safety case"},
+          {"name": "residual-risk-register", "desc": "Known residual risks"}
+        ],
+        "outputs": [
+          {"name": "independence-analysis", "desc": "For each redundant pair: physical separation, electrical isolation, software diversity, manufacturing lot diversity, and maintenance staggering assessment"},
+          {"name": "common-cause-defense-score", "desc": "Scoring against IEC 61508 Annex D or equivalent: separation/segregation, diversity, complexity, assessment, competence, environmental testing, and environmental control, with an overall beta factor estimate"},
+          {"name": "updated-residual-risks", "desc": "Residual risk register updated with common cause mitigation evidence and revised PFD calculations"}
+        ],
+        "process": [
+          "Assess physical independence: are redundant channels in separate enclosures, on separate boards, powered from separate sources, routed through separate connectors? Physical proximity is the most common source of common cause: a single overvoltage event, a single thermal excursion, or a single mechanical impact can defeat both channels simultaneously.",
+          "Assess design diversity: are redundant channels implemented with different hardware (different IC families, different sensor technologies), different software (different algorithms, different compilers, different operating systems), and different design teams? Full diversity is expensive but dramatically reduces beta. Partial diversity (same hardware, different software) provides moderate common cause reduction.",
+          "Score the common cause defenses against IEC 61508 Annex D scoring system. Each defense category (separation, diversity, complexity management, assessment, competence, environmental testing, environmental control) receives a score from 0 to 3. The total score maps to a beta factor: score 165+ gives beta = 0.5%, score 130-165 gives beta = 1%, lower scores give higher beta values.",
+          "Recalculate the PFD with the revised beta factor and verify the safety integrity target is still met. If not, the options are: add diversity (expensive but effective), add diagnostics to detect common cause conditions before they propagate (moderate cost), or add a third channel to provide voting (expensive and complex). Document the chosen approach and its justification in the safety case."
+        ],
+        "tags": ["safety", "common-cause", "diversity", "independence", "beta-factor"]
+      }
+    ]
+  }
+]
