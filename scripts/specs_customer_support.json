@@ -1,0 +1,474 @@
+[
+  {
+    "chain_name": "ticket-triage-workflow",
+    "description": "Triage incoming support tickets by category, severity, and routing.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "triage"],
+    "steps": [
+      {
+        "flow_name": "ticket-classifier",
+        "description": "Classify incoming tickets by category and subcategory.",
+        "inputs": [{"name": "ticket-queue", "desc": "Incoming unclassified tickets"}, {"name": "category-definitions", "desc": "Supported categories (bug, feature request, billing, how-to)"}],
+        "outputs": [{"name": "classified-tickets", "desc": "Tickets tagged with category and subcategory"}, {"name": "classification-confidence", "desc": "Confidence scores for each classification"}],
+        "process": ["Read each ticket subject and body.", "Match against category definitions using keyword and intent analysis.", "Assign category, subcategory, and confidence score.", "Flag low-confidence tickets for manual review."],
+        "tags": ["customer-support", "triage"]
+      },
+      {
+        "flow_name": "severity-assessor",
+        "description": "Assess severity and business impact of each ticket.",
+        "inputs": [{"name": "classified-tickets", "desc": "Tickets with categories assigned"}, {"name": "severity-matrix", "desc": "Severity levels and their criteria"}],
+        "outputs": [{"name": "scored-tickets", "desc": "Tickets with severity and impact scores"}, {"name": "critical-alerts", "desc": "Tickets flagged as critical for immediate attention"}],
+        "process": ["Evaluate each ticket against the severity matrix.", "Score impact based on number of users affected and business function.", "Flag critical tickets for immediate escalation.", "Attach severity and impact scores to each ticket."],
+        "tags": ["customer-support", "triage"]
+      },
+      {
+        "flow_name": "ticket-router",
+        "description": "Route tickets to the correct team or support tier.",
+        "inputs": [{"name": "scored-tickets", "desc": "Tickets with category and severity"}, {"name": "routing-rules", "desc": "Rules mapping categories and severities to teams"}],
+        "outputs": [{"name": "routed-tickets", "desc": "Tickets assigned to teams with SLA timers"}, {"name": "routing-exceptions", "desc": "Tickets that could not be auto-routed"}],
+        "process": ["Apply routing rules based on category, severity, and customer tier.", "Set SLA response and resolution timers per the SLA policy.", "Assign to the team queue with the shortest wait time.", "Log routing exceptions for manual assignment."],
+        "tags": ["customer-support", "triage"]
+      },
+      {
+        "flow_name": "ticket-acknowledgment-sender",
+        "description": "Send acknowledgment messages to customers with expected response times.",
+        "inputs": [{"name": "routed-tickets", "desc": "Tickets with team assignments and SLA timers"}, {"name": "acknowledgment-templates", "desc": "Message templates by category"}],
+        "outputs": [{"name": "acknowledged-tickets", "desc": "Tickets with acknowledgment sent"}, {"name": "acknowledgment-log", "desc": "Record of all acknowledgments sent"}],
+        "process": ["Select the acknowledgment template matching the ticket category.", "Insert the expected response time from the SLA timer.", "Send the acknowledgment to the customer.", "Log the acknowledgment timestamp."],
+        "tags": ["customer-support", "triage"]
+      },
+      {
+        "flow_name": "triage-queue-reporter",
+        "description": "Produce the triaged ticket queue report with distribution metrics.",
+        "inputs": [{"name": "acknowledged-tickets", "desc": "Fully triaged and acknowledged tickets"}, {"name": "routing-exceptions", "desc": "Tickets requiring manual routing"}],
+        "outputs": [{"name": "triage-report", "desc": "Summary of triaged tickets by category, severity, and team"}, {"name": "exception-list", "desc": "List of unrouted tickets needing attention"}],
+        "process": ["Count tickets by category, severity, and assigned team.", "Calculate average triage time.", "List all routing exceptions with reasons.", "Produce the triage queue report."],
+        "tags": ["customer-support", "triage"]
+      }
+    ]
+  },
+  {
+    "chain_name": "escalation-management",
+    "description": "Manage ticket escalations from trigger identification through resolution and review.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "escalation"],
+    "steps": [
+      {
+        "flow_name": "escalation-trigger-detector",
+        "description": "Detect tickets that meet escalation criteria.",
+        "inputs": [{"name": "ticket-queue", "desc": "Active tickets with status and history"}, {"name": "escalation-policy", "desc": "Triggers for escalation (SLA breach, sentiment, repeat contact)"}],
+        "outputs": [{"name": "escalation-candidates", "desc": "Tickets meeting escalation criteria"}, {"name": "trigger-reasons", "desc": "Why each ticket was flagged for escalation"}],
+        "process": ["Scan active tickets for SLA breach or approaching breach.", "Analyze customer sentiment in recent messages.", "Identify repeat contacts on the same issue.", "Flag tickets meeting any escalation trigger."],
+        "tags": ["customer-support", "escalation"]
+      },
+      {
+        "flow_name": "escalation-router",
+        "description": "Route escalated tickets to the appropriate tier with a briefing.",
+        "inputs": [{"name": "escalation-candidates", "desc": "Tickets flagged for escalation"}, {"name": "trigger-reasons", "desc": "Reasons for each escalation"}],
+        "outputs": [{"name": "escalated-tickets", "desc": "Tickets assigned to higher-tier agents"}, {"name": "escalation-briefs", "desc": "Context briefs for receiving agents"}],
+        "process": ["Determine the target tier based on escalation type.", "Compile the ticket history into a brief for the receiving agent.", "Assign the ticket to the target tier queue.", "Notify the receiving agent with the brief."],
+        "tags": ["customer-support", "escalation"]
+      },
+      {
+        "flow_name": "escalation-resolution-tracker",
+        "description": "Track escalation progress and communicate updates to the customer.",
+        "inputs": [{"name": "escalated-tickets", "desc": "Tickets in escalation"}, {"name": "escalation-briefs", "desc": "Briefs provided to handling agents"}],
+        "outputs": [{"name": "resolution-log", "desc": "Record of actions taken and resolution details"}, {"name": "customer-updates", "desc": "Updates sent to the customer during escalation"}],
+        "process": ["Monitor each escalated ticket for progress updates.", "Send periodic status updates to the customer.", "Record all actions taken by the handling agent.", "Close the escalation when the issue is resolved."],
+        "tags": ["customer-support", "escalation"]
+      },
+      {
+        "flow_name": "escalation-review-analyst",
+        "description": "Review completed escalations to identify patterns and improvements.",
+        "inputs": [{"name": "resolution-log", "desc": "Record of escalation resolutions"}, {"name": "customer-updates", "desc": "Communication history during escalation"}],
+        "outputs": [{"name": "escalation-report", "desc": "Analysis of escalation patterns and root causes"}, {"name": "improvement-recommendations", "desc": "Suggested changes to reduce future escalations"}],
+        "process": ["Categorize escalations by root cause.", "Calculate average resolution time by escalation type.", "Identify recurring patterns that could be prevented.", "Produce the escalation review report with recommendations."],
+        "tags": ["customer-support", "escalation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "knowledge-base-creation",
+    "description": "Build a customer-facing knowledge base from support ticket analysis.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "knowledge-base"],
+    "steps": [
+      {
+        "flow_name": "ticket-category-auditor",
+        "description": "Audit ticket categories to identify the most common issues.",
+        "inputs": [{"name": "ticket-history", "desc": "Historical support tickets with categories and resolution notes"}, {"name": "time-range", "desc": "Period to analyze"}],
+        "outputs": [{"name": "category-frequency-report", "desc": "Categories ranked by ticket volume"}, {"name": "top-issues-list", "desc": "Top issues suitable for knowledge base articles"}],
+        "process": ["Group tickets by category and subcategory.", "Rank categories by volume.", "Identify the top issues where a self-service article would reduce ticket volume.", "Produce the category frequency report."],
+        "tags": ["customer-support", "knowledge-base"]
+      },
+      {
+        "flow_name": "kb-article-writer",
+        "description": "Write knowledge base articles for the top support issues.",
+        "inputs": [{"name": "top-issues-list", "desc": "Issues to write articles for"}, {"name": "resolution-patterns", "desc": "Common resolution steps from ticket history"}],
+        "outputs": [{"name": "draft-articles", "desc": "Written knowledge base articles"}, {"name": "article-metadata", "desc": "Tags, categories, and keywords for each article"}],
+        "process": ["For each issue, extract the resolution steps from ticket history.", "Write the article with a problem statement, steps to resolve, and expected outcome.", "Add screenshots or diagrams where helpful.", "Tag each article with category, keywords, and difficulty level."],
+        "tags": ["customer-support", "knowledge-base"]
+      },
+      {
+        "flow_name": "kb-taxonomy-organizer",
+        "description": "Organize articles into a searchable taxonomy.",
+        "inputs": [{"name": "draft-articles", "desc": "Written articles"}, {"name": "article-metadata", "desc": "Tags and categories for each article"}],
+        "outputs": [{"name": "organized-kb", "desc": "Knowledge base with categories, navigation, and search optimization"}, {"name": "taxonomy-map", "desc": "Category hierarchy and cross-references"}],
+        "process": ["Group articles into categories and subcategories.", "Create cross-reference links between related articles.", "Optimize article titles and metadata for search.", "Build the navigation structure."],
+        "tags": ["customer-support", "knowledge-base"]
+      },
+      {
+        "flow_name": "kb-deflection-tracker",
+        "description": "Set up tracking for knowledge base deflection rate and article performance.",
+        "inputs": [{"name": "organized-kb", "desc": "Published knowledge base"}, {"name": "taxonomy-map", "desc": "Article organization structure"}],
+        "outputs": [{"name": "kb-plan", "desc": "Knowledge base maintenance and review plan"}, {"name": "deflection-metrics", "desc": "Baseline deflection rate and per-article metrics"}],
+        "process": ["Define the deflection metric (searches that do not result in a ticket).", "Set up tracking for article views, helpfulness votes, and follow-on tickets.", "Establish the review schedule for article freshness.", "Produce the knowledge base plan."],
+        "tags": ["customer-support", "knowledge-base"]
+      }
+    ]
+  },
+  {
+    "chain_name": "csat-survey-program",
+    "description": "Run a customer satisfaction survey program from design through analysis.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "survey", "csat"],
+    "steps": [
+      {
+        "flow_name": "survey-method-selector",
+        "description": "Select the survey methodology and design the questions.",
+        "inputs": [{"name": "survey-goals", "desc": "What the survey should measure (satisfaction, effort, loyalty)"}, {"name": "customer-segments", "desc": "Customer groups to survey"}],
+        "outputs": [{"name": "survey-design", "desc": "Survey instrument with questions and scale"}, {"name": "sampling-plan", "desc": "Which customers to survey and when"}],
+        "process": ["Choose the method (CSAT, NPS, CES) based on the goals.", "Write questions that are specific, unbiased, and actionable.", "Define the sampling plan by customer segment.", "Set the trigger points (post-ticket, post-purchase, periodic)."],
+        "tags": ["customer-support", "survey"]
+      },
+      {
+        "flow_name": "survey-distributor",
+        "description": "Distribute surveys at the configured trigger points.",
+        "inputs": [{"name": "survey-design", "desc": "Finalized survey instrument"}, {"name": "sampling-plan", "desc": "Distribution targets and triggers"}],
+        "outputs": [{"name": "distribution-log", "desc": "Record of surveys sent with timestamps"}, {"name": "response-data", "desc": "Raw survey responses"}],
+        "process": ["Configure the distribution channel (email, in-app, SMS).", "Send surveys at each trigger point per the sampling plan.", "Track delivery and response rates.", "Collect raw responses."],
+        "tags": ["customer-support", "survey"]
+      },
+      {
+        "flow_name": "survey-response-analyzer",
+        "description": "Analyze survey scores and verbatim comments.",
+        "inputs": [{"name": "response-data", "desc": "Raw survey responses"}, {"name": "customer-segments", "desc": "Segments for breakout analysis"}],
+        "outputs": [{"name": "score-analysis", "desc": "Aggregate and segmented scores with trends"}, {"name": "theme-analysis", "desc": "Themes from verbatim comments ranked by frequency"}],
+        "process": ["Calculate aggregate scores and breakdowns by segment.", "Analyze verbatim comments for recurring themes.", "Identify drivers of high and low scores.", "Compare against prior periods for trends."],
+        "tags": ["customer-support", "survey"]
+      },
+      {
+        "flow_name": "survey-action-planner",
+        "description": "Turn survey findings into an improvement action plan.",
+        "inputs": [{"name": "score-analysis", "desc": "Quantitative survey results"}, {"name": "theme-analysis", "desc": "Qualitative themes from comments"}],
+        "outputs": [{"name": "survey-report", "desc": "Full survey report with scores, themes, and trends"}, {"name": "action-plan", "desc": "Prioritized improvements with owners and deadlines"}],
+        "process": ["Rank improvement areas by impact and feasibility.", "Assign owners and deadlines for each action.", "Define the success metric for each action.", "Produce the survey report and action plan."],
+        "tags": ["customer-support", "survey"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sla-management-setup",
+    "description": "Set up SLA management with tiers, tracking, alerts, and reporting.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "sla"],
+    "steps": [
+      {
+        "flow_name": "sla-tier-definer",
+        "description": "Define SLA tiers with response and resolution time targets.",
+        "inputs": [{"name": "customer-segments", "desc": "Customer groups (enterprise, business, free)"}, {"name": "support-capacity", "desc": "Available support resources and hours"}],
+        "outputs": [{"name": "sla-tiers", "desc": "Defined SLA tiers with time targets per severity"}, {"name": "tier-assignment-rules", "desc": "Rules for assigning customers to tiers"}],
+        "process": ["Define the tiers based on customer segment or plan.", "Set first-response and resolution time targets for each severity within each tier.", "Document the tier assignment rules.", "Validate that targets are achievable with current capacity."],
+        "tags": ["customer-support", "sla"]
+      },
+      {
+        "flow_name": "sla-tracking-configurator",
+        "description": "Configure SLA tracking and breach alerts in the ticketing system.",
+        "inputs": [{"name": "sla-tiers", "desc": "Tier definitions with time targets"}, {"name": "tier-assignment-rules", "desc": "Rules for customer-to-tier mapping"}],
+        "outputs": [{"name": "tracking-configuration", "desc": "SLA tracking rules configured in the system"}, {"name": "alert-configuration", "desc": "Breach and warning alert settings"}],
+        "process": ["Configure SLA clocks in the ticketing system per tier.", "Set warning alerts at 75% of the time target.", "Set breach alerts at 100% of the time target.", "Configure escalation actions on breach."],
+        "tags": ["customer-support", "sla"]
+      },
+      {
+        "flow_name": "sla-compliance-reporter",
+        "description": "Report on SLA compliance and recommend adjustments.",
+        "inputs": [{"name": "tracking-configuration", "desc": "Active SLA tracking setup"}, {"name": "alert-configuration", "desc": "Alert thresholds and escalation actions"}],
+        "outputs": [{"name": "sla-framework", "desc": "Complete SLA management framework document"}, {"name": "compliance-report-template", "desc": "Template for weekly compliance reporting"}],
+        "process": ["Define the compliance metrics (% met, average response time, average resolution time).", "Build the weekly compliance report template.", "Set the quarterly review cadence for target adjustments.", "Produce the SLA framework document."],
+        "tags": ["customer-support", "sla"]
+      }
+    ]
+  },
+  {
+    "chain_name": "chatbot-conversation-design",
+    "description": "Design a customer support chatbot from intent mapping through testing.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "chatbot"],
+    "steps": [
+      {
+        "flow_name": "intent-mapper",
+        "description": "Map the top customer intents from ticket and chat data.",
+        "inputs": [{"name": "ticket-history", "desc": "Historical tickets and chat transcripts"}, {"name": "channel-data", "desc": "Volume and type of inquiries by channel"}],
+        "outputs": [{"name": "intent-catalog", "desc": "Catalog of customer intents ranked by frequency"}, {"name": "intent-examples", "desc": "Example utterances for each intent"}],
+        "process": ["Analyze ticket subjects and chat transcripts for recurring patterns.", "Group into distinct intents.", "Rank intents by frequency and resolution complexity.", "Collect example utterances for each intent."],
+        "tags": ["customer-support", "chatbot"]
+      },
+      {
+        "flow_name": "conversation-flow-writer",
+        "description": "Write conversation flows for each chatbot intent.",
+        "inputs": [{"name": "intent-catalog", "desc": "Intents to support"}, {"name": "intent-examples", "desc": "Example utterances per intent"}],
+        "outputs": [{"name": "conversation-flows", "desc": "Scripted flows for each intent"}, {"name": "fallback-paths", "desc": "Fallback and human-handoff paths"}],
+        "process": ["For each intent, write the conversation tree (greeting, clarification, resolution, confirmation).", "Design fallback responses for unrecognized inputs.", "Define handoff criteria to a human agent.", "Include entity extraction points (order number, account, product)."],
+        "tags": ["customer-support", "chatbot"]
+      },
+      {
+        "flow_name": "chatbot-utterance-builder",
+        "description": "Build training utterances and test the chatbot conversations.",
+        "inputs": [{"name": "conversation-flows", "desc": "Scripted conversation flows"}, {"name": "fallback-paths", "desc": "Fallback and handoff paths"}],
+        "outputs": [{"name": "training-set", "desc": "Training utterances for each intent"}, {"name": "test-results", "desc": "Results from sample conversation tests"}],
+        "process": ["Generate training utterances with variations for each intent.", "Run sample conversations through each flow.", "Measure intent recognition accuracy and flow completion rate.", "Identify and fix misrouted or dead-end paths."],
+        "tags": ["customer-support", "chatbot"]
+      },
+      {
+        "flow_name": "chatbot-performance-reporter",
+        "description": "Measure chatbot containment rate and produce the design document.",
+        "inputs": [{"name": "test-results", "desc": "Conversation test results"}, {"name": "training-set", "desc": "Finalized training utterances"}],
+        "outputs": [{"name": "chatbot-design-document", "desc": "Complete chatbot design with flows, training data, and performance targets"}, {"name": "containment-baseline", "desc": "Expected containment rate based on testing"}],
+        "process": ["Calculate the containment rate (conversations resolved without human handoff).", "Document the expected performance by intent.", "Package the design, training data, and test results.", "Produce the chatbot design document."],
+        "tags": ["customer-support", "chatbot"]
+      }
+    ]
+  },
+  {
+    "chain_name": "customer-onboarding-support",
+    "description": "Support customer onboarding from welcome sequence through activation tracking.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "onboarding"],
+    "steps": [
+      {
+        "flow_name": "onboarding-milestone-definer",
+        "description": "Define the onboarding milestones and success criteria.",
+        "inputs": [{"name": "product-features", "desc": "Key product features and activation points"}, {"name": "customer-segments", "desc": "Customer types and their goals"}],
+        "outputs": [{"name": "milestone-map", "desc": "Onboarding milestones with completion criteria"}, {"name": "activation-definition", "desc": "What counts as a successfully activated customer"}],
+        "process": ["Identify the key actions a new customer must complete.", "Sequence the milestones from signup to activation.", "Define success criteria for each milestone.", "Set the target timeline for reaching activation."],
+        "tags": ["customer-support", "onboarding"]
+      },
+      {
+        "flow_name": "welcome-sequence-builder",
+        "description": "Create the welcome and onboarding communication sequence.",
+        "inputs": [{"name": "milestone-map", "desc": "Onboarding milestones"}, {"name": "activation-definition", "desc": "Activation criteria"}],
+        "outputs": [{"name": "welcome-sequence", "desc": "Timed emails, in-app messages, and guides"}, {"name": "getting-started-guide", "desc": "Step-by-step getting started guide"}],
+        "process": ["Write the welcome email with first steps.", "Create in-app messages that trigger at each milestone.", "Build the getting-started guide with screenshots.", "Schedule check-in touchpoints at day 1, 7, 14, and 30."],
+        "tags": ["customer-support", "onboarding"]
+      },
+      {
+        "flow_name": "onboarding-activation-tracker",
+        "description": "Track onboarding progress and identify stuck users.",
+        "inputs": [{"name": "welcome-sequence", "desc": "Active onboarding sequence"}, {"name": "milestone-map", "desc": "Expected milestones and timeline"}],
+        "outputs": [{"name": "onboarding-support-plan", "desc": "Complete onboarding support plan"}, {"name": "activation-metrics", "desc": "Activation rate and time-to-activate by segment"}],
+        "process": ["Track milestone completion per customer.", "Identify users who stall at a milestone beyond the expected timeline.", "Trigger proactive outreach to stuck users.", "Calculate activation rate and time-to-activate by segment."],
+        "tags": ["customer-support", "onboarding"]
+      }
+    ]
+  },
+  {
+    "chain_name": "support-quality-assurance",
+    "description": "Run QA on support interactions with scoring, calibration, and coaching.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "quality-assurance"],
+    "steps": [
+      {
+        "flow_name": "qa-scorecard-designer",
+        "description": "Design the quality scorecard for support interactions.",
+        "inputs": [{"name": "quality-standards", "desc": "Standards for support quality (accuracy, tone, process)"}, {"name": "channel-types", "desc": "Support channels to score (email, chat, phone)"}],
+        "outputs": [{"name": "qa-scorecard", "desc": "Scorecard with criteria, weights, and rating scale"}, {"name": "scoring-guidelines", "desc": "Detailed guidance for each criterion"}],
+        "process": ["Define the scoring criteria (accuracy, tone, resolution, process adherence).", "Weight each criterion by importance.", "Write scoring guidelines with examples of each rating level.", "Customize the scorecard per channel if needed."],
+        "tags": ["customer-support", "quality-assurance"]
+      },
+      {
+        "flow_name": "qa-ticket-sampler",
+        "description": "Sample tickets for QA review using stratified sampling.",
+        "inputs": [{"name": "qa-scorecard", "desc": "Finalized scorecard"}, {"name": "ticket-pool", "desc": "Resolved tickets available for review"}],
+        "outputs": [{"name": "review-sample", "desc": "Tickets selected for QA review"}, {"name": "sampling-report", "desc": "Sampling methodology and coverage statistics"}],
+        "process": ["Define the sampling rate per agent and channel.", "Stratify by ticket category and complexity.", "Select the review sample.", "Document the sampling methodology."],
+        "tags": ["customer-support", "quality-assurance"]
+      },
+      {
+        "flow_name": "qa-scorer",
+        "description": "Score sampled interactions and calibrate reviewers.",
+        "inputs": [{"name": "review-sample", "desc": "Tickets to score"}, {"name": "scoring-guidelines", "desc": "How to apply the scorecard"}],
+        "outputs": [{"name": "scored-interactions", "desc": "Scores per interaction per criterion"}, {"name": "calibration-notes", "desc": "Notes from reviewer calibration sessions"}],
+        "process": ["Score each interaction against the scorecard.", "Flag disagreements between reviewers for calibration.", "Run monthly calibration sessions to align scoring.", "Record calibration decisions."],
+        "tags": ["customer-support", "quality-assurance"]
+      },
+      {
+        "flow_name": "qa-report-generator",
+        "description": "Produce the QA report with trends and coaching recommendations.",
+        "inputs": [{"name": "scored-interactions", "desc": "All scored interactions"}, {"name": "calibration-notes", "desc": "Calibration session outcomes"}],
+        "outputs": [{"name": "qa-report", "desc": "QA report with scores, trends, and agent breakdowns"}, {"name": "coaching-plan", "desc": "Agent-level coaching recommendations"}],
+        "process": ["Calculate scores by agent, team, and criterion.", "Identify trends over time.", "Highlight top performers and agents needing coaching.", "Produce the QA report and coaching plan."],
+        "tags": ["customer-support", "quality-assurance"]
+      }
+    ]
+  },
+  {
+    "chain_name": "voice-of-customer-analysis",
+    "description": "Analyze voice of customer data from multiple feedback sources.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "voice-of-customer"],
+    "steps": [
+      {
+        "flow_name": "feedback-collector",
+        "description": "Collect customer feedback from all sources.",
+        "inputs": [{"name": "feedback-sources", "desc": "Sources to collect from (tickets, surveys, reviews, social media)"}, {"name": "time-range", "desc": "Period to analyze"}],
+        "outputs": [{"name": "raw-feedback", "desc": "Aggregated feedback from all sources"}, {"name": "source-summary", "desc": "Volume and type breakdown by source"}],
+        "process": ["Pull feedback from each configured source.", "Normalize the format across sources.", "Deduplicate entries from the same customer.", "Produce the source volume summary."],
+        "tags": ["customer-support", "voice-of-customer"]
+      },
+      {
+        "flow_name": "theme-categorizer",
+        "description": "Categorize feedback by theme and sentiment.",
+        "inputs": [{"name": "raw-feedback", "desc": "Aggregated customer feedback"}, {"name": "source-summary", "desc": "Source breakdown for weighting"}],
+        "outputs": [{"name": "themed-feedback", "desc": "Feedback categorized by theme with sentiment scores"}, {"name": "theme-ranking", "desc": "Themes ranked by volume and impact"}],
+        "process": ["Identify recurring themes across all feedback.", "Score sentiment for each piece of feedback.", "Quantify each theme by volume and average sentiment.", "Rank themes by combined volume and negative sentiment."],
+        "tags": ["customer-support", "voice-of-customer"]
+      },
+      {
+        "flow_name": "root-cause-identifier",
+        "description": "Identify root causes behind the top feedback themes.",
+        "inputs": [{"name": "themed-feedback", "desc": "Categorized feedback"}, {"name": "theme-ranking", "desc": "Priority-ranked themes"}],
+        "outputs": [{"name": "root-cause-map", "desc": "Root causes linked to each theme"}, {"name": "improvement-opportunities", "desc": "Prioritized list of improvement actions"}],
+        "process": ["For each top theme, analyze the underlying causes.", "Distinguish product issues from process issues from communication issues.", "Estimate the impact of fixing each root cause.", "Prioritize improvements by impact and feasibility."],
+        "tags": ["customer-support", "voice-of-customer"]
+      },
+      {
+        "flow_name": "voc-report-writer",
+        "description": "Produce the voice of customer report.",
+        "inputs": [{"name": "root-cause-map", "desc": "Root causes by theme"}, {"name": "improvement-opportunities", "desc": "Prioritized improvements"}],
+        "outputs": [{"name": "voc-report", "desc": "Voice of customer report with themes, causes, and recommendations"}, {"name": "executive-summary", "desc": "One-page summary for leadership"}],
+        "process": ["Write the findings section with data from each theme.", "Map root causes to recommended actions.", "Write the executive summary.", "Produce the full report."],
+        "tags": ["customer-support", "voice-of-customer"]
+      }
+    ]
+  },
+  {
+    "chain_name": "self-service-portal-design",
+    "description": "Design a customer self-service portal from audit through content creation.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "self-service"],
+    "steps": [
+      {
+        "flow_name": "self-service-opportunity-auditor",
+        "description": "Audit support requests to identify self-service opportunities.",
+        "inputs": [{"name": "ticket-history", "desc": "Historical support tickets"}, {"name": "current-self-service", "desc": "Existing self-service options if any"}],
+        "outputs": [{"name": "self-service-candidates", "desc": "Requests that can be self-served"}, {"name": "automation-potential", "desc": "Estimated ticket deflection per candidate"}],
+        "process": ["Categorize tickets by resolution type (information, action, troubleshooting).", "Identify requests where the customer could resolve without agent help.", "Estimate the deflection potential for each candidate.", "Rank by volume and ease of self-service implementation."],
+        "tags": ["customer-support", "self-service"]
+      },
+      {
+        "flow_name": "portal-information-architect",
+        "description": "Design the portal information architecture and navigation.",
+        "inputs": [{"name": "self-service-candidates", "desc": "Features and content for the portal"}, {"name": "automation-potential", "desc": "Priority ranking of self-service features"}],
+        "outputs": [{"name": "portal-architecture", "desc": "Site map, navigation structure, and page hierarchy"}, {"name": "content-requirements", "desc": "Content needed for each section"}],
+        "process": ["Group self-service features into logical categories.", "Design the navigation hierarchy.", "Define the content requirements for each page.", "Plan the search and filtering experience."],
+        "tags": ["customer-support", "self-service"]
+      },
+      {
+        "flow_name": "portal-content-creator",
+        "description": "Write the help content, FAQs, and community forum structure.",
+        "inputs": [{"name": "portal-architecture", "desc": "Portal structure and navigation"}, {"name": "content-requirements", "desc": "Content specifications per section"}],
+        "outputs": [{"name": "portal-content", "desc": "Written help articles, FAQs, and guides"}, {"name": "forum-structure", "desc": "Community forum categories and moderation rules"}],
+        "process": ["Write help articles for each self-service feature.", "Build the FAQ section from the most common questions.", "Define the community forum categories and posting guidelines.", "Set up the moderation rules and response commitments."],
+        "tags": ["customer-support", "self-service"]
+      },
+      {
+        "flow_name": "portal-design-finalizer",
+        "description": "Finalize the portal design plan with metrics and launch checklist.",
+        "inputs": [{"name": "portal-content", "desc": "All portal content"}, {"name": "forum-structure", "desc": "Forum setup"}],
+        "outputs": [{"name": "portal-design-plan", "desc": "Complete portal design plan with content and architecture"}, {"name": "launch-checklist", "desc": "Pre-launch checklist and success metrics"}],
+        "process": ["Define the success metrics (deflection rate, search success rate, time on page).", "Build the pre-launch checklist.", "Plan the announcement and adoption campaign.", "Produce the portal design plan."],
+        "tags": ["customer-support", "self-service"]
+      }
+    ]
+  },
+  {
+    "chain_name": "support-team-scheduling",
+    "description": "Schedule a support team based on volume forecasting and staffing requirements.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "scheduling"],
+    "steps": [
+      {
+        "flow_name": "ticket-volume-forecaster",
+        "description": "Forecast ticket volume by hour and day of week.",
+        "inputs": [{"name": "historical-volume", "desc": "Past ticket volumes with timestamps"}, {"name": "business-calendar", "desc": "Holidays, product launches, and seasonal events"}],
+        "outputs": [{"name": "volume-forecast", "desc": "Forecasted ticket volume by hour and day"}, {"name": "peak-periods", "desc": "Identified peak volume periods"}],
+        "process": ["Analyze historical volume patterns by hour, day, and month.", "Adjust for known events (product launches, holidays, promotions).", "Identify recurring peak and valley periods.", "Produce the volume forecast."],
+        "tags": ["customer-support", "scheduling"]
+      },
+      {
+        "flow_name": "staffing-calculator",
+        "description": "Calculate staffing requirements per shift from the volume forecast.",
+        "inputs": [{"name": "volume-forecast", "desc": "Expected ticket volumes"}, {"name": "agent-capacity", "desc": "Average tickets per agent per hour by channel"}],
+        "outputs": [{"name": "staffing-requirements", "desc": "Required agents per shift"}, {"name": "coverage-gaps", "desc": "Shifts where current headcount is insufficient"}],
+        "process": ["Calculate required agents per hour using the volume forecast and agent capacity.", "Account for shrinkage (breaks, meetings, training, PTO).", "Identify coverage gaps where demand exceeds supply.", "Recommend hiring or schedule adjustments for gaps."],
+        "tags": ["customer-support", "scheduling"]
+      },
+      {
+        "flow_name": "schedule-builder",
+        "description": "Build the team schedule with shift assignments and coverage.",
+        "inputs": [{"name": "staffing-requirements", "desc": "Required agents per shift"}, {"name": "coverage-gaps", "desc": "Gaps to address"}],
+        "outputs": [{"name": "team-schedule", "desc": "Published schedule with shift assignments"}, {"name": "on-call-roster", "desc": "On-call coverage assignments"}],
+        "process": ["Assign agents to shifts based on availability and skill.", "Build the on-call roster for after-hours and overflow.", "Handle shift swap requests.", "Publish the schedule."],
+        "tags": ["customer-support", "scheduling"]
+      },
+      {
+        "flow_name": "schedule-adherence-monitor",
+        "description": "Monitor real-time adherence and produce the staffing report.",
+        "inputs": [{"name": "team-schedule", "desc": "Published schedule"}, {"name": "on-call-roster", "desc": "On-call assignments"}],
+        "outputs": [{"name": "staffing-schedule", "desc": "Final staffing schedule document"}, {"name": "adherence-report", "desc": "Schedule adherence metrics and adjustment recommendations"}],
+        "process": ["Track login and logout times against the schedule.", "Monitor real-time queue depth against forecasted volume.", "Flag adherence issues for manager review.", "Produce the staffing schedule and adherence report."],
+        "tags": ["customer-support", "scheduling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "customer-health-scoring",
+    "description": "Build a customer health scoring model from indicator definition through alerting.",
+    "domain": "business",
+    "tags": ["customer-support", "service", "health-scoring", "retention"],
+    "steps": [
+      {
+        "flow_name": "health-indicator-definer",
+        "description": "Define the health indicators and their data sources.",
+        "inputs": [{"name": "customer-data-sources", "desc": "Available data (usage, tickets, billing, engagement)"}, {"name": "churn-history", "desc": "Historical churn data with reasons"}],
+        "outputs": [{"name": "indicator-catalog", "desc": "Health indicators with definitions and data sources"}, {"name": "churn-correlations", "desc": "Which indicators correlate most with churn"}],
+        "process": ["Inventory available customer data signals.", "Analyze which signals correlate with churn and expansion.", "Select the indicators to include in the score.", "Document each indicator with its definition and data source."],
+        "tags": ["customer-support", "health-scoring"]
+      },
+      {
+        "flow_name": "health-score-modeler",
+        "description": "Weight indicators and set score thresholds.",
+        "inputs": [{"name": "indicator-catalog", "desc": "Health indicators to include"}, {"name": "churn-correlations", "desc": "Correlation strengths for weighting"}],
+        "outputs": [{"name": "scoring-model", "desc": "Weighted scoring formula with threshold definitions"}, {"name": "threshold-definitions", "desc": "Healthy, at-risk, and critical thresholds"}],
+        "process": ["Weight each indicator based on its churn correlation.", "Define the scoring formula.", "Set thresholds for healthy, at-risk, and critical.", "Validate thresholds against historical churn data."],
+        "tags": ["customer-support", "health-scoring"]
+      },
+      {
+        "flow_name": "health-score-automator",
+        "description": "Automate score calculation and set up alerts.",
+        "inputs": [{"name": "scoring-model", "desc": "Weighted formula"}, {"name": "threshold-definitions", "desc": "Score thresholds"}],
+        "outputs": [{"name": "automated-scoring", "desc": "Automated health score calculation pipeline"}, {"name": "alert-rules", "desc": "Alert configurations for at-risk and critical accounts"}],
+        "process": ["Build the automated pipeline to calculate scores on a daily cadence.", "Configure alerts for accounts crossing into at-risk or critical.", "Route alerts to the account owner or CSM.", "Set up the health score dashboard."],
+        "tags": ["customer-support", "health-scoring"]
+      },
+      {
+        "flow_name": "health-model-reporter",
+        "description": "Produce the health scoring model documentation.",
+        "inputs": [{"name": "automated-scoring", "desc": "Running scoring pipeline"}, {"name": "alert-rules", "desc": "Active alert configuration"}],
+        "outputs": [{"name": "health-scoring-model", "desc": "Complete health scoring model document"}, {"name": "model-validation-report", "desc": "Validation results against historical churn"}],
+        "process": ["Document the full scoring model with indicators, weights, and thresholds.", "Run the model against historical data and report accuracy.", "Define the model review cadence.", "Produce the health scoring model document."],
+        "tags": ["customer-support", "health-scoring"]
+      }
+    ]
+  }
+]
