@@ -1,0 +1,874 @@
+[
+  {
+    "chain_name": "analog-circuit-design",
+    "description": "Design a transistor-level analog circuit from specification through topology selection, bias point analysis, small-signal modeling, noise analysis, feedback and compensation, stability verification, and layout-aware parasitic extraction.",
+    "domain": "electrical-engineering",
+    "tags": ["analog", "amplifier", "transistor", "noise", "feedback", "stability", "compensation"],
+    "steps": [
+      {
+        "flow_name": "analog-topology-selection",
+        "description": "Select the amplifier topology that meets gain, bandwidth, noise, input impedance, output swing, and power constraints before committing to a schematic.",
+        "inputs": [
+          {"name": "performance-spec", "desc": "Required voltage gain Av, bandwidth BW, input-referred noise density en(f), input impedance Zin, output swing Vout_pp, supply voltage Vdd, and quiescent current budget Iq"},
+          {"name": "load-conditions", "desc": "Load impedance (resistive, capacitive, or both), required output current drive, capacitive load CL"}
+        ],
+        "outputs": [
+          {"name": "selected-topology", "desc": "The chosen amplifier topology (common-source, cascode, folded-cascode, telescopic, differential pair, OTA) with rationale for why it meets each spec line"},
+          {"name": "topology-tradeoffs", "desc": "What the chosen topology sacrifices: headroom, CMRR, PSRR, or complexity relative to alternatives"}
+        ],
+        "process": [
+          "If gain*bandwidth exceeds the process fT by more than 10x, the spec is infeasible in a single stage; partition into cascaded stages and allocate gain per stage so that each stage's bandwidth covers the total BW with margin for interstage pole interaction.",
+          "For gains below 20 dB in CMOS, a common-source with resistive load or active load suffices. For gains of 20 to 40 dB, a cascode (telescopic or folded) adds output resistance without cascading stages. For gains above 60 dB, use a two-stage Miller-compensated OTA or a gain-boosted cascode.",
+          "Check headroom. A telescopic cascode requires Vdd > Vdsat_top + Vdsat_cascode + Vdsat_current_source + Vdsat_input + Vth, typically about 4*Vdsat + Vth. If supply is under 1.8 V in 180nm CMOS, a folded cascode recovers one Vdsat of headroom by folding the cascode device to the opposite supply rail.",
+          "For low noise, the input pair must be large (long and wide) to reduce 1/f noise corner frequency. PMOS input pairs have 3 to 5 times lower 1/f noise than NMOS in most CMOS processes. Calculate input-referred thermal noise density: en = sqrt(8*kT/(3*gm)) for a single device; the total for a differential pair is sqrt(2) times this.",
+          "For high-speed applications where bandwidth matters more than noise, use NMOS input pairs (higher mobility gives higher gm/Id) and minimize parasitic capacitance at the high-impedance node. Record the selected topology, its node count, and which spec line drove each architectural choice."
+        ],
+        "tags": ["analog", "topology", "amplifier-design"]
+      },
+      {
+        "flow_name": "bias-point-analysis",
+        "description": "Set the DC operating point of every transistor so that all devices are in saturation (or the correct region), the output sits at the target common-mode voltage, and the circuit draws the specified quiescent current.",
+        "inputs": [
+          {"name": "selected-topology", "desc": "The amplifier topology with device roles identified"},
+          {"name": "performance-spec", "desc": "Supply voltage, quiescent current, output common-mode target"}
+        ],
+        "outputs": [
+          {"name": "bias-conditions", "desc": "Vgs, Vds, Id for every transistor, plus W/L ratios and operating region confirmation (saturation for gain devices, triode for switches if any)"},
+          {"name": "bias-circuit", "desc": "The current mirror or resistor biasing network that sets the operating point, with its reference current and mirror ratios"}
+        ],
+        "process": [
+          "Start from the output node and work back toward the input. Set the output DC voltage to the target common-mode (typically Vdd/2 for maximum symmetric swing). This fixes Vds of the output device and its current source.",
+          "Use the square-law equation Id = (mu*Cox/2)*(W/L)*(Vgs - Vth)^2 for hand calculation in saturation, but verify against the process gm/Id curve to account for velocity saturation in short-channel devices. The gm/Id methodology picks the inversion level first (weak, moderate, or strong) based on the gain-bandwidth vs power tradeoff, then reads off W/L from lookup tables.",
+          "For a differential pair, set the tail current to 2*Id_branch. Each branch gets Id_branch = gm_required / (gm/Id_chosen). For example, if the spec needs gm = 1 mA/V and the chosen inversion level gives gm/Id = 15 V^-1, then Id_branch = 67 uA.",
+          "Design the bias current mirror. A simple current mirror has output resistance ro = VA/Id (Early voltage divided by drain current), which may not be enough for cascode topologies. Use a cascode current mirror if the bias current accuracy must be better than 5 percent across process corners.",
+          "Verify every device is in saturation: Vds > Vgs - Vth (MOSFET) or Vce > 0.3V (BJT). List any device operating close to the edge of saturation (Vds within 100mV of Vdsat) as a risk that process variation could push into triode."
+        ],
+        "tags": ["analog", "bias", "operating-point"]
+      },
+      {
+        "flow_name": "small-signal-gain-analysis",
+        "description": "Derive the small-signal voltage gain from the DC operating point by building the small-signal equivalent circuit and identifying the dominant gain-limiting mechanism.",
+        "inputs": [
+          {"name": "bias-conditions", "desc": "Vgs, Vds, Id, W/L for every transistor, confirming saturation"},
+          {"name": "selected-topology", "desc": "The amplifier topology with device roles"}
+        ],
+        "outputs": [
+          {"name": "voltage-gain", "desc": "The open-loop voltage gain Av = Vout/Vin in magnitude and dB, with the analytical expression showing which parameters dominate"},
+          {"name": "output-resistance", "desc": "The output resistance Rout of the amplifier stage, which sets the gain when driving resistive loads"}
+        ],
+        "process": [
+          "Replace each transistor with its small-signal model: a voltage-controlled current source gm*vgs in parallel with output resistance ro = VA/Id (or 1/gds from simulation). Include body effect gmb = chi*gm where chi = gamma/(2*sqrt(2*phi_f + Vsb)) if the source is not tied to the bulk.",
+          "For a common-source stage: Av = -gm * (ro || Rload). For a cascode: Av = -gm1 * (gm2*ro2*ro1 || Rload), where the cascode boosts output resistance to gm2*ro2*ro1. For a differential pair with active current mirror load: Av = gm * (rop || ron), where rop and ron are the output resistances of the PMOS and NMOS sides.",
+          "For a two-stage OTA: Av_total = Av1 * Av2, where Av1 = gm1*(rop1||ron1) for the first stage and Av2 = gm_second*(rop2||ron2) for the second. Gains of 60 to 80 dB are typical for two-stage Miller-compensated OTAs in 180nm CMOS.",
+          "Identify the gain-limiting element. In most cases it is the output resistance of the current source (finite ro). If the load is resistive and Rload << ro, then Av is approximately -gm*Rload and increasing ro does not help.",
+          "Cross-check the hand-calculated gain against the gm/Id methodology prediction: Av = (gm/Id) * Id * Rout. If the calculated gain falls short of the spec, the options are: increase gm (more current or larger W/L), increase Rout (cascode or gain-boosting), or add a second stage."
+        ],
+        "tags": ["analog", "small-signal", "gain"]
+      },
+      {
+        "flow_name": "noise-analysis-methodology",
+        "description": "Calculate the input-referred noise of the circuit to verify it meets the noise spec, identifying which devices and which noise mechanisms (thermal, shot, 1/f) dominate.",
+        "inputs": [
+          {"name": "bias-conditions", "desc": "Operating points and W/L for all transistors"},
+          {"name": "voltage-gain", "desc": "Small-signal gain and output resistance"},
+          {"name": "performance-spec", "desc": "Required input-referred noise spectral density en(f) or integrated noise over bandwidth"}
+        ],
+        "outputs": [
+          {"name": "noise-budget", "desc": "Input-referred noise spectral density in nV/sqrt(Hz) at a reference frequency, the 1/f corner frequency, and integrated RMS noise over the signal bandwidth"},
+          {"name": "dominant-noise-sources", "desc": "Which devices and which noise mechanisms (thermal, 1/f, shot) contribute more than 10 percent of the total input-referred noise"}
+        ],
+        "process": [
+          "For each MOSFET, the drain current noise spectral density is: thermal component Sid_thermal = 4*kT*gamma*gm where gamma is 2/3 for long-channel and up to 2 for short-channel, and 1/f component Sid_flicker = K/(Cox*W*L*f) where K is the flicker noise coefficient from the process (typically 1e-25 to 1e-24 V^2*F for NMOS, 3 to 5x lower for PMOS).",
+          "Refer each noise source to the input by dividing by the gain squared from that noise source to the output: vn_input^2 = Sid/gm_input^2 for the input device, and vn_input^2 = Sid_load * (gm_load/gm_input)^2 for load devices. The input pair dominates thermal noise; load devices add 1/f noise that can dominate at low frequencies.",
+          "Calculate the 1/f corner frequency where thermal noise equals flicker noise: fc = K*gm / (4*kT*gamma*Cox*W*L). To push fc below the signal band, increase W*L of the input pair. Doubling both W and L halves fc but quadruples the input capacitance.",
+          "For BJT circuits, the base shot noise current spectral density is Sib = 2*q*Ib and collector shot noise is Sic = 2*q*Ic. The input-referred voltage noise is en = sqrt(4*kT*rb + 2*q*Ic/(gm^2)) where rb is the base spreading resistance.",
+          "Integrate the noise spectral density over the signal bandwidth to get total RMS noise: Vn_rms = sqrt(integral from fL to fH of vn^2(f) df). If 1/f dominates below fc, the integral from fL to fc is vn_1/f^2 * fc * ln(fc/fL). Compare against the spec. If the noise is too high, the design levers are: increase gm of the input pair (more current), increase W*L of input pair (lower 1/f), or switch to PMOS input (lower K)."
+        ],
+        "tags": ["analog", "noise", "thermal-noise", "flicker-noise"]
+      },
+      {
+        "flow_name": "feedback-and-stability-design",
+        "description": "Apply negative feedback to set the closed-loop gain, then verify stability through loop gain analysis, phase margin measurement, and compensation network design.",
+        "inputs": [
+          {"name": "voltage-gain", "desc": "Open-loop gain Av and output resistance Rout"},
+          {"name": "performance-spec", "desc": "Required closed-loop gain Acl, bandwidth, and phase margin (typically 60 degrees minimum)"},
+          {"name": "noise-budget", "desc": "Noise analysis results to confirm feedback does not degrade SNR below spec"}
+        ],
+        "outputs": [
+          {"name": "feedback-network", "desc": "The feedback topology (series-shunt, shunt-series, series-series, shunt-shunt) with component values (resistors, capacitors) and the feedback factor beta"},
+          {"name": "stability-analysis", "desc": "Loop gain T(f) magnitude and phase plots showing unity-gain frequency, phase margin, and gain margin. Identification of all poles and zeros."},
+          {"name": "compensation-network", "desc": "The compensation components (Miller capacitor Cc, nulling resistor Rz if needed) with values and their effect on pole/zero locations"}
+        ],
+        "process": [
+          "Choose the feedback topology based on what the application senses and returns. Voltage-voltage (series-shunt) feedback is most common for voltage amplifiers: it samples the output voltage and returns a fraction beta = R1/(R1+R2) to the input. Closed-loop gain is Acl = 1/beta when loop gain T = Av*beta >> 1.",
+          "Identify all poles in the open-loop transfer function. For a single-stage amplifier, the dominant pole is at fp1 = 1/(2*pi*Rout*CL) where CL is the total load capacitance. For a two-stage OTA, the first stage has a pole at 1/(2*pi*Rout1*Cc) after Miller compensation, and the second stage has a pole at gm2/(2*pi*CL).",
+          "For a two-stage Miller-compensated OTA, the compensation capacitor Cc creates a dominant pole at fp1 = 1/(2*pi*gm1*Rout1*Rout2*Cc) and pushes the non-dominant pole to fp2 = gm2/(2*pi*CL). For stability, fp2 must be above the unity-gain frequency fu = gm1/(2*pi*Cc). This gives the constraint: Cc > gm1*CL/gm2.",
+          "Miller compensation introduces a right-half-plane zero at fz = gm2/(2*pi*Cc) which degrades phase margin. Cancel it with a nulling resistor Rz = 1/gm2 in series with Cc, which moves the zero to infinity (or to the left half plane if Rz > 1/gm2, creating a left-half-plane zero for phase boost).",
+          "Verify phase margin by plotting the loop gain magnitude and phase. At the frequency where |T(f)| = 0 dB, the phase must be greater than -120 degrees (phase margin > 60 degrees). If margin is insufficient, increase Cc (moves fp1 down, reducing unity-gain frequency), or add a lead compensator (zero before the second pole). Also verify gain margin: at the frequency where phase(T) = -180 degrees, the gain must be below 0 dB by at least 10 dB."
+        ],
+        "tags": ["analog", "feedback", "stability", "compensation", "miller"]
+      },
+      {
+        "flow_name": "layout-parasitic-verification",
+        "description": "Extract layout parasitics and verify that the post-layout circuit still meets gain, bandwidth, noise, and stability specifications, iterating the design if parasitic capacitance or resistance degrades performance.",
+        "inputs": [
+          {"name": "stability-analysis", "desc": "Pre-layout stability analysis with pole/zero locations and phase margin"},
+          {"name": "bias-conditions", "desc": "Transistor sizes and operating points for layout"},
+          {"name": "performance-spec", "desc": "All specifications that must hold post-layout"}
+        ],
+        "outputs": [
+          {"name": "post-layout-performance", "desc": "Gain, bandwidth, phase margin, noise, CMRR, and PSRR after parasitic extraction, compared against pre-layout values and spec limits"},
+          {"name": "layout-iteration-log", "desc": "Any changes made to the schematic or layout to recover performance lost to parasitics (guard rings, shielding, dummy devices, wider routing)"}
+        ],
+        "process": [
+          "Match differential pair transistors by using common-centroid layout with interdigitated fingers (ABBA pattern minimum, ABBAABBA for high matching). This reduces Vos from random threshold mismatch, which scales as AVT/sqrt(W*L) where AVT is the Pelgrom coefficient from the process.",
+          "Add dummy devices at the ends of matched arrays to equalize the etch environment. Dummy devices are identical transistors with gate tied to supply (always off) that make the edge effects symmetric.",
+          "Extract parasitic capacitances at high-impedance nodes (drain of cascode, output node). The parasitic capacitance from routing and well-to-substrate junctions adds directly to the load capacitance CL, shifting poles. If the extracted CL is more than 20 percent above the schematic estimate, the phase margin will degrade and Cc may need to increase.",
+          "Extract parasitic resistance in the bias current mirror routing. Even 10 ohms of resistance in a mirror connection introduces a Vgs mismatch of 10*Id, which can be several millivolts and cause systematic current mismatch between branches.",
+          "Run post-layout simulation across process corners (TT, FF, SS, FS, SF) and temperature (-40C, 27C, 125C). The spec must be met at all corners, not just typical. If any corner fails, identify which parasitic or device variation caused the failure and adjust: increase device size for matching, add shielding for substrate noise coupling, or widen metal for resistance."
+        ],
+        "tags": ["analog", "layout", "parasitic-extraction", "matching"]
+      }
+    ]
+  },
+  {
+    "chain_name": "power-converter-design",
+    "description": "Design a switching power converter from specification through topology selection, steady-state analysis, component sizing, magnetic design, control loop compensation, EMI filter design, and thermal verification.",
+    "domain": "electrical-engineering",
+    "tags": ["power", "converter", "switching", "magnetics", "control-loop", "emc"],
+    "steps": [
+      {
+        "flow_name": "converter-topology-selection",
+        "description": "Select the power converter topology that meets the input/output voltage ratio, power level, isolation requirement, and efficiency target.",
+        "inputs": [
+          {"name": "power-spec", "desc": "Input voltage range (Vin_min to Vin_max), output voltage Vout, output current Iout, efficiency target, isolation requirement (yes/no), ripple limits (output voltage ripple, input current ripple)"},
+          {"name": "constraints", "desc": "Board area, height, thermal environment, cost targets, EMI standard to meet"}
+        ],
+        "outputs": [
+          {"name": "selected-topology", "desc": "The chosen topology (buck, boost, buck-boost, flyback, forward, half-bridge, full-bridge, LLC resonant) with operating mode (CCM or DCM) and rationale"},
+          {"name": "topology-parameters", "desc": "Duty cycle range, switch voltage stress, switch current stress, and diode reverse voltage for the selected topology"}
+        ],
+        "process": [
+          "Calculate the voltage conversion ratio M = Vout/Vin. For step-down (M < 1) without isolation: buck. For step-up (M > 1) without isolation: boost. For inverting or M near 1 without isolation: buck-boost or SEPIC. For isolated converters under 100W: flyback. For 100W to 500W isolated: forward or half-bridge. Above 500W: full-bridge or phase-shifted full-bridge.",
+          "Calculate the duty cycle for the nominal input voltage. Buck: D = Vout/Vin. Boost: D = 1 - Vin/Vout. Flyback: D = Vout*N/(Vin + Vout*N) where N is the turns ratio. Verify D stays between 0.1 and 0.9 across the full input range; extreme duty cycles degrade transient response and increase losses.",
+          "For resonant topologies (LLC), the benefit is zero-voltage switching (ZVS) of the primary FETs and zero-current switching (ZCS) of the secondary diodes, achieving 95 to 98 percent efficiency at high power. The cost is a more complex transformer (magnetizing inductance, leakage inductance, and resonant capacitor form the tank). Use LLC when efficiency above 95 percent is required at power levels above 200W.",
+          "Calculate switch stress. For a buck converter: Vds_max = Vin_max, Id_peak = Iout + delta_IL/2 where delta_IL is the inductor ripple current. For a flyback: Vds_max = Vin_max + Vout/N + voltage spike from leakage inductance (add snubber or clamp). Select switches rated at least 20 percent above the maximum stress.",
+          "Determine CCM vs DCM. In CCM (continuous conduction mode), the inductor current never reaches zero; in DCM it does. CCM gives lower peak currents and easier control loop design. DCM is sometimes chosen at light load to avoid reverse recovery losses in the diode. The boundary condition is L_crit = D*(1-D)^2*R/(2*fsw) for a buck, where R = Vout/Iout and fsw is the switching frequency."
+        ],
+        "tags": ["power", "topology-selection", "converter"]
+      },
+      {
+        "flow_name": "power-stage-component-sizing",
+        "description": "Size the inductor, output capacitor, input capacitor, and semiconductor switches for the chosen topology, ensuring ripple, stress, and thermal limits are all met.",
+        "inputs": [
+          {"name": "selected-topology", "desc": "Topology, duty cycle range, CCM/DCM mode"},
+          {"name": "power-spec", "desc": "Vin range, Vout, Iout, ripple limits, switching frequency fsw"}
+        ],
+        "outputs": [
+          {"name": "inductor-spec", "desc": "Inductance value, peak current, RMS current, saturation current requirement, and DCR limit for efficiency"},
+          {"name": "capacitor-spec", "desc": "Output capacitor: capacitance, ESR, ripple current rating. Input capacitor: capacitance, ripple current rating."},
+          {"name": "switch-spec", "desc": "MOSFET Vds rating, Rds_on target for conduction loss, Qg for switching loss, body diode characteristics"}
+        ],
+        "process": [
+          "For a buck converter, the inductor value for a target ripple current delta_IL: L = (Vin - Vout)*D / (fsw * delta_IL). Typical design targets delta_IL = 20 to 40 percent of Iout (peak-to-peak). Larger inductance reduces ripple but increases size and cost; smaller inductance increases ripple current and core loss.",
+          "The inductor must not saturate at peak current: Ipk = Iout + delta_IL/2. The RMS current is approximately Iout for CCM with small ripple (exact: sqrt(Iout^2 + delta_IL^2/12)). Select a core and winding that handle both the saturation current and the RMS heating.",
+          "Output capacitor sizing has two constraints: voltage ripple and ESR. The capacitive component of ripple is delta_Vc = delta_IL/(8*fsw*Cout). The ESR component is delta_V_ESR = delta_IL * ESR. Total ripple is approximately the sum. If the ripple spec is tight (under 10mV), use ceramic capacitors (low ESR) in parallel; if ripple can be 50mV, bulk capacitors (electrolytic, polymer) with moderate ESR are acceptable.",
+          "Input capacitor sees pulsed current in a buck converter: RMS ripple current = Iout * sqrt(D*(1-D)). The input capacitor must handle this RMS current without overheating. Ceramic X5R or X7R capacitors rated for the ripple current are typical. Place them as close as possible to the switch and ground pins.",
+          "MOSFET selection: conduction loss = Ids_rms^2 * Rds_on. Switching loss per cycle = 0.5 * Vds * Ids * (tr + tf) * fsw where tr and tf are rise and fall times from the gate charge curve. Total loss = conduction + switching + gate drive (Qg*Vgs*fsw). Optimize Rds_on vs Qg: lower Rds_on means higher Qg (larger die), so there is an optimal FET size for a given fsw."
+        ],
+        "tags": ["power", "inductor", "capacitor", "mosfet"]
+      },
+      {
+        "flow_name": "magnetic-design-methodology",
+        "description": "Design the magnetic component (inductor or transformer) including core material selection, core geometry, winding layout, and loss calculation using Steinmetz parameters.",
+        "inputs": [
+          {"name": "inductor-spec", "desc": "Inductance, peak current, RMS current, switching frequency, ripple current waveform"},
+          {"name": "constraints", "desc": "Board area, height limit, temperature rise limit, cost"}
+        ],
+        "outputs": [
+          {"name": "core-selection", "desc": "Core material (ferrite grade: MnZn or NiZn, powdered iron, or amorphous), core size and shape (toroid, EE, ER, PQ), and air gap length if needed"},
+          {"name": "winding-design", "desc": "Number of turns, wire gauge (accounting for skin effect and proximity effect), winding layout, and estimated DCR"},
+          {"name": "loss-breakdown", "desc": "Core loss from Steinmetz equation Pcore = k * f^alpha * B^beta * Volume, copper loss from I^2*Rac, and total temperature rise estimate"}
+        ],
+        "process": [
+          "The energy storage requirement sets the minimum core size: E = 0.5*L*Ipk^2. This energy must be stored in the air gap (or distributed gap for powder cores). The air gap length is lg = mu0*N^2*Ae/L where Ae is the core cross-section area. Larger gap means more fringing flux and more proximity-effect loss in windings near the gap.",
+          "Select core material by switching frequency. MnZn ferrite (3C90, 3F3, N87) works from 20 kHz to 500 kHz. NiZn ferrite (4F1) extends to several MHz but has lower permeability. Powdered iron (Kool Mu, MPP, XFlux) handles high DC bias without gapping but has higher core loss than ferrite at the same B and f.",
+          "Calculate peak flux density: Bpk = L*Ipk/(N*Ae). For ferrite, keep Bpk under the saturation flux density Bsat (typically 300 to 400 mT at 25C, drops to 200 to 250 mT at 100C). For powder cores, Bsat is higher (up to 1T for XFlux) but permeability drops with DC bias, so the effective inductance falls.",
+          "Core loss from the improved generalized Steinmetz equation (iGSE) for non-sinusoidal waveforms: Pv = ki * (delta_B)^(beta-alpha) * integral(|dB/dt|^alpha * dt) / T, where ki, alpha, and beta come from the core manufacturer's datasheet. For a triangular ripple waveform in a buck inductor, delta_B = L*delta_IL/(N*Ae), and the iGSE simplifies because dB/dt is piecewise constant.",
+          "Copper loss at high frequency exceeds DC loss due to skin effect and proximity effect. The skin depth is delta = sqrt(rho/(pi*f*mu0)), about 0.3mm at 100kHz in copper. Use Litz wire (multiple insulated strands thinner than 2*delta) or flat copper foil to reduce AC resistance. The AC resistance factor Fr = Rac/Rdc can be estimated from Dowell's equation for layered windings: Fr depends on the number of layers and the ratio of conductor thickness to skin depth."
+        ],
+        "tags": ["power", "magnetics", "inductor-design", "core-loss", "steinmetz"]
+      },
+      {
+        "flow_name": "control-loop-compensation",
+        "description": "Design the voltage or current mode control loop for the power converter, ensuring stable regulation with adequate phase margin and transient response.",
+        "inputs": [
+          {"name": "selected-topology", "desc": "Converter topology and operating mode"},
+          {"name": "power-stage-transfer-function", "desc": "The control-to-output transfer function Gvd(s) derived from the power stage small-signal model (including inductor, capacitor ESR, and load)"},
+          {"name": "performance-spec", "desc": "Bandwidth target, phase margin target (minimum 45 degrees, typically 60), load transient response (voltage deviation and recovery time)"}
+        ],
+        "outputs": [
+          {"name": "compensator-design", "desc": "Compensator type (Type I, II, or III), component values (resistors, capacitors in the feedback network), and the resulting loop gain Bode plot"},
+          {"name": "transient-performance", "desc": "Predicted load step response: voltage undershoot/overshoot and recovery time, compared against spec"}
+        ],
+        "process": [
+          "Derive the power stage transfer function. For a voltage-mode buck in CCM: Gvd(s) = Vin * (1 + s*Resr*Cout) / (1 + s*(L/R + Resr*Cout) + s^2*L*Cout) where R = Vout/Iout. This has a double pole at f_LC = 1/(2*pi*sqrt(L*Cout)) and an ESR zero at f_ESR = 1/(2*pi*Resr*Cout). The double pole gives -180 degrees phase shift, requiring a Type III compensator to add phase boost.",
+          "For current-mode control, the inner current loop converts the double-pole plant into a single-pole system (the inductor pole is absorbed into the current loop), simplifying the voltage loop compensator to Type II. The current-mode plant is approximately Gvc(s) = Ri * R / (1 + s*R*Cout) where Ri is the current sense gain. This is a single pole at 1/(2*pi*R*Cout).",
+          "Type III compensator has two zeros and three poles (including the origin). Place the two zeros at or below the LC double pole frequency to provide phase boost. Place the two high-frequency poles at the ESR zero frequency and at half the switching frequency to attenuate switching ripple. Set the crossover frequency (0 dB loop gain) to fsw/5 to fsw/10 for adequate gain margin.",
+          "The crossover frequency sets the transient response speed. For a load step delta_I, the output voltage deviation is approximately delta_V = delta_I / (2*pi*fc*Cout) where fc is the crossover frequency. To meet a 50mV transient spec with a 5A load step and 100uF output capacitance, fc must be at least 5/(2*pi*0.05*100e-6) = 159 kHz. If this exceeds fsw/5, increase Cout or relax the transient spec.",
+          "Verify the compensated loop gain Bode plot: confirm phase margin > 45 degrees at the crossover frequency, gain margin > 10 dB at the -180 degree phase crossing, and that the loop gain rolls off at -20 dB/decade through crossover (indicating a single integration). Simulate a load step to verify the transient matches prediction."
+        ],
+        "tags": ["power", "control-loop", "compensation", "bode-plot"]
+      },
+      {
+        "flow_name": "emi-filter-thermal-design",
+        "description": "Design the input EMI filter to meet conducted emissions standards, then verify the full converter thermal performance under worst-case conditions.",
+        "inputs": [
+          {"name": "power-spec", "desc": "Input voltage range, switching frequency, input current waveform"},
+          {"name": "loss-breakdown", "desc": "Loss in each component: MOSFET, diode, inductor, capacitor ESR"},
+          {"name": "constraints", "desc": "EMI standard to meet (CISPR 32 Class B, FCC Part 15B), ambient temperature, cooling method (natural convection, forced air, heatsink)"}
+        ],
+        "outputs": [
+          {"name": "emi-filter-design", "desc": "Component values for the EMI filter: common-mode choke inductance and capacitance (Y-caps), differential-mode inductance and capacitance (X-caps), damping if needed"},
+          {"name": "thermal-analysis", "desc": "Junction temperature of each semiconductor, hot-spot temperature of magnetics, and thermal margin to maximum rated temperature"}
+        ],
+        "process": [
+          "Measure or estimate the conducted emissions spectrum. The fundamental is at fsw with harmonics at N*fsw. The envelope of a trapezoidal current waveform falls at -20 dB/decade up to 1/(pi*trise) and then -40 dB/decade. If trise = 50ns, the first breakpoint is at about 6 MHz.",
+          "Separate common-mode (CM) and differential-mode (DM) noise. DM noise is driven by the pulsed input current of the converter. CM noise is driven by dV/dt across the switching node coupling through parasitic capacitance to ground (heatsink, chassis). At low frequencies (below 1 MHz), DM usually dominates. Above 5 MHz, CM often dominates.",
+          "DM filter: a pi-filter with Cx capacitors and a DM inductor (or use the leakage inductance of the CM choke). The required attenuation at fsw is: A_required = V_noise(fsw) - V_limit(fsw) + 6dB margin. A single-stage LC filter gives -40 dB/decade above resonance. The filter corner frequency must be low enough to provide the required attenuation at fsw.",
+          "CM filter: a CM choke (high impedance to CM current, transparent to DM current) plus Y-capacitors to ground. Y-cap values are limited by safety leakage current requirements: for IEC 60950 Class I, total Y-cap leakage must be under 3.5 mA at line frequency. This limits each Y-cap to about 4.7nF for 240VAC/50Hz applications.",
+          "Thermal: total power dissipation Ptotal = Pcond_FET + Psw_FET + Pdiode + Pcore + Pcopper + PESR_cap. Junction temperature Tj = Ta + Ptotal * Rth_ja where Rth_ja is the junction-to-ambient thermal resistance. For a MOSFET on a PCB with no heatsink, Rth_ja is typically 40 to 80 C/W. For a MOSFET on a heatsink, Rth_ja = Rth_jc + Rth_cs + Rth_sa. The maximum Tj must stay below the rated limit (typically 125C or 150C) with margin for ambient temperature variation."
+        ],
+        "tags": ["power", "emi-filter", "thermal", "conducted-emissions"]
+      }
+    ]
+  },
+  {
+    "chain_name": "mixed-signal-ic-design",
+    "description": "Design a mixed-signal integrated circuit from ADC/DAC architecture selection through reference design, clock generation, and mixed-signal floor planning to minimize substrate noise coupling and achieve target resolution and speed.",
+    "domain": "electrical-engineering",
+    "tags": ["mixed-signal", "adc", "dac", "pll", "bandgap", "ic-design"],
+    "steps": [
+      {
+        "flow_name": "adc-architecture-selection",
+        "description": "Select the ADC architecture that meets the resolution, sampling rate, power, and area constraints from the available options: SAR, delta-sigma, pipeline, and flash.",
+        "inputs": [
+          {"name": "conversion-spec", "desc": "Resolution in bits (ENOB), sampling rate fs, input bandwidth, SNR/SNDR requirements, power budget, area budget"},
+          {"name": "system-context", "desc": "What drives the ADC (sensor bandwidth, signal type: DC, audio, RF), anti-aliasing filter order available"}
+        ],
+        "outputs": [
+          {"name": "selected-architecture", "desc": "ADC type with key parameters: for SAR the number of bits and comparison cycles; for delta-sigma the oversampling ratio OSR and modulator order; for pipeline the number of stages and bits per stage"},
+          {"name": "architecture-tradeoffs", "desc": "Power-vs-speed figure of merit (Walden FOM = P/(2^ENOB * fs) in fJ/conversion-step), area estimate, and design complexity assessment"}
+        ],
+        "process": [
+          "Map the resolution-speed space. SAR ADCs cover 8 to 18 bits at up to 10 MSPS, with excellent power efficiency (FOM of 1 to 10 fJ/conv-step in advanced CMOS). Delta-sigma covers 12 to 24 bits at audio to MHz bandwidth, trading speed for resolution through oversampling. Pipeline covers 8 to 16 bits at 10 MSPS to 1 GSPS. Flash covers 4 to 8 bits at multi-GSPS but area and power scale as 2^N.",
+          "For a SAR ADC at N bits, the comparator must resolve signals smaller than Vref/(2^(N+1)) within one clock period. The DAC settling time must be under T/(N+1) where T = 1/fs (one comparison per bit, plus one for sampling). The total capacitor array size for N bits is 2^N * C_unit, where C_unit is set by the kT/C noise requirement: C_total > kT/(Vn_rms^2) where Vn_rms = Vref/(2^(N+1)*sqrt(12)) for 0.5 LSB noise.",
+          "For a delta-sigma ADC, the oversampling ratio OSR = fs_clk/(2*BW) where BW is the signal bandwidth and fs_clk is the modulator clock. An Lth-order modulator achieves SQNR = (2L+1)*10*log10(OSR) - 10*log10(pi^(2L)/(2L+1)) dB. A second-order modulator with OSR = 256 achieves about 100 dB SQNR (16+ bits ENOB). Higher orders give more bits per doubling of OSR but require careful stability management.",
+          "For a pipeline ADC, each stage resolves B bits and passes the residue (amplified by 2^B) to the next stage. The interstage gain amplifier (MDAC) accuracy limits resolution: its gain error and settling must be within 0.5 LSB of the remaining bits. A 1.5-bit/stage architecture (B=1 with digital correction) relaxes comparator offset to +/-Vref/4 instead of Vref/2^N.",
+          "Compare candidates on the Walden FOM. State-of-the-art SAR ADCs achieve 1 to 5 fJ/conv-step, pipelines achieve 10 to 50 fJ/conv-step, and delta-sigma ADCs achieve 1 to 100 fJ/conv-step depending on bandwidth. If the application allows, a SAR is almost always the most power-efficient choice below 10 MSPS."
+        ],
+        "tags": ["mixed-signal", "adc", "sar", "delta-sigma", "pipeline"]
+      },
+      {
+        "flow_name": "voltage-reference-bandgap-design",
+        "description": "Design a bandgap voltage reference that provides a stable, temperature-independent reference voltage for the data converters.",
+        "inputs": [
+          {"name": "reference-spec", "desc": "Target reference voltage (typically 1.2V for bandgap), temperature coefficient TC in ppm/C, PSRR requirement, settling time"},
+          {"name": "process-parameters", "desc": "Available BJT or parasitic bipolar parameters (Is, beta, Vbe at room temperature), supply voltage"}
+        ],
+        "outputs": [
+          {"name": "bandgap-circuit", "desc": "Schematic with component values: resistor ratio, BJT area ratio, and bias current, plus the resulting TC and PSRR"},
+          {"name": "startup-circuit", "desc": "The startup circuit that prevents the bandgap from latching at the zero-current degenerate operating point"}
+        ],
+        "process": [
+          "The bandgap principle: Vref = Vbe + K*delta_Vbe, where Vbe has a negative TC of about -1.8 mV/C, and delta_Vbe = VT*ln(N) has a positive TC (VT = kT/q increases with temperature). N is the BJT area ratio. Choose K = Vbe_TC / (VT_TC * ln(N)) so the positive and negative TCs cancel at the reference temperature.",
+          "For a standard Brokaw bandgap: two BJTs with area ratio N (typically 8), a resistor R1 that sets the PTAT current I_PTAT = delta_Vbe/R1 = VT*ln(N)/R1, and a resistor R2 that converts this current to the PTAT voltage. Vref = Vbe + R2*I_PTAT = Vbe + (R2/R1)*VT*ln(N). For Vref = 1.2V: (R2/R1)*VT*ln(N) must equal about 0.55V at room temperature.",
+          "First-order TC cancellation gives about 20 to 50 ppm/C. For better TC, add curvature correction. The Vbe curvature (Vbe is not perfectly linear in T) can be compensated by adding a second PTAT^2 current or by using a piecewise-linear correction circuit. State-of-the-art curvature-corrected bandgaps achieve 1 to 5 ppm/C over -40 to 125C.",
+          "The startup circuit must inject a small current into the self-biased loop to kick it out of the zero-current state, then turn itself off so it does not inject offset. A simple approach: a PMOS with gate tied to the bandgap output through an inverter; when the output is zero, the PMOS turns on and injects current; once the bandgap rises above the inverter threshold, the PMOS turns off.",
+          "PSRR of the bandgap is set by how well the bias current mirrors reject supply variation. A cascode current mirror improves DC PSRR by 20 to 40 dB over a simple mirror. For high-frequency PSRR, the output must be buffered or filtered. Verify PSRR from DC to 1 MHz, as the ADC reference PSRR directly translates to supply-induced noise at the ADC output."
+        ],
+        "tags": ["mixed-signal", "bandgap", "voltage-reference", "temperature-coefficient"]
+      },
+      {
+        "flow_name": "clock-generation-pll",
+        "description": "Design the clock generation circuit (PLL or DLL) that provides a stable, low-jitter sampling clock for the data converters.",
+        "inputs": [
+          {"name": "clock-spec", "desc": "Output frequency, jitter requirement (RMS and peak-to-peak), phase noise mask, reference clock frequency and quality"},
+          {"name": "system-context", "desc": "Whether the clock drives an ADC (aperture jitter matters) or digital logic (duty cycle and skew matter)"}
+        ],
+        "outputs": [
+          {"name": "pll-design", "desc": "PLL architecture (integer-N, fractional-N), VCO type (ring, LC), loop filter component values, division ratio, and predicted phase noise and jitter"},
+          {"name": "jitter-budget", "desc": "Breakdown of jitter contributions: VCO phase noise, reference noise, charge pump noise, and power supply coupling"}
+        ],
+        "process": [
+          "For ADC clocking, the maximum tolerable aperture jitter is: tj_rms < 1/(2*pi*fin*2^(ENOB+1)) where fin is the input signal frequency. For a 14-bit ADC sampling a 10 MHz signal, tj_rms < 1/(2*pi*10e6*2^15) = 0.49 ps RMS. This is achievable with an LC VCO PLL but not a ring oscillator PLL.",
+          "For an integer-N PLL: fout = N * fref. The loop bandwidth must be low enough to filter VCO phase noise but high enough to track reference noise and achieve fast lock time. Typical loop bandwidth is fref/10 to fref/20. The phase detector comparison frequency is fref, and the division ratio N = fout/fref.",
+          "VCO selection: ring oscillator PLLs achieve 1 to 10 ps RMS jitter at 100 MHz to 1 GHz, suitable for digital clocking. LC oscillator PLLs achieve 0.1 to 1 ps RMS jitter but require on-chip inductors (area-intensive) or external crystals. For high-resolution ADC clocking, an LC VCO or a crystal oscillator with a jitter-cleaning PLL is required.",
+          "Loop filter design for a charge pump PLL: the loop filter converts the charge pump current pulses into a smooth VCO control voltage. A third-order filter (two capacitors and one resistor) is standard. The zero frequency is: fz = 1/(2*pi*R*C1). The pole frequencies are: fp1 = 1/(2*pi*R*C1*C2/(C1+C2)) and fp2 from the third capacitor. Place fz at the loop bandwidth and fp1, fp2 above to ensure phase margin > 60 degrees.",
+          "Simulate phase noise: the total output phase noise is the reference noise multiplied by N^2 inside the loop bandwidth, and the VCO noise outside the loop bandwidth. At the crossover frequency, both contributions should be roughly equal (optimal noise performance). Integrate the phase noise from 100 Hz to half the sampling frequency to get RMS jitter."
+        ],
+        "tags": ["mixed-signal", "pll", "clock", "jitter", "phase-noise"]
+      },
+      {
+        "flow_name": "mixed-signal-floor-planning",
+        "description": "Plan the physical layout of the mixed-signal IC to isolate sensitive analog circuits from noisy digital circuits, minimizing substrate coupling and supply bounce.",
+        "inputs": [
+          {"name": "block-list", "desc": "All analog blocks (ADC, DAC, bandgap, PLL VCO), digital blocks (DSP, SPI, control logic), and I/O (pads, ESD)"},
+          {"name": "noise-sensitivity-map", "desc": "Which blocks are noise-sensitive (ADC comparator, bandgap, VCO) and which are noise-generators (digital logic, output drivers, charge pumps)"}
+        ],
+        "outputs": [
+          {"name": "floor-plan", "desc": "Block placement with guard ring plan, supply domain assignments, and substrate isolation strategy (deep N-well, triple-well, separate substrate contacts)"},
+          {"name": "supply-routing-plan", "desc": "Separate analog and digital supply domains, decoupling capacitor placement, and supply resistance budget from pad to block"}
+        ],
+        "process": [
+          "Place the most noise-sensitive block (usually the ADC comparator or VCO) as far as possible from the noisiest block (usually the digital core or output drivers). Substrate noise attenuates roughly as 1/r for surface coupling and more steeply for deep-well isolated blocks.",
+          "Use deep N-well isolation for all sensitive analog blocks. A deep N-well creates a reverse-biased junction between the P-substrate and the N-well, attenuating substrate noise by 20 to 40 dB depending on frequency and geometry. Add a guard ring of P+ substrate contacts around the deep N-well, tied to a quiet analog ground.",
+          "Separate the supply domains: AVDD/AVSS for analog, DVDD/DVSS for digital, and IOVDD/IOVSS for I/O pads. Each domain gets its own pad pair and its own on-chip decoupling capacitor. The analog and digital grounds connect at one point only (star ground) at the package level, never on-chip through the substrate.",
+          "Place on-chip decoupling capacitors (MOS caps or MIM caps) adjacent to each power-hungry block. The required decoupling is: Cdecap > I_peak * dt / delta_V where I_peak is the peak current demand, dt is the switching event duration, and delta_V is the allowed supply bounce. For a digital block switching 100mA in 1ns with 10mV allowed bounce: Cdecap > 10nF.",
+          "Route sensitive analog signals (ADC input, reference voltage, VCO control voltage) as differential pairs whenever possible, shielded with ground traces on both sides. Keep digital signal routing away from analog signal routing by at least 50um, or use a grounded metal shield layer between them. Verify the coupling with post-layout extraction."
+        ],
+        "tags": ["mixed-signal", "floor-plan", "substrate-noise", "layout"]
+      }
+    ]
+  },
+  {
+    "chain_name": "high-speed-digital-design",
+    "description": "Design a high-speed digital board from signal integrity analysis through transmission line design, termination, crosstalk mitigation, power distribution network design, and timing/jitter budgeting.",
+    "domain": "electrical-engineering",
+    "tags": ["signal-integrity", "transmission-line", "pdn", "crosstalk", "timing", "jitter"],
+    "steps": [
+      {
+        "flow_name": "transmission-line-impedance-design",
+        "description": "Calculate the characteristic impedance of PCB traces from the board stackup geometry and select the target impedance for each signal class.",
+        "inputs": [
+          {"name": "signal-list", "desc": "All high-speed signal classes with data rate, edge rate, and impedance standard (DDR4: 40 ohm, PCIe: 85 ohm differential, USB: 90 ohm differential, Ethernet: 100 ohm differential)"},
+          {"name": "stackup", "desc": "PCB layer count, dielectric material (FR-4, Megtron 6, Rogers), copper weight, dielectric thickness between layers"}
+        ],
+        "outputs": [
+          {"name": "impedance-geometry", "desc": "Trace width and spacing for each signal class to achieve the target impedance on the assigned layer pair, calculated from the stackup"},
+          {"name": "stackup-validation", "desc": "The final stackup with impedance values verified, layer assignments for each signal class, and reference plane assignments"}
+        ],
+        "process": [
+          "Determine which signals need controlled impedance. Any signal where the trace length exceeds lambda/10 (where lambda = rise_time * propagation_speed / 3) must be treated as a transmission line. For a 1 ns rise time on FR-4 (propagation at about 6 inches/ns), the critical length is about 0.6 inches. Modern DDR4 and PCIe signals with sub-100ps rise times require controlled impedance for traces longer than 0.2 inches.",
+          "For a microstrip (trace on outer layer over a ground plane): Z0 = (87/sqrt(Er+1.41)) * ln(5.98*H/(0.8*W+T)) where H is dielectric height to reference plane, W is trace width, T is copper thickness, and Er is dielectric constant. For typical FR-4 (Er=4.3) with H=4mil and T=1.2mil, a 50-ohm single-ended trace is about 5.5 mil wide.",
+          "For a stripline (trace on inner layer between two ground planes): Z0 = (60/sqrt(Er)) * ln(4*B/(0.67*pi*(0.8*W+T))) where B is the total distance between the two reference planes. Stripline has lower emissions than microstrip (shielded by both planes) but slightly higher loss and is harder to probe.",
+          "For differential pairs, the differential impedance Zdiff = 2*Z0*(1-k) where k is the coupling coefficient between the two traces. Coupling depends on the trace spacing S relative to the dielectric height H. Tightly coupled pairs (S < 2*H) have k = 0.1 to 0.3, loosely coupled pairs (S > 3*H) have k < 0.05. For 100-ohm differential impedance, each trace has Z0 slightly above 50 ohm.",
+          "Validate with a 2D field solver (not just formulas) for production. The IPC-2141 formulas are approximations that diverge from measured impedance by 5 to 10 percent for edge cases (very wide traces, very thin dielectrics, high Er). Run the field solver on the final stackup and adjust trace widths to hit the target within +/- 10 percent (the typical PCB fabrication tolerance)."
+        ],
+        "tags": ["signal-integrity", "impedance", "transmission-line", "stackup"]
+      },
+      {
+        "flow_name": "termination-strategy-design",
+        "description": "Select and implement the termination scheme for each high-speed signal to minimize reflections and maintain signal quality at the receiver.",
+        "inputs": [
+          {"name": "impedance-geometry", "desc": "Characteristic impedance Z0 for each signal, trace lengths, driver and receiver impedance"},
+          {"name": "signal-list", "desc": "Data rate, edge rate, topology (point-to-point, multidrop, star)"}
+        ],
+        "outputs": [
+          {"name": "termination-scheme", "desc": "For each signal: termination type (series at source, parallel at receiver, AC, Thevenin, on-die), component values, and placement"},
+          {"name": "reflection-analysis", "desc": "Time-domain reflectometry simulation showing the reflected voltage at critical nodes, confirming the reflection coefficient is below the receiver noise margin"}
+        ],
+        "process": [
+          "Series termination (source termination): place a resistor Rs at the driver output such that Rs + Rdriver = Z0. The launched wave has half amplitude (Vinit = Vs*Z0/(Z0+Z0)) but the reflected wave from the open receiver adds to give full amplitude at the receiver. Advantage: no DC current, low power. Disadvantage: the signal at the driver end is half-amplitude until the round-trip reflection returns, so this topology only works for point-to-point where only the far end needs to receive.",
+          "Parallel termination (receiver termination): place a resistor Rt = Z0 at the receiver end to ground or to Vtt (a termination voltage at Vdd/2). The signal arrives at full amplitude with no reflection. Advantage: works for multidrop topologies. Disadvantage: continuous DC current through Rt (for a 50 ohm line at 3.3V, that is 66mA per signal, which is prohibitive for wide buses).",
+          "AC termination: a series RC to ground at the receiver, where R = Z0 and C is large enough to hold the termination voltage constant during a bit period. C > 10/(Z0*fdata) is typical. This eliminates DC current while providing matched termination at signal frequencies. Used in DDR memory interfaces.",
+          "On-die termination (ODT): modern memory interfaces (DDR3/4/5) and SerDes (PCIe, USB) include programmable on-die termination. The driver and receiver impedances are calibrated to match the transmission line impedance. This eliminates external components but requires correct ODT register programming during initialization.",
+          "Verify with time-domain simulation (SPICE or IBIS). The eye diagram at the receiver must show: eye height > receiver threshold with margin for noise, and eye width > unit interval with margin for jitter. The reflection coefficient Gamma = (ZL-Z0)/(ZL+Z0) must produce reflections smaller than 10 percent of the signal swing."
+        ],
+        "tags": ["signal-integrity", "termination", "reflection", "impedance-matching"]
+      },
+      {
+        "flow_name": "power-distribution-network-design",
+        "description": "Design the power distribution network (PDN) to deliver stable supply voltage to all ICs with impedance below the target from DC to the highest switching frequency.",
+        "inputs": [
+          {"name": "power-requirements", "desc": "Supply voltage, steady-state current, peak transient current, allowed voltage ripple (typically 3 to 5 percent of Vdd)"},
+          {"name": "ic-decoupling-model", "desc": "On-die capacitance, package inductance, number and inductance of power/ground vias"}
+        ],
+        "outputs": [
+          {"name": "target-impedance-profile", "desc": "The maximum allowed PDN impedance vs frequency: Ztarget = delta_V / delta_I, typically flat from DC to the processor's clock frequency"},
+          {"name": "decoupling-strategy", "desc": "Number and value of bulk capacitors, MLCC capacitors (by size: 0402, 0201), and their placement, plus the plane capacitance contribution"}
+        ],
+        "process": [
+          "Calculate target impedance: Ztarget = allowed_ripple_voltage / max_transient_current. For a 1.0V supply with 3 percent ripple tolerance and 10A transient current: Ztarget = 0.03V / 10A = 3 milliohm. This impedance must be maintained from DC to the highest frequency component of the transient (typically the clock frequency or faster).",
+          "The PDN impedance has four regions. At DC, the VRM output impedance dominates (milliohms). From 1 kHz to 100 kHz, bulk capacitors (electrolytic, polymer) provide low impedance. From 100 kHz to 100 MHz, MLCC decoupling capacitors maintain impedance. Above 100 MHz, the power/ground plane capacitance and on-die decoupling take over.",
+          "Size bulk capacitors: select enough capacitance so that the impedance stays below Ztarget at the VRM bandwidth frequency (typically 10 to 50 kHz). A 100uF polymer capacitor with 5 mohm ESR has impedance crossing Ztarget at f = ESR*C crossover. Use multiple in parallel to reduce the effective ESR.",
+          "Size MLCC decoupling: each MLCC has a series resonant frequency where its impedance is minimum (equal to ESR, typically 2 to 10 mohm). A 100nF 0402 MLCC resonates near 100 MHz, a 10nF near 300 MHz, a 1nF near 1 GHz. Use a mix of values to cover the frequency range from 1 MHz to 1 GHz. Place them as close as possible to the IC power pins to minimize the loop inductance.",
+          "Calculate plane capacitance: Cplane = Er*E0*A/d where A is the plane overlap area and d is the dielectric thickness. For a 4-inch x 4-inch plane pair with 4-mil FR-4 spacing: Cplane = 4.3*8.85e-12*(0.1)^2/(0.1e-3) = 380 pF. This is small but has very low inductance, so it is effective above 500 MHz where MLCCs become inductive."
+        ],
+        "tags": ["signal-integrity", "pdn", "decoupling", "power-integrity"]
+      },
+      {
+        "flow_name": "timing-jitter-budget-analysis",
+        "description": "Build the timing budget and jitter budget for each high-speed interface to verify that setup and hold times are met with margin across all operating conditions.",
+        "inputs": [
+          {"name": "interface-spec", "desc": "Data rate, unit interval (UI), setup time Tsu and hold time Th requirements from the receiver datasheet, clock-data relationship (source-synchronous, recovered clock, system clock)"},
+          {"name": "board-design", "desc": "Trace lengths and propagation delays for clock and data, skew between differential pairs, number of connectors/vias in the path"}
+        ],
+        "outputs": [
+          {"name": "timing-budget", "desc": "Table showing each timing contribution (driver delay, propagation delay, clock skew, receiver setup/hold), summed to show the timing margin at worst case"},
+          {"name": "jitter-budget", "desc": "Breakdown of jitter: deterministic (ISI, DCD, crosstalk-induced) and random, combined to total jitter at the target BER, compared against the available timing margin"}
+        ],
+        "process": [
+          "For source-synchronous interfaces (DDR, LVDS): the clock and data travel the same path, so the timing budget is about skew, not absolute delay. The key terms are: Tskew_max = Tdata_delay - Tclock_delay (trace length mismatch), Tsetup_margin = UI/2 - Tskew - Tsu - Tjitter. Match data and clock trace lengths to within 10 to 50 mils depending on edge rate.",
+          "For recovered-clock interfaces (PCIe, SATA, USB 3.x): the receiver CDR (clock and data recovery) extracts timing from the data stream. The jitter budget replaces the timing budget. The CDR tracks low-frequency jitter (below its bandwidth, typically 1 to 10 MHz) but cannot track high-frequency jitter. Total jitter at BER = 1e-12: TJ = DJ + 2*alpha*RJ where alpha = 7.03 for BER 1e-12.",
+          "Deterministic jitter (DJ) components: duty-cycle distortion (DCD) from asymmetric rise/fall times, inter-symbol interference (ISI) from channel loss and reflections, periodic jitter (PJ) from crosstalk or power supply coupling. DJ is bounded and adds directly.",
+          "Random jitter (RJ) from thermal noise, shot noise in drivers/receivers, and oscillator phase noise. RJ is Gaussian and unbounded; at BER 1e-12, the peak-to-peak random jitter is 14.07 * sigma_RJ. Total jitter TJ(1e-12) = DJ_pp + 14.07 * RJ_rms must be less than the unit interval.",
+          "Eye diagram measurement: the eye opening = UI - TJ(BER). For a 10 Gbps link (UI = 100 ps), if TJ(1e-12) = 70 ps, the eye opening is 30 ps, which must exceed the receiver's minimum eye opening requirement. If the eye closes, equalization (CTLE, DFE) at the receiver can open it by compensating for ISI."
+        ],
+        "tags": ["signal-integrity", "timing", "jitter", "eye-diagram", "cdr"]
+      }
+    ]
+  },
+  {
+    "chain_name": "motor-drive-design",
+    "description": "Design a motor drive system from motor selection through inverter design, gate driver circuit, current sensing, FOC control algorithm implementation, and protection circuitry.",
+    "domain": "electrical-engineering",
+    "tags": ["motor", "inverter", "foc", "bldc", "gate-driver", "current-sensing"],
+    "steps": [
+      {
+        "flow_name": "motor-selection-sizing",
+        "description": "Select the motor type and size to meet the mechanical load requirements: torque, speed, duty cycle, and efficiency.",
+        "inputs": [
+          {"name": "mechanical-load", "desc": "Required torque (continuous and peak), speed range (RPM), load inertia, duty cycle, ambient temperature, and application type (servo, pump, fan, traction)"},
+          {"name": "electrical-constraints", "desc": "Available DC bus voltage, maximum current from supply, efficiency target"}
+        ],
+        "outputs": [
+          {"name": "motor-selection", "desc": "Motor type (BLDC, PMSM, induction, stepper, SRM) with rated torque, speed, Kt (torque constant), Ke (back-EMF constant), resistance, inductance, and thermal time constant"},
+          {"name": "operating-point-analysis", "desc": "Torque-speed curve showing the continuous operating region, field-weakening region, and peak overload region, with current and voltage at key operating points"}
+        ],
+        "process": [
+          "Calculate the required mechanical power: P = T*omega where T is torque in Nm and omega is speed in rad/s. Add losses (bearing friction, windage, gearbox if present). The electrical input power is P_mech / motor_efficiency. This determines the minimum motor rating.",
+          "For servo applications requiring precise position control and fast dynamics: PMSM (permanent magnet synchronous motor) gives the best torque-to-inertia ratio. For fans and pumps (variable speed, no position control): BLDC or induction motors are cost-effective. For high-torque low-speed without gearbox: direct-drive PMSM with high pole count. For cost-sensitive applications with moderate performance: induction motor with V/f or FOC.",
+          "Size the motor for thermal limits, not just the instantaneous torque. The continuous torque rating is set by the winding temperature limit (typically Class F: 155C or Class H: 180C). The motor thermal model is a first-order system: T_winding = T_ambient + P_loss * Rth * (1 - exp(-t/tau)) where Rth is thermal resistance and tau is thermal time constant (minutes to tens of minutes).",
+          "Check the voltage constraint. At maximum speed, the back-EMF is Vemf = Ke * omega_max. The DC bus voltage must exceed Vemf plus the voltage drop across the inverter and winding resistance: Vdc > Vemf + I*R + 2*Vdrop_FET. If Vdc is insufficient at max speed, field weakening (injecting negative d-axis current to reduce flux) extends the speed range at the cost of reduced torque.",
+          "Match the motor inductance to the inverter PWM frequency. The current ripple is delta_I = Vdc * D * (1-D) / (L * fsw). For smooth torque, current ripple should be under 10 percent of rated current. If L is too low (common in high-speed PMSM with few turns), increase fsw or add external inductance."
+        ],
+        "tags": ["motor", "selection", "sizing", "torque-speed"]
+      },
+      {
+        "flow_name": "three-phase-inverter-design",
+        "description": "Design the three-phase inverter power stage including MOSFET or IGBT selection, gate driver circuit, dead time, and DC bus capacitor.",
+        "inputs": [
+          {"name": "motor-selection", "desc": "Motor voltage rating, maximum phase current, switching frequency requirement"},
+          {"name": "electrical-constraints", "desc": "DC bus voltage, maximum continuous and peak current, cooling method"}
+        ],
+        "outputs": [
+          {"name": "power-stage-design", "desc": "Switch selection (MOSFET or IGBT, voltage/current rating, Rds_on or Vce_sat), gate driver IC, dead time value, DC bus capacitor value and type"},
+          {"name": "loss-analysis", "desc": "Conduction loss, switching loss, and gate drive loss for each switch, total inverter efficiency at rated operating point"}
+        ],
+        "process": [
+          "Select switch technology. For bus voltage under 100V: silicon MOSFETs (low Rds_on at low voltage). For 100 to 600V: silicon MOSFETs, SiC MOSFETs (lower switching loss but higher cost), or IGBTs (lower conduction loss at high current but higher switching loss). For above 600V: IGBTs or SiC MOSFETs. SiC saves 50 to 70 percent of switching loss compared to silicon at the same voltage and current.",
+          "Rate switches at minimum 20 percent above the DC bus voltage for MOSFETs (avalanche-rated devices can be closer), 50 percent above for IGBTs (no avalanche capability). Current rating: the RMS phase current for sinusoidal drive is I_phase_rms = I_peak / sqrt(2). Each switch conducts for half the electrical cycle, so switch RMS current is I_phase_rms / sqrt(2) = I_peak / 2.",
+          "Gate driver selection: the gate driver must provide peak gate current Ig_peak = Qg / t_transition to switch the FET in the required time. For a FET with Qg = 100nC and desired transition time of 50ns: Ig_peak = 2A. The driver must handle the high-side bootstrap voltage (for N-channel high-side MOSFETs) or use an isolated gate driver for each switch.",
+          "Dead time: the time between turning off one switch in a half-bridge and turning on the complementary switch, to prevent shoot-through. Minimum dead time = max(toff_high + margin, ton_low + margin) from the gate driver datasheet. Typical values: 100ns to 1us. Too long dead time introduces voltage distortion (dead-time effect) and generates low-order harmonics in the motor current.",
+          "DC bus capacitor: sized to supply the ripple current and limit bus voltage ripple during commutation. The RMS ripple current for a three-phase inverter is approximately I_ripple_rms = I_phase_peak * sqrt(3*M/(4*pi) * (2-M)) where M is the modulation index. Use film capacitors (low ESR, high ripple current) or a mix of electrolytic (bulk energy) and ceramic (high-frequency ripple)."
+        ],
+        "tags": ["motor", "inverter", "gate-driver", "mosfet", "igbt"]
+      },
+      {
+        "flow_name": "foc-control-implementation",
+        "description": "Implement field-oriented control (FOC) for the motor drive: Clarke and Park transforms, PI current regulators for d and q axes, space vector PWM, and speed/position control outer loop.",
+        "inputs": [
+          {"name": "motor-selection", "desc": "Motor parameters: Ld, Lq, R, flux linkage lambda_m, pole pairs p, inertia J"},
+          {"name": "control-spec", "desc": "Current loop bandwidth, speed loop bandwidth, position accuracy if applicable, PWM frequency"}
+        ],
+        "outputs": [
+          {"name": "control-architecture", "desc": "Block diagram of the full FOC: outer speed/position loop, inner d-q current loops, decoupling terms, and SVPWM modulator"},
+          {"name": "pi-tuning", "desc": "PI gains for the d-axis current loop (Kp_d, Ki_d), q-axis current loop (Kp_q, Ki_q), and speed loop (Kp_s, Ki_s), with the bandwidth and phase margin of each loop"}
+        ],
+        "process": [
+          "FOC transforms three-phase sinusoidal quantities into DC quantities in the rotating d-q frame, where standard PI controllers work well. The signal chain is: measure ia, ib, ic -> Clarke transform (abc to alpha-beta) -> Park transform (alpha-beta to d-q using rotor angle theta_e) -> PI controllers on id and iq -> inverse Park -> SVPWM -> gate signals.",
+          "Clarke transform: i_alpha = ia, i_beta = (ia + 2*ib)/sqrt(3) (assuming ia + ib + ic = 0). Park transform: id = i_alpha*cos(theta_e) + i_beta*sin(theta_e), iq = -i_alpha*sin(theta_e) + i_beta*cos(theta_e). The rotor electrical angle theta_e = p * theta_mechanical where p is the number of pole pairs.",
+          "Current loop tuning: the d-axis plant is Gd(s) = 1/(Ld*s + R) with a single pole at R/Ld. The PI controller Gc(s) = Kp + Ki/s places a zero to cancel the plant pole: Ki/Kp = R/Ld. Then Kp sets the bandwidth: Kp = 2*pi*fc_current * Ld where fc_current is the desired current loop bandwidth (typically fsw/5 to fsw/10). Repeat for q-axis with Lq instead of Ld (they differ for IPM motors).",
+          "Add decoupling terms to cancel the cross-coupling between d and q axes: Vd_decouple = -omega_e * Lq * iq, Vq_decouple = omega_e * (Ld * id + lambda_m). Without decoupling, d and q axes interact and the step response shows oscillation. The decoupled plant is two independent first-order systems.",
+          "Speed loop: the plant from iq to speed is G_speed(s) = (3/2)*p*lambda_m / (J*s + B) where J is inertia and B is friction. Tune the speed PI with bandwidth 5 to 10 times slower than the current loop. For position control, add an outer proportional controller on the position error feeding the speed reference, with bandwidth 3 to 5 times slower than the speed loop."
+        ],
+        "tags": ["motor", "foc", "vector-control", "svpwm", "park-transform"]
+      },
+      {
+        "flow_name": "motor-drive-protection",
+        "description": "Design the protection circuits for the motor drive: overcurrent, overvoltage, overtemperature, desaturation detection, and safe shutdown sequencing.",
+        "inputs": [
+          {"name": "power-stage-design", "desc": "Switch ratings, DC bus voltage range, maximum current, thermal limits"},
+          {"name": "motor-selection", "desc": "Motor winding temperature limit, demagnetization current"}
+        ],
+        "outputs": [
+          {"name": "protection-circuits", "desc": "Hardware overcurrent comparator threshold and response time, desaturation detection circuit, overvoltage clamp or brake chopper, temperature monitoring ADC channels and thresholds"},
+          {"name": "fault-response-table", "desc": "For each fault type: detection method, response time, action (soft shutdown with deceleration ramp, hard shutdown with all switches off, or brake chopper activation)"}
+        ],
+        "process": [
+          "Overcurrent protection must be fast enough to protect the switches before thermal damage. The MOSFET or IGBT safe operating area (SOA) defines the maximum current at the bus voltage; exceeding it causes device failure in microseconds. Use a hardware comparator on the current sense signal with a threshold at 150 percent of rated peak current. Response time from detection to gate turn-off must be under 5 to 10 microseconds.",
+          "Desaturation detection (for IGBTs): monitors Vce during conduction. Normal Vce_sat is 1.5 to 3V; during a short circuit, Vce rises to near bus voltage while current is limited by the IGBT's saturation characteristic. A comparator triggers when Vce exceeds a threshold (typically 7 to 9V) after a blanking time (2 to 5 us after turn-on to ignore the voltage spike during switching). The response is immediate gate turn-off with a controlled dV/dt gate pull-down to limit di/dt-induced voltage spikes.",
+          "Overvoltage protection: when the motor regenerates (decelerating) or when a fault causes load dump, the DC bus voltage rises. A brake chopper (a switch in series with a power resistor across the DC bus) activates when Vdc exceeds a threshold (typically 110 percent of nominal) and dissipates the regenerated energy. Alternatively, a TVS diode or varistor clamps transient spikes.",
+          "Overtemperature: monitor the switch case temperature (NTC thermistor on heatsink, or on-die temperature sense for intelligent power modules), motor winding temperature (PTC or NTC embedded in the winding), and ambient temperature. Derate current linearly as temperature approaches the limit. Shut down if any temperature exceeds the absolute maximum.",
+          "Safe shutdown sequence: on a non-critical fault (overtemperature warning), ramp the speed reference to zero over 100ms to 1s (controlled deceleration), then disable PWM. On a critical fault (overcurrent, desaturation, overvoltage), immediately turn off all switches (hard shutdown). For a motor with significant inertia, hard shutdown causes the back-EMF to appear on the inverter output; the freewheeling diodes conduct this current safely, but the bus capacitor must absorb the energy."
+        ],
+        "tags": ["motor", "protection", "overcurrent", "desaturation", "fault"]
+      }
+    ]
+  },
+  {
+    "chain_name": "battery-management-system",
+    "description": "Design a battery management system covering cell characterization, SOC and SOH estimation, cell balancing, thermal management, and protection for series-connected lithium-ion battery packs.",
+    "domain": "electrical-engineering",
+    "tags": ["battery", "bms", "soc", "balancing", "lithium-ion", "protection"],
+    "steps": [
+      {
+        "flow_name": "cell-characterization-profiling",
+        "description": "Characterize the battery cell's electrical and thermal properties to build the models needed for accurate SOC and SOH estimation.",
+        "inputs": [
+          {"name": "cell-datasheet", "desc": "Cell chemistry (NMC, LFP, NCA), nominal capacity, voltage range (Vmin to Vmax), maximum continuous and pulse discharge rates, cycle life rating"},
+          {"name": "test-equipment", "desc": "Available test capabilities: constant current/voltage source, temperature chamber, impedance analyzer"}
+        ],
+        "outputs": [
+          {"name": "ocv-soc-curve", "desc": "Open-circuit voltage vs state of charge table at multiple temperatures (0C, 25C, 45C), measured at C/20 or slower to approximate thermodynamic equilibrium"},
+          {"name": "impedance-model", "desc": "Equivalent circuit model parameters: ohmic resistance R0, charge-transfer resistance R1 with time constant tau1 = R1*C1, and optionally a second RC pair, at multiple SOC points and temperatures"}
+        ],
+        "process": [
+          "Measure the OCV-SOC curve by discharging from 100 percent to 0 percent SOC at C/20 (or lower) rate, recording voltage every 0.1 percent SOC. Repeat at charge direction. The average of charge and discharge curves minimizes hysteresis error. The OCV-SOC curve is the foundation of coulomb-counting-corrected SOC estimation.",
+          "For LFP chemistry, the OCV-SOC curve has a flat plateau from 20 to 80 percent SOC (voltage changes less than 50mV over 60 percent of capacity), making OCV-based SOC estimation poor in the plateau region. For NMC and NCA, the curve is more monotonic and OCV-based correction works across the full range.",
+          "Measure impedance using EIS (electrochemical impedance spectroscopy) from 10 kHz to 10 mHz at 10, 30, 50, 70, and 90 percent SOC, and at 0C, 25C, and 45C. Fit the Nyquist plot to an equivalent circuit: R0 (high-frequency intercept) in series with one or two R-C parallel networks (the semicircle). R0 increases 3 to 5x from 25C to 0C due to electrolyte conductivity drop.",
+          "Alternatively, if EIS equipment is unavailable, use pulse testing: apply a current pulse (1C for 10 seconds, then rest for 1 hour) at each SOC point. R0 = immediate voltage drop / I_pulse. R1 and C1 are extracted from the exponential voltage recovery during the rest period: V(t) = V_final - R1*I*exp(-t/tau1).",
+          "Measure capacity vs temperature and C-rate. The usable capacity decreases at low temperatures (typically 70 to 80 percent of nominal at 0C) and at high C-rates (internal resistance drop reduces the voltage to cutoff sooner). This data is needed for accurate remaining-capacity estimation in the BMS."
+        ],
+        "tags": ["battery", "characterization", "ocv", "impedance", "eis"]
+      },
+      {
+        "flow_name": "soc-estimation-algorithm",
+        "description": "Implement the state-of-charge estimation algorithm combining coulomb counting with model-based correction to achieve accuracy within 3 to 5 percent across operating conditions.",
+        "inputs": [
+          {"name": "ocv-soc-curve", "desc": "OCV vs SOC lookup table at multiple temperatures"},
+          {"name": "impedance-model", "desc": "Equivalent circuit model parameters vs SOC and temperature"},
+          {"name": "sensor-specs", "desc": "Current sensor accuracy and offset, voltage sensor accuracy, temperature sensor accuracy"}
+        ],
+        "outputs": [
+          {"name": "soc-algorithm", "desc": "The implemented SOC estimation method with state equations, tuning parameters, and expected accuracy vs conditions"},
+          {"name": "initialization-strategy", "desc": "How SOC is initialized at power-on (from stored value, OCV lookup after rest, or forced calibration at full/empty)"}
+        ],
+        "process": [
+          "Coulomb counting alone: SOC(t) = SOC(0) - (1/Qnom) * integral(I(t) dt). This drifts due to current sensor offset (even 10mA offset accumulates 36 mAh per hour) and uncertainty in the actual capacity Qnom (which changes with temperature and aging). Without correction, drift exceeds 10 percent SOC within hours.",
+          "Extended Kalman Filter (EKF) combines coulomb counting (prediction step) with the voltage model (correction step). State vector: x = [SOC, V_RC1, V_RC2]. Prediction: SOC_k+1 = SOC_k - (dt/(Qnom*3600))*I_k, V_RC1_k+1 = V_RC1_k * exp(-dt/tau1) + R1*(1-exp(-dt/tau1))*I_k. Measurement: V_terminal = OCV(SOC) - V_RC1 - V_RC2 - R0*I. The Kalman gain weights the model prediction vs the voltage measurement based on their respective noise covariances.",
+          "Tune the EKF process noise Q and measurement noise R. Process noise Q reflects the model uncertainty (larger Q makes the filter trust the voltage measurement more). Measurement noise R reflects the voltage sensor noise. Start with Q = diag([1e-6, 1e-8]) and R = [1e-4], then tune based on the SOC estimation error in validation tests.",
+          "The UKF (Unscented Kalman Filter) avoids the Jacobian calculation required by the EKF and handles the OCV nonlinearity more accurately. It propagates sigma points through the nonlinear state and measurement equations. For LFP cells with the flat OCV plateau, the UKF typically outperforms the EKF because the OCV function's near-zero derivative causes the EKF linearization to become inaccurate.",
+          "SOC initialization: after a rest period of at least 2 hours (so the cell has reached electrochemical equilibrium), measure OCV and look up SOC from the OCV-SOC table. If the vehicle was just turned off and back on (short rest), use the last stored SOC value. Calibrate to 100 percent when the charger signals end-of-charge (constant voltage phase current below C/20), and to 0 percent when the terminal voltage reaches the cutoff under load."
+        ],
+        "tags": ["battery", "soc", "kalman-filter", "coulomb-counting"]
+      },
+      {
+        "flow_name": "cell-balancing-design",
+        "description": "Design the cell balancing system to equalize charge across series-connected cells, extending pack capacity and cycle life.",
+        "inputs": [
+          {"name": "pack-config", "desc": "Number of cells in series, cell capacity, expected cell-to-cell variation in capacity and self-discharge rate"},
+          {"name": "balancing-spec", "desc": "Balancing speed requirement (equalize within one charge cycle vs overnight), cost and complexity budget"}
+        ],
+        "outputs": [
+          {"name": "balancing-topology", "desc": "Passive (bleed resistor) or active (inductor-based, capacitor-based, transformer-based) with component values and expected balancing current"},
+          {"name": "balancing-algorithm", "desc": "When to balance (during charge, discharge, or both), the threshold to trigger balancing (SOC difference or voltage difference), and the termination condition"}
+        ],
+        "process": [
+          "Passive balancing: each cell has a parallel resistor switched by a FET controlled by the BMS. Excess energy from higher-SOC cells is dissipated as heat. The balancing current is I_bal = (Vcell - Vthreshold) / R_bleed, typically 50 to 200 mA. This is simple and cheap but slow (equalizing a 100mAh imbalance at 100mA takes 1 hour) and wastes energy.",
+          "Active balancing with inductor: an inductor is switched between adjacent cells to transfer charge from the higher cell to the lower cell. The transfer efficiency is 80 to 90 percent (loss in the inductor DCR and switch resistance). A flyback topology with a small transformer can transfer between any two cells, not just adjacent ones, but adds complexity.",
+          "Active balancing with capacitor (switched capacitor): a capacitor is alternately connected across the higher-voltage cell (charges to that voltage) and the lower-voltage cell (discharges to that voltage). The charge transferred per cycle is C * delta_V, and the switching frequency determines the balancing current. Simple to implement but slow when delta_V is small.",
+          "Balance during the charge phase when cells are in the constant-voltage region and the voltage differences are most pronounced. Trigger balancing when the SOC difference between the highest and lowest cell exceeds 2 to 3 percent. Terminate when all cells are within 1 percent SOC or 10mV voltage.",
+          "For large packs (electric vehicles), the balancing speed must match the charge rate. If the charger can add 50 Ah in 30 minutes but the balancer can only move 100 mAh in the same time, balancing is irrelevant during fast charging. In this case, active balancing during discharge (transferring energy from the lowest-capacity cell to others as it approaches cutoff) extends the usable range."
+        ],
+        "tags": ["battery", "balancing", "passive", "active", "cell-equalization"]
+      },
+      {
+        "flow_name": "bms-protection-design",
+        "description": "Design the protection system for the battery pack covering all failure modes: overvoltage, undervoltage, overcurrent, short circuit, and thermal runaway.",
+        "inputs": [
+          {"name": "cell-datasheet", "desc": "Cell absolute maximum ratings: max charge voltage, min discharge voltage, max continuous and pulse current, max and min temperature"},
+          {"name": "pack-config", "desc": "Series and parallel cell count, contactor or FET disconnect mechanism, fuse rating"}
+        ],
+        "outputs": [
+          {"name": "protection-thresholds", "desc": "Trip points and response times for each protection function: overvoltage, undervoltage, overcurrent (charge and discharge), short circuit, overtemperature, undertemperature"},
+          {"name": "protection-hardware", "desc": "Current sensor type and range, cell voltage monitoring IC, contactor/FET specifications, fuse or PTC specifications, precharge circuit design"}
+        ],
+        "process": [
+          "Overvoltage protection: set the threshold at the cell manufacturer's absolute maximum charge voltage (typically 4.2V for NMC, 3.65V for LFP) minus a margin of 20 to 50mV for measurement error. When any cell exceeds the threshold, the BMS must disconnect the charger within 100ms. Use a dedicated cell monitoring IC (such as the TI BQ76952 or Analog Devices ADBMS6815) that measures each cell voltage with 1 to 2 mV accuracy and has hardware overvoltage comparators.",
+          "Undervoltage protection: set the threshold at the minimum discharge voltage (typically 2.5V for NMC, 2.0V for LFP) plus a margin for IR drop under load. Under heavy load, the terminal voltage drops below OCV by I*R_internal; the cell may not actually be empty even though the terminal voltage hit cutoff. A SOC-based cutoff (stop at 5 percent SOC rather than a voltage) is more accurate but requires reliable SOC estimation.",
+          "Short circuit protection must act in microseconds. A short circuit on a lithium-ion cell can deliver hundreds of amps, causing thermal runaway in seconds. Use a hardware comparator on the current sense (not software, which is too slow) with a threshold at 3 to 5x the maximum rated current and a response time under 100 microseconds. A high-side FET disconnects the pack; the FET must be rated for the full short-circuit current during the detection delay.",
+          "Precharge circuit: before closing the main contactor, the DC bus capacitance of the inverter must be precharged to near the pack voltage through a resistor. Without precharge, the inrush current to charge the bus capacitor can weld the contactor contacts and damage the capacitor. Precharge resistor value: R_pre = Vpk / I_inrush_max. Precharge time: t = 5*R_pre*C_bus (5 time constants to reach 99 percent).",
+          "Thermal runaway propagation prevention: if one cell enters thermal runaway (exothermic decomposition above 150C for NMC), the heat can trigger runaway in adjacent cells. Physical barriers (mica sheets, intumescent materials), cell spacing, and thermal management (coolant flow directing heat away from adjacent cells) are the primary defenses. The BMS detects early signs (rapid voltage drop, temperature rise above 60C, cell swelling via gas sensor) and initiates emergency disconnect and cooling."
+        ],
+        "tags": ["battery", "protection", "bms", "thermal-runaway", "precharge"]
+      }
+    ]
+  },
+  {
+    "chain_name": "sensor-interface-design",
+    "description": "Design a sensor interface circuit from signal conditioning through anti-aliasing, ADC selection, calibration, temperature compensation, and EMC protection.",
+    "domain": "electrical-engineering",
+    "tags": ["sensor", "signal-conditioning", "adc", "calibration", "emc"],
+    "steps": [
+      {
+        "flow_name": "sensor-signal-conditioning",
+        "description": "Design the front-end circuit that amplifies and conditions the raw sensor signal to match the ADC input range while minimizing added noise.",
+        "inputs": [
+          {"name": "sensor-output", "desc": "Sensor type (resistive bridge, piezoelectric, thermocouple, current loop 4-20mA, voltage output), output range, source impedance, bandwidth"},
+          {"name": "adc-input-range", "desc": "ADC full-scale voltage range (e.g., 0 to 3.3V or +/-2.5V differential), input impedance"}
+        ],
+        "outputs": [
+          {"name": "conditioning-circuit", "desc": "Schematic with amplifier topology (instrumentation amp, difference amp, charge amp), gain setting resistors, and expected output range"},
+          {"name": "noise-analysis", "desc": "Total input-referred noise from the conditioning circuit in the signal bandwidth, compared against the sensor's minimum detectable signal"}
+        ],
+        "process": [
+          "For a Wheatstone bridge sensor (strain gauge, pressure sensor, load cell): the bridge output is a differential voltage of 1 to 3 mV/V excitation per full-scale. For a 5V excitation and 2 mV/V sensitivity, full-scale output is 10 mV differential. Use an instrumentation amplifier (INA) with gain G = ADC_range / (2 * V_bridge_FS) to center the signal in the ADC input range. For 10 mV full-scale to 3.3V ADC: G = 165.",
+          "INA selection criteria: input bias current (must be low for high-impedance bridges), CMRR (must reject the common-mode voltage of Vexcitation/2), gain error and drift, and input noise density. For high-accuracy measurements (better than 0.1 percent), use an INA with gain error under 0.01 percent and CMRR above 100 dB at the signal frequency.",
+          "For a piezoelectric sensor (accelerometer, pressure transducer): the sensor is a charge source Q = d*F where d is the piezoelectric coefficient. Use a charge amplifier: Vout = -Q/Cf = -d*F/Cf where Cf is the feedback capacitor. The low-frequency cutoff is f_low = 1/(2*pi*Rf*Cf) where Rf is the feedback resistor (sets the DC bias point). For vibration measurement from 10 Hz to 10 kHz, choose Rf*Cf = 1/(2*pi*10) = 16 ms.",
+          "For a 4-20 mA current loop: convert to voltage with a precision sense resistor. Vsense = I * Rsense. For a 0 to 3.3V ADC range: Rsense = 3.3V / 20mA = 165 ohm. The 4mA zero offset maps to 0.66V, leaving 0.66V to 3.3V for the 4-20mA signal range. Use a precision resistor (0.1 percent tolerance, low TC of 25 ppm/C) to minimize gain error.",
+          "For all topologies, calculate the signal-to-noise ratio: SNR = V_signal_rms / V_noise_rms where V_noise_rms = en * sqrt(BW) * G (amplifier noise referred to output). The SNR must exceed the ADC resolution by at least 6 dB: SNR > 6.02*N + 1.76 + 6 dB where N is the ADC bits. If the conditioning circuit noise exceeds the ADC quantization noise, the ADC resolution is wasted."
+        ],
+        "tags": ["sensor", "instrumentation-amplifier", "charge-amplifier", "conditioning"]
+      },
+      {
+        "flow_name": "antialiasing-adc-selection",
+        "description": "Design the anti-aliasing filter and select the ADC to capture the sensor signal with the required resolution and bandwidth.",
+        "inputs": [
+          {"name": "signal-bandwidth", "desc": "Maximum signal frequency of interest and required attenuation of out-of-band signals at the Nyquist frequency"},
+          {"name": "conditioning-circuit", "desc": "Output signal range and impedance from the conditioning stage"},
+          {"name": "resolution-spec", "desc": "Required measurement resolution in bits or engineering units, maximum allowed noise floor"}
+        ],
+        "outputs": [
+          {"name": "filter-design", "desc": "Anti-aliasing filter topology (Butterworth, Bessel, Chebyshev), order, cutoff frequency, and component values"},
+          {"name": "adc-selection", "desc": "ADC type, resolution, sampling rate, interface (SPI, I2C, parallel), and ENOB at the signal frequency"}
+        ],
+        "process": [
+          "The anti-aliasing filter must attenuate signals at the Nyquist frequency (fs/2) by at least the ADC dynamic range. For a 16-bit ADC (96 dB dynamic range), the filter must provide at least 96 dB attenuation at fs/2. If the signal bandwidth is 1 kHz and the ADC samples at 10 kSPS (Nyquist at 5 kHz), a fourth-order Butterworth filter (-80 dB/decade) gives only 56 dB at 5 kHz. Either increase the sampling rate (oversampling) or increase filter order.",
+          "Oversampling relaxes the anti-aliasing filter: sampling at 100 kSPS moves the Nyquist to 50 kHz, and a second-order Butterworth at 1 kHz cutoff gives -80 dB at 50 kHz. Then decimation filtering (digital low-pass and downsample) recovers the effective data rate. Delta-sigma ADCs use extreme oversampling (OSR of 64 to 512) with a simple first-order RC anti-aliasing filter.",
+          "Filter type selection: Butterworth has the flattest passband (maximally flat magnitude), Bessel has the flattest group delay (best pulse response with no overshoot), and Chebyshev Type I has the steepest rolloff but with passband ripple. For measurement systems where amplitude accuracy matters, use Butterworth. For transient signals (pulse, step response), use Bessel to avoid ringing.",
+          "ADC ENOB at the signal frequency determines the actual usable resolution. ENOB = (SINAD - 1.76) / 6.02 where SINAD is signal-to-noise-and-distortion ratio. A 16-bit ADC with 90 dB SINAD at 1 kHz has ENOB = 14.7 bits at that frequency. Check the datasheet ENOB vs frequency curve; it degrades at higher frequencies due to aperture jitter and comparator settling.",
+          "Match the ADC's input impedance and sampling capacitor to the driving circuit. A SAR ADC's input has a switched capacitor that requires charge from the driving source within the acquisition time. The source impedance must be low enough to settle to within 0.5 LSB: R_source * C_sample < T_acq / (N+1) * ln(2) where T_acq is the acquisition time and N is resolution bits. Add a buffer amplifier (rail-to-rail output, adequate settling time) if the sensor conditioning output impedance is too high."
+        ],
+        "tags": ["sensor", "anti-aliasing", "adc-selection", "filter"]
+      },
+      {
+        "flow_name": "calibration-temperature-compensation",
+        "description": "Design the calibration and temperature compensation procedures to achieve the required measurement accuracy across the full operating temperature range.",
+        "inputs": [
+          {"name": "accuracy-spec", "desc": "Required measurement accuracy (e.g., +/- 0.5 percent FS) over the temperature range (-40 to 85C)"},
+          {"name": "sensor-thermal-behavior", "desc": "Sensor sensitivity TC (ppm/C), offset TC, bridge resistance TC if applicable"},
+          {"name": "conditioning-circuit", "desc": "Amplifier gain TC, reference voltage TC, ADC gain and offset TC"}
+        ],
+        "outputs": [
+          {"name": "calibration-procedure", "desc": "Number of calibration points, calibration algorithm (linear 2-point, polynomial, or lookup table), and the calibration coefficients storage format"},
+          {"name": "temperature-compensation", "desc": "Hardware compensation (bridge completion resistors with matching TC, reference resistor) and/or software compensation (temperature-dependent correction polynomial)"}
+        ],
+        "process": [
+          "Two-point calibration corrects offset and gain errors: apply two known inputs (zero and full-scale), record the ADC outputs, and compute gain = (FS_actual - zero_actual) / (ADC_FS - ADC_zero) and offset = zero_actual - gain * ADC_zero. This corrects linear errors but not nonlinearity.",
+          "Multi-point calibration with polynomial fit: apply 5 to 10 known inputs across the measurement range, fit a polynomial y = a0 + a1*x + a2*x^2 + ... of degree sufficient to reduce residual error below the accuracy spec. A third-order polynomial typically corrects sensor nonlinearity to better than 0.05 percent FS. Store the coefficients in EEPROM.",
+          "Temperature compensation for a resistive bridge: the bridge sensitivity TC is typically -0.1 to -0.3 percent/C for silicon strain gauges and -0.02 percent/C for metal foil gauges. Hardware compensation: add a resistor with matched TC in series with the excitation to reduce the excitation voltage as temperature rises, compensating the sensitivity increase. The compensation resistor value is R_comp = R_bridge * (TC_bridge / TC_comp).",
+          "Software temperature compensation: measure the temperature with a sensor near the measurement sensor, then apply a correction: V_corrected = V_measured * (1 + alpha * (T - T_cal)) where alpha is the temperature sensitivity coefficient determined during temperature characterization. For higher accuracy, use a 2D lookup table indexed by temperature and raw measurement.",
+          "End-to-end calibration validation: after calibration, sweep the input across the full range at -40C, 25C, and 85C, and verify the error stays within the accuracy spec at every point. If the error exceeds spec at temperature extremes, the temperature compensation model needs more terms (higher-order polynomial or a lookup table with finer temperature resolution)."
+        ],
+        "tags": ["sensor", "calibration", "temperature-compensation", "accuracy"]
+      }
+    ]
+  },
+  {
+    "chain_name": "wireless-system-design",
+    "description": "Design a wireless communication system from link budget analysis through modulation selection, RF front-end design, antenna selection, and protocol implementation for ISM-band applications.",
+    "domain": "electrical-engineering",
+    "tags": ["wireless", "rf", "link-budget", "antenna", "modulation", "ble", "lora"],
+    "steps": [
+      {
+        "flow_name": "link-budget-analysis",
+        "description": "Calculate the complete link budget to determine whether the required range is achievable with the available transmit power and receiver sensitivity.",
+        "inputs": [
+          {"name": "system-requirements", "desc": "Required range, data rate, BER target, operating frequency band (915 MHz, 2.4 GHz, etc.), environment (indoor, outdoor, urban, rural)"},
+          {"name": "regulatory-limits", "desc": "Maximum EIRP from regulations (FCC Part 15: +30 dBm for 902-928 MHz, +20 dBm for 2.4 GHz ISM)"}
+        ],
+        "outputs": [
+          {"name": "link-budget-table", "desc": "Complete link budget from transmitter to receiver: Tx power, antenna gains, path loss, fade margin, cable losses, and resulting received power vs receiver sensitivity"},
+          {"name": "link-margin", "desc": "The margin between received power and sensitivity, which must be positive by at least the fade margin (typically 10 to 20 dB for outdoor, 20 to 30 dB for indoor with multipath)"}
+        ],
+        "process": [
+          "Free-space path loss (FSPL): FSPL(dB) = 20*log10(d) + 20*log10(f) + 32.45 where d is distance in km and f is frequency in MHz. At 2.4 GHz and 100 meters: FSPL = 20*log10(0.1) + 20*log10(2400) + 32.45 = -20 + 67.6 + 32.45 = 80 dB. At 915 MHz and 1 km: FSPL = 0 + 59.2 + 32.45 = 91.7 dB.",
+          "Add environment-specific losses. Indoor: wall penetration loss (5 to 15 dB per wall depending on material: drywall 3 dB, concrete 10 dB, metal 20+ dB), floor penetration (10 to 20 dB per floor). Outdoor urban: Hata model or Okumura-Hata for distances beyond 1 km. Vegetation: 0.2 dB/m for foliage at 2.4 GHz.",
+          "Fade margin accounts for multipath fading (constructive and destructive interference from reflected signals) and shadowing (obstruction by moving objects). For 99 percent link availability in a Rayleigh fading environment, the fade margin must be 20 dB. For 99.9 percent: 30 dB. Indoor environments with strong multipath need higher margins.",
+          "Received power: Prx(dBm) = Ptx(dBm) + Gtx(dBi) - Lcable_tx(dB) - FSPL(dB) - Lmisc(dB) + Grx(dBi) - Lcable_rx(dB). The link margin is: Margin = Prx - Sensitivity - Fade_margin. If margin is negative, the link cannot close at the required range. Options: increase Tx power (up to regulatory limit), increase antenna gain (larger antenna), reduce data rate (improves sensitivity), or reduce range.",
+          "Sensitivity is set by the required Eb/N0 for the modulation and coding at the target BER: Sensitivity(dBm) = -174 + 10*log10(BW) + NF + Eb/N0_required where -174 dBm/Hz is the thermal noise floor at 290K, BW is the receiver noise bandwidth in Hz, and NF is the receiver noise figure in dB. For BLE (1 MHz BW, NF = 6 dB, GFSK with Eb/N0 = 10 dB for BER 1e-3): Sensitivity = -174 + 60 + 6 + 10 = -98 dBm."
+        ],
+        "tags": ["wireless", "link-budget", "path-loss", "sensitivity"]
+      },
+      {
+        "flow_name": "rf-front-end-design",
+        "description": "Design the RF front end including the LNA, mixer, filters, and PA to meet the sensitivity and linearity requirements from the link budget.",
+        "inputs": [
+          {"name": "link-budget-table", "desc": "Required sensitivity, maximum input power (for blocker scenarios), and transmit power"},
+          {"name": "frequency-band", "desc": "Center frequency, bandwidth, adjacent channel rejection requirement"}
+        ],
+        "outputs": [
+          {"name": "receiver-chain", "desc": "LNA noise figure and gain, mixer conversion loss and IIP3, IF/baseband filter bandwidth, and overall receiver noise figure and dynamic range"},
+          {"name": "transmitter-chain", "desc": "PA output power, efficiency (PAE), linearity (EVM, ACPR), harmonic filtering"}
+        ],
+        "process": [
+          "Cascaded noise figure (Friis equation): NF_total = NF1 + (NF2 - 1)/G1 + (NF3 - 1)/(G1*G2) + ... where NF and G are in linear (not dB). The LNA dominates the overall noise figure if its gain is high enough. For NF_total < 3 dB: choose an LNA with NF < 1.5 dB and gain > 15 dB, so the mixer noise contribution (NF2-1)/G1 < 1 dB even with a high-loss mixer.",
+          "LNA selection: key parameters are noise figure, gain, IIP3 (input third-order intercept point), and current consumption. For 2.4 GHz: typical integrated LNAs achieve NF = 1 to 2 dB, gain = 15 to 20 dB, IIP3 = -10 to 0 dBm. The LNA must not saturate from strong nearby transmitters; the maximum input without compression is P1dB_input = IIP3 - 9.6 dB.",
+          "Mixer selection: for superheterodyne, the mixer converts RF to IF. Conversion loss is typically 6 to 8 dB for passive mixers (no gain, but excellent linearity with IIP3 > +15 dBm) and -10 to -15 dB (gain) for active mixers (worse linearity with IIP3 around -5 dBm). For direct-conversion (zero-IF), the mixer converts directly to baseband, eliminating the IF filter but introducing DC offset and 1/f noise challenges.",
+          "System IIP3 (cascaded): 1/IIP3_total = 1/IIP3_1 + G1/IIP3_2 + G1*G2/IIP3_3 + ... The last stage before the ADC typically dominates the linearity because it sees the highest signal level. Design the gain distribution so that the signal level at each stage stays well below that stage's P1dB.",
+          "PA design for the transmitter: the required output power from the link budget sets the PA power rating. Power-added efficiency PAE = (Pout - Pin) / Pdc is the key figure of merit. Class A: PAE up to 50 percent but typically 25 to 35 percent. Class AB: 40 to 60 percent. Class E/F (switching mode): 60 to 80 percent but only for constant-envelope modulations (FSK, GMSK). For non-constant-envelope modulations (QAM, OFDM), back off the PA by 6 to 10 dB from P1dB to meet EVM and spectral mask requirements."
+        ],
+        "tags": ["wireless", "rf", "lna", "mixer", "pa", "noise-figure"]
+      },
+      {
+        "flow_name": "antenna-design-selection",
+        "description": "Select or design the antenna to meet the gain, bandwidth, size, and polarization requirements for the wireless system.",
+        "inputs": [
+          {"name": "link-budget-table", "desc": "Required antenna gain (Tx and Rx), operating frequency and bandwidth"},
+          {"name": "physical-constraints", "desc": "Available volume, ground plane size, mounting (PCB trace, external, chip antenna), polarization requirement"}
+        ],
+        "outputs": [
+          {"name": "antenna-selection", "desc": "Antenna type (PCB trace, chip, wire, patch, helical), dimensions, gain pattern, return loss (S11 < -10 dB across the band), and efficiency"},
+          {"name": "matching-network", "desc": "Impedance matching components (LC network) to transform the antenna impedance to 50 ohm at the operating frequency"}
+        ],
+        "process": [
+          "Antenna size scales with wavelength. At 2.4 GHz, lambda = 12.5 cm, so a quarter-wave monopole is 3.1 cm. At 915 MHz, lambda = 33 cm, so a quarter-wave monopole is 8.2 cm. If the available space is smaller than lambda/4, the antenna will be electrically small and the efficiency drops (radiation resistance decreases while loss resistance stays constant).",
+          "PCB trace antenna (inverted-F, meandered monopole): zero additional cost, 0 to 2 dBi gain, but requires a ground plane clearance area (no copper pour) of at least lambda/4 x lambda/10 around the antenna. The ground plane IS part of the antenna; its size and shape affect the radiation pattern and impedance. Minimum ground plane size for reasonable efficiency: lambda/4 x lambda/4.",
+          "Chip antenna (ceramic): compact (3 to 8 mm), 0 to 1 dBi gain, requires a matching network and specific ground plane keep-out per the manufacturer's datasheet. Less efficient than a well-designed PCB trace antenna but easier to implement. The matching network (pi or L network of capacitors and inductors) tunes the antenna impedance to 50 ohm; the component values are frequency-specific and must be verified on the actual PCB.",
+          "Patch antenna: directional (6 to 9 dBi gain in the broadside direction), useful when the communication partner is in a known direction. Size is lambda/2 x lambda/2 (6 cm x 6 cm at 2.4 GHz). Bandwidth is narrow (1 to 5 percent for a standard patch; wider with stacked or slotted designs). Polarization is set by the feed point location (linear) or with two feeds in quadrature (circular).",
+          "Impedance matching: measure the antenna impedance with a VNA (vector network analyzer) on the actual PCB (not on a test board, because the ground plane affects impedance). Design an L-network or pi-network to transform the measured impedance to 50 ohm. The matching bandwidth determines the usable frequency range: a narrowband match (high Q) gives better efficiency at the center frequency but less bandwidth."
+        ],
+        "tags": ["wireless", "antenna", "impedance-matching", "pcb-antenna"]
+      }
+    ]
+  },
+  {
+    "chain_name": "protection-circuit-design",
+    "description": "Design protection circuits for electronic systems covering ESD, overvoltage, reverse polarity, inrush current limiting, overcurrent, hot-swap, and surge protection to meet safety and reliability standards.",
+    "domain": "electrical-engineering",
+    "tags": ["protection", "esd", "overvoltage", "overcurrent", "hot-swap", "surge"],
+    "steps": [
+      {
+        "flow_name": "esd-protection-design",
+        "description": "Design ESD protection for all external-facing pins to survive the ESD events specified by the applicable standard without damaging the protected IC.",
+        "inputs": [
+          {"name": "esd-standard", "desc": "Target ESD withstand level (IEC 61000-4-2: contact 4kV/air 8kV for Level 2, contact 8kV/air 15kV for Level 4; HBM: 2kV or 4kV; CDM: 500V or 1kV)"},
+          {"name": "protected-pins", "desc": "List of external pins with their signal type (digital I/O, analog input, power), operating voltage, data rate, and capacitance tolerance"}
+        ],
+        "outputs": [
+          {"name": "esd-devices", "desc": "TVS diode or ESD protection IC for each pin: working voltage, clamping voltage at specified current, capacitance, and package"},
+          {"name": "pcb-layout-rules", "desc": "Routing rules for ESD paths: TVS placement distance from connector, trace width, ground connection strategy"}
+        ],
+        "process": [
+          "Select TVS diode working voltage: Vrwm (reverse working voltage) must exceed the maximum signal voltage by at least 10 percent. For a 3.3V digital signal: Vrwm >= 3.6V, so select a 5V TVS. The clamping voltage Vc at the specified peak pulse current (e.g., 16A for IEC 61000-4-2 at 8kV contact) must be below the protected IC's absolute maximum rating.",
+          "Capacitance matters for high-speed signals. A standard TVS diode adds 50 to 500 pF, which is acceptable for power and low-speed I/O but degrades signal integrity on USB, HDMI, or Ethernet. For high-speed lines, use low-capacitance TVS arrays (0.5 to 5 pF) or rail-clamp ESD protection ICs designed for the specific interface.",
+          "PCB layout is critical for ESD protection effectiveness. The TVS must be placed as close as possible to the connector pin, before the signal trace reaches the protected IC. The ground connection from the TVS must be short (under 10mm) and wide (at least 20 mil) with a direct via to the ground plane. A long ground trace adds inductance that increases the voltage at the protected IC during the fast ESD transient.",
+          "For multi-pin connectors, use a TVS array IC that protects all pins in one package, sharing a common ground. This saves board space and ensures matched protection across all pins. For differential pairs (USB, Ethernet), use TVS arrays specifically designed for differential signals that clamp both common-mode and differential ESD events.",
+          "Verify protection by ESD testing to the target standard. IEC 61000-4-2 testing uses a specified ESD generator (150 pF, 330 ohm for contact discharge) applied to each external pin. Verify that the equipment continues to operate (performance criterion A) or recovers after reset (criterion B) after the specified number of discharges (typically 10 positive and 10 negative per pin)."
+        ],
+        "tags": ["protection", "esd", "tvs-diode", "iec-61000"]
+      },
+      {
+        "flow_name": "overvoltage-reverse-polarity-protection",
+        "description": "Design protection against sustained overvoltage on the power input and reverse polarity connection, without excessive voltage drop or power loss during normal operation.",
+        "inputs": [
+          {"name": "input-voltage-range", "desc": "Normal operating voltage range (e.g., 9 to 36V for automotive), maximum expected overvoltage (e.g., load dump 60V for 40ms in automotive), reverse voltage"},
+          {"name": "current-range", "desc": "Normal operating current, maximum load current"}
+        ],
+        "outputs": [
+          {"name": "overvoltage-circuit", "desc": "Protection topology (crowbar, clamp, foldback), component values, and the voltage seen by the downstream circuit during an overvoltage event"},
+          {"name": "reverse-polarity-circuit", "desc": "Protection topology (series diode, P-FET, ideal diode controller), voltage drop and power dissipation during normal operation"}
+        ],
+        "process": [
+          "Reverse polarity with a series diode: simple but wastes Vf * Iload (0.3 to 0.7V * current) continuously. A Schottky diode reduces Vf to 0.3V but leaks more reverse current at high temperature. For currents above 1A, the loss becomes significant.",
+          "Reverse polarity with a P-channel MOSFET: the MOSFET body diode conducts during normal polarity (Vgs = -Vin, turning on the FET), and blocks during reverse polarity (Vgs = 0, FET off). Forward voltage drop is I*Rds_on, typically 10 to 50 mV at rated current. This is 10 to 50x lower loss than a diode. The FET must be rated for the full reverse voltage on Vds.",
+          "Overvoltage clamp: a TVS diode across the input clamps transient overvoltage. For automotive load dump (ISO 7637-2 pulse 5: 60V for 400ms), the TVS must absorb significant energy: E = integral(V*I*dt). A 36V working voltage TVS clamping at 50V with 1A load for 400ms absorbs about 20 J, which exceeds most discrete TVS ratings. Use a series resistor to limit current, or use a dedicated transient voltage suppressor module.",
+          "For sustained overvoltage protection, an active clamp or a DC-DC converter with wide input range is more appropriate than a TVS. An active clamp uses a series FET that enters linear mode to regulate the output voltage when the input exceeds a threshold, dissipating the excess voltage as heat. The FET must survive the SOA (safe operating area) at the overvoltage condition.",
+          "Crowbar protection: a thyristor (SCR) fires when the voltage exceeds a threshold (set by a zener trigger), short-circuiting the input and blowing the upstream fuse. This is destructive (fuse must be replaced) but protects against high-energy overvoltage. Used in military and aerospace where the protected circuit is more valuable than the fuse."
+        ],
+        "tags": ["protection", "overvoltage", "reverse-polarity", "automotive"]
+      },
+      {
+        "flow_name": "hot-swap-inrush-protection",
+        "description": "Design the hot-swap and inrush current limiting circuit for boards inserted into a live backplane, protecting both the board and the backplane from damage.",
+        "inputs": [
+          {"name": "bus-voltage", "desc": "Backplane voltage (12V, 48V, etc.), allowed voltage transient on the bus during insertion"},
+          {"name": "load-capacitance", "desc": "Total capacitance on the board that must be charged during insertion (bulk capacitors, MLCC, etc.)"},
+          {"name": "steady-state-current", "desc": "Normal operating current after the board is fully inserted and powered"}
+        ],
+        "outputs": [
+          {"name": "hot-swap-circuit", "desc": "Hot-swap controller IC, series MOSFET (rating and SOA verification), sense resistor, and timing capacitor for dV/dt and current limiting"},
+          {"name": "soa-analysis", "desc": "FET safe operating area plot showing the insertion transient trajectory (voltage across FET vs current through FET vs time) stays within the SOA boundary"}
+        ],
+        "process": [
+          "During insertion, the board's bulk capacitance is at 0V while the backplane is at Vbus. Without limiting, the inrush current is I_peak = Vbus / (R_connector + R_trace), which can be hundreds of amps for a low-impedance bus. This current can weld connector pins, cause a bus voltage dip affecting other boards, and damage capacitors.",
+          "A series N-channel MOSFET controlled by a hot-swap controller limits the inrush current by operating in the linear region during startup. The controller ramps the gate voltage slowly (controlled by an external capacitor on the GATE pin), which limits dV/dt across the load capacitance: dV/dt = I_limit / C_load. The charging time is t_charge = C_load * Vbus / I_limit.",
+          "Current limiting: a sense resistor in series with the MOSFET source provides current feedback to the controller. When the current exceeds the limit (set by the controller's threshold voltage divided by the sense resistor), the controller reduces the gate voltage to maintain constant current. Typical I_limit = V_threshold / R_sense, e.g., 50mV / 10 mohm = 5A.",
+          "FET SOA verification: during the inrush event, the FET simultaneously carries the limit current and blocks (Vbus - V_load). The power dissipation is P = I_limit * (Vbus - V_load), which is maximum at the start (V_load = 0, so P = I_limit * Vbus). The FET must survive this power for the duration of the charging event. Plot the I_limit, Vds trajectory on the FET's SOA curve and verify it stays within the DC or pulsed SOA boundary for the charging duration.",
+          "After the load capacitance is charged and the FET is fully on (Vds = I_load * Rds_on), the hot-swap controller monitors for overcurrent and short circuit faults. An overcurrent fault (current exceeding the limit for a programmable time) triggers the controller to turn off the FET, disconnecting the board. A fast comparator detects short circuits (current exceeding 2 to 3x the limit) and turns off the FET within microseconds."
+        ],
+        "tags": ["protection", "hot-swap", "inrush", "soa"]
+      }
+    ]
+  },
+  {
+    "chain_name": "electromagnetic-compatibility",
+    "description": "Design for electromagnetic compatibility by identifying EMI sources, measuring and mitigating conducted and radiated emissions, designing PCB layouts for EMC, and verifying compliance with CISPR 32 or FCC Part 15B.",
+    "domain": "electrical-engineering",
+    "tags": ["emc", "emi", "conducted-emissions", "radiated-emissions", "shielding", "filter"],
+    "steps": [
+      {
+        "flow_name": "emi-source-identification",
+        "description": "Identify and characterize all EMI sources in the system before designing mitigation, because fixing the source is always cheaper than filtering after the fact.",
+        "inputs": [
+          {"name": "system-block-diagram", "desc": "All active blocks: switching converters, digital clocks, motor drives, communication interfaces, and their operating frequencies, edge rates, and current levels"},
+          {"name": "emc-standard", "desc": "The applicable emissions standard (CISPR 32 Class B for residential, FCC Part 15 Class B, automotive: CISPR 25) with its frequency range and limits"}
+        ],
+        "outputs": [
+          {"name": "emi-source-inventory", "desc": "For each source: fundamental frequency, harmonic spectrum estimate, current or voltage amplitude, and the coupling mechanism (conducted, radiated, or both)"},
+          {"name": "risk-ranking", "desc": "Sources ranked by their likely contribution to emissions failure, based on amplitude and frequency relative to the limit"}
+        ],
+        "process": [
+          "Switching power converters generate conducted DM noise at the switching frequency and its harmonics, plus CM noise from the switch node dV/dt coupling through parasitic capacitance to the chassis/ground. A buck converter switching at 500 kHz with 10 ns edges generates significant spectral energy up to 1/(pi*10ns) = 32 MHz.",
+          "Digital clocks generate radiated emissions from the PCB traces acting as unintentional antennas. A 100 MHz clock with 1 ns edges radiates harmonics up to 300 MHz or higher. The emission amplitude from a trace of length L carrying current I at frequency f is approximately: E = 1.3e-6 * f^2 * I * A / r (V/m) where A is the loop area (trace + return path) in m^2 and r is the distance in meters.",
+          "Motor drives generate broadband EMI from the PWM switching of the inverter. The motor cable acts as an antenna, radiating the PWM spectral content. CM current flows through the motor frame parasitic capacitance to ground. The EMI spectrum extends from the PWM frequency (typically 10 to 20 kHz) to tens of MHz.",
+          "Estimate the conducted emissions spectrum by calculating the Fourier coefficients of the switching waveform. For a trapezoidal waveform with amplitude A, duty cycle D, rise time tr, and frequency f0: the nth harmonic amplitude is An = 2*A*D*sinc(n*pi*D)*sinc(n*pi*f0*tr). Plot this envelope against the applicable limit line. The frequency range where the envelope exceeds the limit is where filtering is needed.",
+          "Rank sources by margin to limit. A source that exceeds the limit by 20 dB needs 20 dB of attenuation from filtering, shielding, or layout improvement. Sources within 6 dB of the limit are at risk due to measurement uncertainty and production variation. Sources more than 10 dB below the limit can typically be ignored."
+        ],
+        "tags": ["emc", "emi-source", "spectrum"]
+      },
+      {
+        "flow_name": "conducted-emissions-mitigation",
+        "description": "Design the EMI filter to reduce conducted emissions on the power input below the applicable limit, handling both differential-mode and common-mode noise.",
+        "inputs": [
+          {"name": "emi-source-inventory", "desc": "Conducted emissions spectrum from each source, separated into DM and CM components"},
+          {"name": "emc-standard", "desc": "Conducted emissions limit line (e.g., CISPR 32 Class B: quasi-peak and average limits from 150 kHz to 30 MHz)"}
+        ],
+        "outputs": [
+          {"name": "filter-design", "desc": "Schematic of the EMI filter with component values: X-capacitors, Y-capacitors, common-mode choke, and DM inductor (or choke leakage inductance)"},
+          {"name": "filter-performance", "desc": "Predicted insertion loss vs frequency for both DM and CM, showing adequate margin to the limit at all frequencies"}
+        ],
+        "process": [
+          "DM filter: X-capacitors shunt DM noise to the return conductor. A single X-cap provides -20 dB/decade above its self-resonant frequency. For more attenuation, use an LC pi-filter: X-cap, DM inductor, X-cap. Each LC stage provides -40 dB/decade above the resonant frequency. The DM inductor can be a separate component or the leakage inductance of the CM choke.",
+          "CM filter: Y-capacitors shunt CM noise from each line to the chassis ground. A CM choke (two windings on one core, wound in the same direction) presents high impedance to CM current and near-zero impedance to DM current. The CM choke impedance is: Zcm = 2*pi*f*Lcm up to the self-resonant frequency, then decreases. Select a choke with self-resonant frequency above the highest frequency where CM attenuation is needed.",
+          "Y-capacitor value is limited by safety leakage current. For IEC 60950-1 Class I equipment: total leakage through Y-caps must be under 3.5 mA at maximum line voltage and frequency. At 240 VAC, 50 Hz: C_y_max = 3.5e-3 / (2*pi*50*240) = 46 nF total. Typical values are 2.2 nF to 4.7 nF per line-to-ground Y-cap.",
+          "Damping: the filter LC resonance can amplify noise at the resonant frequency instead of attenuating it. Add damping to prevent resonance peaks that exceed the limit. A resistor in series with a capacitor across the filter input (Rd, Cd network) damps the resonance. Rd is chosen to equal the characteristic impedance sqrt(L/C) of the filter at resonance. Cd must be at least 4x the filter capacitor to be effective.",
+          "Verify the filter by measuring conducted emissions with a LISN (line impedance stabilization network) per the applicable standard. The LISN provides a defined 50 ohm impedance at the measurement port and isolates the equipment under test from the mains. Compare the measured emissions against the quasi-peak and average limits. If the measured emissions exceed the limit at any frequency, increase the filter attenuation at that frequency by adding components or improving layout."
+        ],
+        "tags": ["emc", "conducted-emissions", "emi-filter", "x-cap", "y-cap", "cm-choke"]
+      },
+      {
+        "flow_name": "pcb-layout-for-emc",
+        "description": "Apply PCB layout techniques to minimize radiated emissions and improve immunity, because layout errors cause more EMC failures than missing filters.",
+        "inputs": [
+          {"name": "system-block-diagram", "desc": "Block placement, signal routing requirements, power distribution"},
+          {"name": "risk-ranking", "desc": "EMI sources ranked by contribution to emissions"}
+        ],
+        "outputs": [
+          {"name": "layout-rules", "desc": "Specific layout rules for this design: ground plane strategy, high-speed signal routing, power loop minimization, connector placement, and shield grounding"},
+          {"name": "layout-review-checklist", "desc": "A checklist of EMC-critical layout items to verify before fabrication"}
+        ],
+        "process": [
+          "Minimize loop area for all high-frequency current paths. Every current flows in a loop (outgoing path + return path). The loop radiates as a magnetic dipole: E proportional to f^2 * I * A where A is the loop area. For a switching converter, the hot loop (switch, inductor, capacitor, return) must be as small as possible. Place the input capacitor directly adjacent to the switch with the shortest trace length.",
+          "Provide a continuous ground plane on at least one inner layer. The ground plane provides a low-impedance return path for all signals. High-frequency return current flows directly under the signal trace (path of least inductance), so a continuous plane under the signal trace keeps the loop area equal to the trace length times the dielectric thickness (small). Any slot or gap in the ground plane forces the return current to detour around the gap, creating a large loop that radiates.",
+          "Route high-speed signals on inner layers (stripline) when possible. Stripline is shielded by ground planes above and below, reducing radiated emissions by 20+ dB compared to microstrip on an outer layer. If microstrip must be used, keep the traces short and away from board edges (edge radiation).",
+          "Separate analog, digital, and power sections physically. Place the switching converter as far as possible from sensitive analog circuits. Route the switching converter's hot loop on the side of the board closest to the ground plane. Never route a high-speed digital signal under or near an analog signal trace.",
+          "Ground stitching vias: place ground vias every lambda/20 around the board perimeter and around any ground plane split to prevent slot antenna effects. At 1 GHz (lambda = 30 cm), this means a via every 15 mm. Along the edge of a shield can or connector ground pad, vias should be spaced even closer (lambda/40) to provide a low-impedance connection to the ground plane."
+        ],
+        "tags": ["emc", "pcb-layout", "ground-plane", "loop-area", "shielding"]
+      }
+    ]
+  }
+]

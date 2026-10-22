@@ -1,0 +1,153 @@
+{
+  "name": "genome-sequencing-pipeline",
+  "description": "Process raw sequencing reads through QC, alignment, duplicate marking, and base quality recalibration to produce analysis-ready BAM files.",
+  "steps": [
+    {
+      "id": "step_1",
+      "skill_name": "sequencing-read-qc",
+      "inputs": {
+        "raw-fastq-files": "from_user_input",
+        "sequencing-platform": "from_user_input"
+      },
+      "outputs": {
+        "qc-report": "qc-report",
+        "quality-flags": "quality-flags"
+      },
+      "parallel_group": 1
+    },
+    {
+      "id": "step_2",
+      "skill_name": "read-trimming-filtering",
+      "inputs": {
+        "raw-fastq-files": "from_context.raw-fastq-files",
+        "qc-report": "step_1.qc-report"
+      },
+      "outputs": {
+        "trimmed-fastq-files": "trimmed-fastq-files",
+        "trimming-statistics": "trimming-statistics"
+      },
+      "parallel_group": 2
+    },
+    {
+      "id": "step_3",
+      "skill_name": "read-alignment-mapping",
+      "inputs": {
+        "trimmed-reads": "from_context.trimmed-reads",
+        "reference-genome": "from_context.reference-genome"
+      },
+      "outputs": {
+        "aligned-bam": "aligned-bam",
+        "alignment-stats": "alignment-stats"
+      },
+      "parallel_group": 3
+    },
+    {
+      "id": "step_4",
+      "skill_name": "duplicate-marking",
+      "inputs": {
+        "aligned-bam": "step_3.aligned-bam",
+        "sequencing-platform": "from_context.sequencing-platform"
+      },
+      "outputs": {
+        "deduped-bam": "deduped-bam",
+        "duplication-metrics": "duplication-metrics"
+      },
+      "parallel_group": 4
+    },
+    {
+      "id": "step_5",
+      "skill_name": "base-quality-recalibration",
+      "inputs": {
+        "deduped-bam": "step_4.deduped-bam",
+        "reference-genome": "from_context.reference-genome",
+        "known-sites-vcf": "from_context.known-sites-vcf"
+      },
+      "outputs": {
+        "recalibrated-bam": "recalibrated-bam",
+        "recalibration-report": "recalibration-report"
+      },
+      "parallel_group": 5
+    }
+  ],
+  "edges": [
+    {
+      "from_step": "step_1",
+      "to_step": "step_2",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_2",
+      "to_step": "step_3",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_3",
+      "to_step": "step_4",
+      "data_type": "object",
+      "field_mapping": {}
+    },
+    {
+      "from_step": "step_4",
+      "to_step": "step_5",
+      "data_type": "object",
+      "field_mapping": {}
+    }
+  ],
+  "entry_inputs": [
+    "raw-fastq-files",
+    "sequencing-platform"
+  ],
+  "terminal_outputs": [
+    "recalibrated-bam",
+    "recalibration-report"
+  ],
+  "parallel_groups": [
+    [
+      "step_1"
+    ],
+    [
+      "step_2"
+    ],
+    [
+      "step_3"
+    ],
+    [
+      "step_4"
+    ],
+    [
+      "step_5"
+    ]
+  ],
+  "estimated_cost": "low",
+  "critical_path": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5"
+  ],
+  "chain_links": {
+    "prerequisites": [],
+    "next_chains": [],
+    "related_chains": [
+      {
+        "chain_name": "clinical-genomics-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "epigenomics-analysis",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "metagenomics-pipeline",
+        "relationship": "complement"
+      },
+      {
+        "chain_name": "variant-calling-methodology",
+        "relationship": "complement"
+      }
+    ]
+  }
+}

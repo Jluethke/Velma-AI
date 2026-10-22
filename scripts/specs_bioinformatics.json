@@ -1,0 +1,799 @@
+[
+  {
+    "chain_name": "genome-sequencing-pipeline",
+    "description": "Process raw sequencing reads through QC, alignment, duplicate marking, and base quality recalibration to produce analysis-ready BAM files.",
+    "domain": "bioinformatics",
+    "tags": ["genomics", "sequencing", "alignment", "NGS", "bioinformatics"],
+    "steps": [
+      {
+        "flow_name": "sequencing-read-qc",
+        "description": "Assess raw read quality and identify issues before alignment. Run FastQC on FASTQ files to evaluate per-base quality scores (Phred scale), sequence content bias, GC distribution, adapter contamination rate, duplication levels, and overrepresented sequences. Flag libraries with mean Q below 30, adapter content above 5%, or abnormal GC curves indicating contamination.",
+        "inputs": [
+          {"name": "raw-fastq-files", "desc": "Paired-end or single-end FASTQ files from the sequencer"},
+          {"name": "sequencing-platform", "desc": "Illumina, PacBio, or Oxford Nanopore with instrument model"}
+        ],
+        "outputs": [
+          {"name": "qc-report", "desc": "Per-sample quality metrics including per-base quality distribution, adapter rates, and duplication levels"},
+          {"name": "quality-flags", "desc": "Pass/warn/fail flags for each quality dimension with thresholds used"}
+        ],
+        "process": [
+          "Run FastQC on each FASTQ file. For paired-end data, run on both R1 and R2 separately.",
+          "Examine per-base sequence quality: reads should maintain median Phred score above 28 through at least 80% of read length. Quality drop at 3-prime end is normal for Illumina; flag if drop begins before position 50.",
+          "Check adapter content curves. Illumina universal adapter and index sequences should be below 5% at any position. Higher rates indicate incomplete size selection or over-sequencing of short fragments.",
+          "Evaluate sequence duplication levels. For whole-genome at 30x target, expect 10-15% optical duplicates (patterned flow cells: HiSeq 4000, NovaSeq) or 5-8% PCR duplicates (unpatterned). PCR-free libraries should show minimal duplication. Exome and targeted panels tolerate higher duplication (30-40%) because of enrichment.",
+          "Check GC content distribution against the expected species profile. Bimodal or shifted GC curves indicate contamination from a different organism. Compare to reference GC distribution (human: ~41% mean GC).",
+          "For long-read platforms (PacBio HiFi, ONT), evaluate read length N50, quality score distribution (Q20+ fraction for HiFi should exceed 99%), and adapter-to-adapter success rate."
+        ],
+        "tags": ["quality-control", "fastqc", "sequencing"]
+      },
+      {
+        "flow_name": "read-trimming-filtering",
+        "description": "Remove adapter sequences and low-quality bases from raw reads. Use fastp for Illumina data: sliding window quality trimming (window size 4, quality threshold 20), adapter auto-detection, poly-G tail removal (NovaSeq two-color chemistry artifact), minimum length filter (36bp for short-insert, 50bp for standard), and per-read quality filter (mean Q below 15 discarded). For long reads, use Porechop for adapter removal or CCS for PacBio subread consensus.",
+        "inputs": [
+          {"name": "raw-fastq-files", "desc": "FASTQ files to be trimmed"},
+          {"name": "qc-report", "desc": "Quality report identifying specific issues to address"}
+        ],
+        "outputs": [
+          {"name": "trimmed-fastq-files", "desc": "Cleaned FASTQ files with adapters removed and low-quality bases trimmed"},
+          {"name": "trimming-statistics", "desc": "Read survival rate, base survival rate, adapter detection rate, quality-filtered count"}
+        ],
+        "process": [
+          "For Illumina paired-end data, run fastp with adapter auto-detection enabled. Fastp identifies adapter sequences from overlap analysis of read pairs without requiring adapter sequence input.",
+          "Apply sliding window trimming: window size 4 bases, mean quality threshold Q20. Trim from 3-prime end when window average drops below threshold. Do not trim from 5-prime end unless quality flags indicated position-specific bias.",
+          "For NovaSeq and NextSeq data, enable poly-G tail removal. Two-color chemistry reports no-signal as G, creating poly-G artifacts at read ends.",
+          "Set minimum read length filter: 36bp for fragment libraries under 200bp insert, 50bp for standard 300-500bp insert libraries. Reads shorter than this after trimming contribute negligible mapping information.",
+          "Apply per-read quality filter: discard reads with mean quality below Q15. This removes the bottom tail of quality distribution without significant data loss in good libraries.",
+          "For UMI-containing libraries, extract UMI sequences before trimming. fastp supports UMI extraction from read headers or fixed positions in R1/R2.",
+          "Verify trimming results: read survival rate should exceed 95% for good libraries. Rates below 80% indicate upstream sample preparation issues."
+        ],
+        "tags": ["trimming", "fastp", "adapter-removal"]
+      },
+      {
+        "flow_name": "read-alignment-mapping",
+        "description": "Align trimmed reads to a reference genome. For short reads, use BWA-MEM2 (SIMD-accelerated successor to BWA-MEM) for whole-genome and exome data or HISAT2 for RNA-seq with splice awareness. For long reads, use minimap2 with preset -ax map-hifi (PacBio HiFi), -ax map-ont (ONT), or -ax map-pb (PacBio CLR). Reference selection: GRCh38 (with ALT contigs and decoy sequences) or T2T-CHM13 (telomere-to-telomere, eliminates ~200Mb of gaps but lacks population-specific ALT haplotypes).",
+        "inputs": [
+          {"name": "trimmed-fastq-files", "desc": "Quality-filtered FASTQ files ready for alignment"},
+          {"name": "reference-genome", "desc": "Reference genome FASTA with BWA or minimap2 index"}
+        ],
+        "outputs": [
+          {"name": "aligned-bam", "desc": "Coordinate-sorted BAM file with read group tags and mapping quality scores"},
+          {"name": "alignment-statistics", "desc": "Mapping rate, properly paired rate, insert size distribution, chimeric rate"}
+        ],
+        "process": [
+          "Build or verify reference index. BWA-MEM2 index: bwa-mem2 index ref.fa (generates .0123, .amb, .ann, .bwt.2bit.64, .pac). minimap2 index: minimap2 -d ref.mmi ref.fa. Index build is one-time per reference.",
+          "Set read group tags at alignment time (-R flag). Minimum: @RG\\tID:flowcell.lane\\tSM:sample\\tLB:library\\tPL:ILLUMINA. Read groups are required for downstream GATK tools and enable per-lane quality assessment.",
+          "Run BWA-MEM2 for Illumina WGS/WES: bwa-mem2 mem -t threads -R readgroup ref.fa R1.fq.gz R2.fq.gz | samtools sort -o aligned.bam. BWA-MEM2 is 2-3x faster than BWA-MEM with identical output.",
+          "For multi-lane or multi-run samples, align each lane separately (preserving lane-level read groups), then merge with samtools merge. This preserves the ability to identify lane-specific artifacts.",
+          "Verify alignment quality: mapping rate should exceed 99% for human WGS (reads failing to map indicate contamination or structural rearrangement). Properly paired rate should exceed 95%. Check insert size distribution for expected library size (typically 300-500bp for standard Illumina).",
+          "For problematic regions (segmental duplications, centromeres, HLA), consider ALT-aware alignment with BWA-MEM2 ALT pipeline or post-alignment liftover from T2T-CHM13.",
+          "Sort BAM by coordinate and create BAI index: samtools index aligned.bam."
+        ],
+        "tags": ["alignment", "bwa-mem2", "minimap2", "mapping"]
+      },
+      {
+        "flow_name": "duplicate-marking",
+        "description": "Identify and flag PCR and optical duplicate reads that arise from library amplification and sequencing artifacts. Use Picard MarkDuplicates or samtools markdup. For optical duplicates on patterned flow cells (HiSeq 4000, NovaSeq 6000), set OPTICAL_DUPLICATE_PIXEL_DISTANCE to 2500 (default 100 is for unpatterned). PCR-free libraries still require duplicate marking for optical duplicates.",
+        "inputs": [
+          {"name": "aligned-bam", "desc": "Coordinate-sorted BAM file from alignment step"},
+          {"name": "sequencing-platform", "desc": "Platform details needed to set optical duplicate distance"}
+        ],
+        "outputs": [
+          {"name": "deduped-bam", "desc": "BAM file with duplicate reads flagged (FLAG 0x400) but retained"},
+          {"name": "duplication-metrics", "desc": "Total reads, duplicate count, optical duplicate fraction, library complexity estimate"}
+        ],
+        "process": [
+          "Run Picard MarkDuplicates on the coordinate-sorted BAM. Set REMOVE_DUPLICATES=false to flag rather than remove. Flagged duplicates are excluded by GATK tools automatically but remain available for manual inspection.",
+          "For patterned flow cells (NovaSeq, HiSeq 3000/4000), set OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500. Optical duplicates arise from cluster generation, not PCR, and should be tracked separately. On unpatterned flow cells (HiSeq 2500, MiSeq), use the default distance of 100.",
+          "For UMI-tagged libraries, use UMI-aware deduplication (fgbio GroupReadsByUmi + CallMolecularConsensusReads, or Picard with BARCODE_TAG=RX). UMI deduplication collapses reads sharing both mapping position AND UMI sequence, allowing recovery of true biological duplicates that share a position by chance.",
+          "Evaluate duplication metrics: estimated library size indicates sequencing saturation. If estimated library size is less than 2x the number of unique reads desired, the library is over-sequenced and additional sequencing yields diminishing returns.",
+          "Check optical duplicate fraction specifically. Rates above 20% on NovaSeq suggest a flow cell loading issue (overloading). Rates should typically be 5-15% on patterned flow cells.",
+          "Create BAM index after duplicate marking: samtools index deduped.bam."
+        ],
+        "tags": ["deduplication", "picard", "optical-duplicates"]
+      },
+      {
+        "flow_name": "base-quality-recalibration",
+        "description": "Recalibrate base quality scores to correct systematic errors in the sequencer's quality estimates. GATK BaseRecalibrator models quality score errors as a function of reported quality, read group, sequencing cycle, and dinucleotide context using a set of known variant sites (dbSNP, Mills indels, 1000 Genomes known indels) to distinguish true variants from errors. ApplyBQSR writes recalibrated scores. Skip for PCR-free WGS if downstream caller handles raw quality appropriately.",
+        "inputs": [
+          {"name": "deduped-bam", "desc": "Duplicate-marked BAM file"},
+          {"name": "reference-genome", "desc": "Reference genome FASTA matching the alignment reference"},
+          {"name": "known-sites-vcf", "desc": "VCF files of known polymorphic sites (dbSNP, Mills, 1000G)"}
+        ],
+        "outputs": [
+          {"name": "recalibrated-bam", "desc": "Analysis-ready BAM with corrected base quality scores"},
+          {"name": "recalibration-report", "desc": "Before/after quality score comparison showing correction magnitude by covariate"}
+        ],
+        "process": [
+          "Run GATK BaseRecalibrator: gatk BaseRecalibrator -I deduped.bam -R ref.fa --known-sites dbsnp.vcf --known-sites mills.vcf --known-sites 1000G.vcf -O recal_table. The tool counts mismatches at non-variant sites, grouped by covariates.",
+          "The covariates modeled by default are: reported quality score (QualityScoreCovariate), read group (ReadGroupCovariate), position in read/sequencing cycle (ContextCovariate for cycle), and preceding+current dinucleotide (ContextCovariate for context). These capture the main sources of systematic quality error.",
+          "Apply recalibration: gatk ApplyBQSR -I deduped.bam -R ref.fa --bqsr-recal-file recal_table -O recalibrated.bam. This writes new quality scores without modifying base calls.",
+          "Generate before/after plots with gatk AnalyzeCovariates to verify recalibration improved quality score accuracy. The empirical quality should align with reported quality after recalibration (points falling on diagonal).",
+          "For exome or targeted sequencing, use interval list (-L) to restrict recalibration to target regions plus padding. This speeds computation and avoids modeling off-target low-coverage regions.",
+          "The final output is the analysis-ready BAM suitable for variant calling, structural variant detection, or copy number analysis."
+        ],
+        "tags": ["bqsr", "gatk", "quality-recalibration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "variant-calling-methodology",
+    "description": "Call germline and somatic variants from analysis-ready BAM files using GATK HaplotypeCaller, DeepVariant, Mutect2, and structural variant callers, then annotate and filter the results.",
+    "domain": "bioinformatics",
+    "tags": ["variant-calling", "genomics", "gatk", "somatic", "germline"],
+    "steps": [
+      {
+        "flow_name": "germline-variant-calling",
+        "description": "Call germline SNVs and indels from a single sample or joint-called cohort. GATK HaplotypeCaller operates in three phases: active region detection (identify areas with evidence of variation), local assembly (de Bruijn graph of reads in active region), and genotyping (pair-HMM likelihood calculation for each haplotype). For single samples, use GVCF mode (-ERC GVCF) to enable later joint genotyping. DeepVariant provides a CNN-based alternative that often outperforms HaplotypeCaller on Illumina data.",
+        "inputs": [
+          {"name": "recalibrated-bam", "desc": "Analysis-ready BAM file from the sequencing pipeline"},
+          {"name": "reference-genome", "desc": "Reference FASTA matching the BAM alignment"}
+        ],
+        "outputs": [
+          {"name": "raw-germline-vcf", "desc": "VCF with all called variant sites and genotype likelihoods"},
+          {"name": "calling-metrics", "desc": "Total variants called, Ti/Tv ratio, het/hom ratio, indel length distribution"}
+        ],
+        "process": [
+          "For single-sample calling with later cohort analysis, run HaplotypeCaller in GVCF mode: gatk HaplotypeCaller -R ref.fa -I sample.bam -ERC GVCF -O sample.g.vcf. GVCF includes non-variant blocks with reference confidence, enabling joint genotyping across samples without re-processing BAMs.",
+          "For joint genotyping of a cohort, consolidate GVCFs with GenomicsDBImport (scales better than CombineGVCFs for large cohorts), then run GenotypeGVCFs on the database.",
+          "As an alternative, run Google DeepVariant: the CNN evaluates pileup images of each candidate site. DeepVariant consistently wins PrecisionFDA Truth Challenges for Illumina data. Use the WGS or WES model as appropriate.",
+          "For long-read data, use DeepVariant with the PACBIO or ONT model, or PEPPER-Margin-DeepVariant pipeline that handles alignment uncertainty in long reads.",
+          "Evaluate call set quality: whole-genome Ti/Tv ratio should be approximately 2.0-2.1 (exome: 2.8-3.3). Het/hom ratio approximately 1.5 for outbred populations. Significant deviation indicates systematic error.",
+          "Expect approximately 4.0-4.5 million SNVs and 500-600K indels per human genome at 30x WGS coverage against GRCh38."
+        ],
+        "tags": ["germline", "haplotypecaller", "deepvariant", "snv", "indel"]
+      },
+      {
+        "flow_name": "somatic-variant-calling",
+        "description": "Call somatic mutations from tumor-normal paired samples or tumor-only samples. GATK Mutect2 uses a local assembly approach similar to HaplotypeCaller but models somatic allele fractions (potentially below 50%) and filters germline variants using a panel of normals and population allele frequency databases. Key parameters: minimum allele fraction for detection, contamination estimation, and orientation bias artifact filtering.",
+        "inputs": [
+          {"name": "tumor-bam", "desc": "Analysis-ready BAM from tumor sample"},
+          {"name": "normal-bam", "desc": "Matched normal BAM from same patient (optional but strongly recommended)"},
+          {"name": "panel-of-normals", "desc": "VCF of recurrent artifacts and germline variants from a set of normal samples"}
+        ],
+        "outputs": [
+          {"name": "somatic-vcf", "desc": "Filtered VCF of somatic mutations with allele fractions and filter annotations"},
+          {"name": "somatic-calling-metrics", "desc": "Mutation count by type, TMB estimate, signature-relevant statistics"}
+        ],
+        "process": [
+          "Run Mutect2 with tumor-normal pair: gatk Mutect2 -R ref.fa -I tumor.bam -I normal.bam -normal normal_sample_name --germline-resource gnomad.vcf --panel-of-normals pon.vcf -O somatic_raw.vcf. The germline resource (gnomAD) provides population allele frequencies for germline filtering.",
+          "Estimate cross-sample contamination: gatk GetPileupSummaries followed by CalculateContamination. Contamination above 2% warrants investigation. The contamination estimate feeds into FilterMutectCalls.",
+          "Collect F1R2 read orientation counts during Mutect2 (--f1r2-tar-gz), then run LearnReadOrientationModel to build an artifact prior. FFPE samples have characteristic C>T artifacts in a specific read orientation.",
+          "Filter calls: gatk FilterMutectCalls -R ref.fa -V somatic_raw.vcf --contamination-table contamination.table --ob-priors orientation_model.tar.gz -O somatic_filtered.vcf. This applies statistical filters for strand bias, contamination, sequencing artifacts, and germline probability.",
+          "For tumor-only calling (no matched normal), Mutect2 relies more heavily on the panel of normals and gnomAD for germline removal. Expect higher false positive rate. Build panel of normals from at least 40 unrelated normal samples processed identically.",
+          "Evaluate somatic call quality: tumor mutational burden (TMB) varies by cancer type (melanoma: 10-50 mut/Mb, lung: 5-20, breast: 1-5). Novel and known driver mutations should be present at allele fractions consistent with tumor purity and ploidy."
+        ],
+        "tags": ["somatic", "mutect2", "tumor-normal", "cancer-genomics"]
+      },
+      {
+        "flow_name": "structural-variant-detection",
+        "description": "Detect structural variants (deletions, duplications, inversions, translocations) and copy number alterations. SV callers use multiple evidence types: split reads (SA tag), discordant read pairs (abnormal insert size or orientation), read depth changes, and assembly. Manta is the primary caller for Illumina data (split-read and paired-end evidence); DELLY adds B-allele frequency for genotyping. For CNV, CNVkit uses on-target and off-target coverage in exome data or uniform binning in WGS.",
+        "inputs": [
+          {"name": "recalibrated-bam", "desc": "Analysis-ready BAM (tumor and/or normal)"},
+          {"name": "reference-genome", "desc": "Reference FASTA"}
+        ],
+        "outputs": [
+          {"name": "sv-vcf", "desc": "VCF of structural variants with event type, size, breakpoint coordinates, and supporting evidence count"},
+          {"name": "cnv-segments", "desc": "Segmented copy number profile with log2 ratio and estimated integer copy number"}
+        ],
+        "process": [
+          "Run Manta for SV detection: configManta.py followed by runWorkflow.py. Manta performs local assembly at breakpoint candidates identified from anomalous read pairs and split reads. It outputs diploidSV.vcf.gz (germline) and somaticSV.vcf.gz (if tumor-normal pair provided).",
+          "Run DELLY for complementary SV detection: delly call -g ref.fa -o sv.bcf sample.bam. DELLY uses paired-end mapping, split-read alignment, and read depth to call deletions, duplications, inversions, and translocations. Merge calls from Manta and DELLY using SURVIVOR (minimum 2 callers agreeing within 500bp breakpoint distance).",
+          "For copy number, run CNVkit: cnvkit.py batch tumor.bam --normal normal.bam --targets targets.bed --fasta ref.fa. CNVkit uses both on-target and off-target (antitarget) bins for exome data, improving resolution in gene-sparse regions. For WGS, use cnvkit.py batch with --method wgs.",
+          "Segment the CNV profile: cnvkit.py segment sample.cnr -o sample.cns. Circular binary segmentation (CBS) identifies breakpoints in the log2 ratio profile. The segmented output provides region-level copy number calls.",
+          "Call integer copy number states: cnvkit.py call sample.cns --purity 0.7 --ploidy 2. Purity and ploidy are estimated from the B-allele frequency and log2 ratio distribution or provided from external tools (ASCAT, PureCN, Sequenza).",
+          "Annotate SVs with gene overlap and known fusion partners. Filter by population frequency (gnomAD-SV for germline) and supporting evidence count (minimum 3 split reads or 5 discordant pairs for high-confidence calls)."
+        ],
+        "tags": ["structural-variants", "cnv", "manta", "delly", "cnvkit"]
+      },
+      {
+        "flow_name": "variant-annotation-filtering",
+        "description": "Annotate variants with functional consequence, population frequency, pathogenicity predictions, and clinical significance. VEP (Ensembl Variant Effect Predictor) assigns consequence terms from the Sequence Ontology, predicts protein impact, and adds allele frequencies from gnomAD. ANNOVAR provides alternative annotation with refGene, cytoBand, and multiple prediction databases. Filter variants using GATK VQSR (machine learning on truth sets) or hard filters as fallback.",
+        "inputs": [
+          {"name": "raw-germline-vcf", "desc": "Raw variant calls to annotate and filter"},
+          {"name": "somatic-vcf", "desc": "Somatic variant calls to annotate (optional)"}
+        ],
+        "outputs": [
+          {"name": "annotated-vcf", "desc": "VCF with functional annotations, population frequencies, pathogenicity scores, and clinical significance"},
+          {"name": "filtered-variants", "desc": "High-confidence variant set after quality filtering with PASS/filter status"}
+        ],
+        "process": [
+          "Run VEP with cache mode for speed: vep --cache --dir_cache vep_data --assembly GRCh38 --offline --fasta ref.fa --input_file variants.vcf --output_file annotated.vcf --vcf --everything. The --everything flag adds all available annotations including SIFT, PolyPhen, allele frequencies, and regulatory features.",
+          "Key annotation fields to evaluate: IMPACT (HIGH/MODERATE/LOW/MODIFIER from Sequence Ontology consequence), gnomAD_AF (population allele frequency; rare disease threshold typically AF < 0.01 or 0.001), SIFT (tolerated/deleterious with score), PolyPhen (benign/possibly_damaging/probably_damaging with score), CADD (Combined Annotation Dependent Depletion; phred-scaled score >20 indicates top 1% deleterious), ClinVar (pathogenic/benign/VUS classification with review status).",
+          "For GATK VQSR filtering (requires at least 30 exomes or 1 WGS): build recalibration model using truth sets (HapMap, Omni, 1000G, dbSNP) with gatk VariantRecalibrator. Apply tranches with ApplyVQSR at sensitivity threshold (99.5% for SNPs, 99.0% for indels).",
+          "If sample count is insufficient for VQSR, apply hard filters: SNPs (QD < 2.0, FS > 60.0, MQ < 40.0, MQRankSum < -12.5, ReadPosRankSum < -8.0); Indels (QD < 2.0, FS > 200.0, ReadPosRankSum < -20.0). These thresholds are from GATK best practices and work for most Illumina data.",
+          "For clinical reporting, prioritize variants by: (1) ClinVar pathogenic/likely pathogenic, (2) predicted loss-of-function in disease-associated genes, (3) rare missense with high CADD (>25) in phenotype-relevant genes, (4) splice-region variants within 2bp of exon boundary.",
+          "Generate summary statistics: total variants by consequence class, novel variant rate (not in dbSNP), Ti/Tv ratio in filtered set (should remain near 2.0 for WGS)."
+        ],
+        "tags": ["annotation", "vep", "filtering", "vqsr", "clinical"]
+      }
+    ]
+  },
+  {
+    "chain_name": "rna-seq-analysis",
+    "description": "Analyze RNA-seq data from experimental design through differential expression and pathway analysis using DESeq2, limma-voom, and GSEA.",
+    "domain": "bioinformatics",
+    "tags": ["transcriptomics", "rna-seq", "differential-expression", "pathway-analysis"],
+    "steps": [
+      {
+        "flow_name": "rna-seq-alignment-quantification",
+        "description": "Align RNA-seq reads with splice awareness and quantify gene and transcript expression. STAR aligner performs two-pass alignment: first pass discovers novel splice junctions, second pass uses the augmented junction database for final alignment. For transcript-level quantification without alignment, Salmon uses quasi-mapping and expectation-maximization to estimate transcript abundances directly from reads.",
+        "inputs": [
+          {"name": "trimmed-rna-fastq", "desc": "Quality-trimmed RNA-seq FASTQ files"},
+          {"name": "reference-annotation", "desc": "GTF gene annotation file (Ensembl or GENCODE) and genome FASTA"}
+        ],
+        "outputs": [
+          {"name": "gene-count-matrix", "desc": "Genes-by-samples count matrix with raw integer counts"},
+          {"name": "transcript-abundances", "desc": "Transcript-level TPM and estimated counts from Salmon"}
+        ],
+        "process": [
+          "Build STAR genome index with annotation: STAR --runMode genomeGenerate --genomeDir star_index --genomeFastaFiles ref.fa --sjdbGTFfile genes.gtf --sjdbOverhang ReadLength-1. The overhang parameter should be read length minus 1 for maximum sensitivity.",
+          "Run STAR two-pass alignment: first pass identifies novel junctions (SJ.out.tab), second pass adds these to the known junction database. This captures sample-specific splice events not in the reference annotation. Use --outSAMtype BAM SortedByCoordinate for direct sorted BAM output.",
+          "Key STAR parameters for standard RNA-seq: --outFilterMultimapNmax 20 (allow up to 20 multi-mapping locations), --alignSJoverhangMin 8 (minimum overhang for unannotated junctions), --outFilterMismatchNoverReadLmax 0.04 (maximum mismatch rate 4%).",
+          "Quantify gene-level counts with featureCounts from the Subread package: featureCounts -a genes.gtf -o counts.txt -p --countReadPairs -T threads aligned.bam. Use --countReadPairs for paired-end data. Default counting mode (Union) assigns reads to the gene with which they have the largest overlap.",
+          "For transcript-level quantification, run Salmon in mapping-based mode: salmon quant -i salmon_index -l A -1 R1.fq.gz -2 R2.fq.gz -o quant_output. The -l A flag enables automatic library type detection. Salmon's quasi-mapping is 10-20x faster than alignment-based counting.",
+          "Salmon outputs TPM (transcripts per million) and estimated counts per transcript. Use tximport in R to aggregate transcript-level estimates to gene level while accounting for transcript length changes across samples (important for differential transcript usage)."
+        ],
+        "tags": ["star", "salmon", "featurecounts", "quantification"]
+      },
+      {
+        "flow_name": "differential-expression-analysis",
+        "description": "Identify differentially expressed genes between conditions using count-based statistical models. DESeq2 fits a negative binomial generalized linear model per gene, estimates dispersion using empirical Bayes shrinkage across genes, and tests for differential expression with a Wald test. limma-voom provides a complementary approach using precision weights derived from the mean-variance relationship.",
+        "inputs": [
+          {"name": "gene-count-matrix", "desc": "Raw count matrix (not normalized) with genes as rows and samples as columns"},
+          {"name": "sample-metadata", "desc": "Sample information table with condition, batch, and other covariates"}
+        ],
+        "outputs": [
+          {"name": "de-results", "desc": "Per-gene differential expression results: log2 fold change, p-value, adjusted p-value, base mean expression"},
+          {"name": "normalized-counts", "desc": "Normalized count matrix (DESeq2 median-of-ratios or TMM) for visualization"}
+        ],
+        "process": [
+          "Construct DESeq2 dataset: dds <- DESeqDataSetFromMatrix(countData, colData, design = ~ batch + condition). Include batch in the design formula if samples were processed in batches. The variable of interest (condition) should be last in the formula.",
+          "Pre-filter low-count genes: keep genes with at least 10 counts across all samples (rowSums(counts(dds)) >= 10). This reduces multiple testing burden and removes genes with no statistical power.",
+          "Run DESeq2: dds <- DESeq(dds). This performs three steps internally: estimation of size factors (median of ratios normalization), estimation of gene-wise dispersions (maximum likelihood followed by empirical Bayes shrinkage toward the fitted mean-dispersion trend), and negative binomial GLM fitting with Wald test.",
+          "Extract results: res <- results(dds, contrast = c('condition', 'treatment', 'control'), alpha = 0.05). The lfcShrinkage function applies adaptive shrinkage (apeglm method) to log2 fold changes, reducing noise for low-count genes while preserving large effects. Use shrunken LFCs for ranking and visualization, original LFCs for effect size reporting.",
+          "For complex designs with continuous covariates, interaction terms, or repeated measures, consider limma-voom: voom transforms counts to log-CPM with precision weights derived from the mean-variance trend, then fits standard linear models. limma handles arbitrary design matrices and contrasts more flexibly than DESeq2.",
+          "Quality checks: MA plot (log2FC vs mean expression) should show symmetric fold change distribution centered at zero. PCA of regularized log-transformed counts (rlog or vst) should separate conditions. Dispersion plot should show shrinkage toward the trend line."
+        ],
+        "tags": ["deseq2", "limma", "differential-expression", "statistics"]
+      },
+      {
+        "flow_name": "pathway-enrichment-analysis",
+        "description": "Identify biological pathways and gene sets enriched in differentially expressed genes. Gene Set Enrichment Analysis (GSEA) uses the full ranked gene list (not a threshold cutoff) to detect coordinated changes in gene sets from MSigDB. Over-representation analysis (ORA) tests whether DE genes (above a significance threshold) overlap gene sets more than expected by chance using the hypergeometric test. ClusterProfiler implements both approaches with visualization.",
+        "inputs": [
+          {"name": "de-results", "desc": "Differential expression results with gene identifiers, log2FC, and adjusted p-values"},
+          {"name": "gene-set-database", "desc": "Gene set collections (MSigDB hallmark, KEGG, Reactome, GO)"}
+        ],
+        "outputs": [
+          {"name": "enrichment-results", "desc": "Enriched pathways with enrichment score, normalized enrichment score, p-value, FDR, and leading edge genes"},
+          {"name": "enrichment-visualization", "desc": "Enrichment plots, dot plots, and gene-concept network diagrams"}
+        ],
+        "process": [
+          "For GSEA, rank all genes by the signed statistic: -log10(p-value) * sign(log2FC). This combines significance and direction. Do not filter by significance threshold. GSEA tests whether genes in each set cluster toward the top or bottom of the ranked list.",
+          "Run fgsea (fast GSEA) or clusterProfiler::GSEA with MSigDB hallmark gene sets (H collection: 50 well-defined biological states and processes) and KEGG/Reactome pathways. Set minimum gene set size to 15 and maximum to 500 to exclude sets that are too small (unstable statistics) or too large (non-specific).",
+          "Interpret GSEA results: normalized enrichment score (NES) indicates direction and strength. Positive NES means the set is enriched in upregulated genes. The leading edge subset contains the genes driving the enrichment signal. FDR < 0.25 is the conventional threshold for GSEA (more permissive than standard 0.05 because GSEA is exploratory).",
+          "For over-representation analysis, select DE genes (adjusted p-value < 0.05 and absolute log2FC > 1) and test overlap with each gene set using the hypergeometric distribution. The background universe should be all genes that were tested (passed the expression filter), not all genes in the genome.",
+          "Run GO enrichment with clusterProfiler::enrichGO for each ontology (BP, MF, CC) separately. Apply simplify() to reduce redundancy in GO results by collapsing semantically similar terms (Wang similarity > 0.7).",
+          "Visualize results: dot plot (top 20 enriched terms by FDR, sized by gene count, colored by NES or p-value), enrichment plot for individual gene sets (running enrichment score curve), and cnetplot (gene-concept network showing which genes appear in multiple enriched pathways)."
+        ],
+        "tags": ["gsea", "pathway", "enrichment", "gene-ontology"]
+      }
+    ]
+  },
+  {
+    "chain_name": "protein-structure-prediction",
+    "description": "Predict and validate protein three-dimensional structure using homology modeling, AlphaFold2, molecular dynamics, and docking methods.",
+    "domain": "bioinformatics",
+    "tags": ["structural-biology", "alphafold", "protein-folding", "molecular-dynamics", "docking"],
+    "steps": [
+      {
+        "flow_name": "sequence-analysis-msa",
+        "description": "Analyze protein sequence for homologs and build multiple sequence alignment. PSI-BLAST iteratively searches UniRef90/UniProt for homologous sequences using position-specific scoring matrices. HHblits performs HMM-HMM comparison against UniClust30 for more sensitive remote homology detection. The resulting MSA captures evolutionary conservation patterns that inform structure prediction. MUSCLE and MAFFT produce high-quality alignments for downstream modeling.",
+        "inputs": [
+          {"name": "query-protein-sequence", "desc": "Target protein sequence in FASTA format"},
+          {"name": "sequence-databases", "desc": "UniRef90, UniClust30, PDB70 databases for homology search"}
+        ],
+        "outputs": [
+          {"name": "multiple-sequence-alignment", "desc": "MSA of query and homologous sequences in A3M or Stockholm format"},
+          {"name": "homolog-analysis", "desc": "Template hits with sequence identity, coverage, E-value, and structural information"}
+        ],
+        "process": [
+          "Run PSI-BLAST against UniRef90 for 3 iterations with E-value threshold 1e-3. Each iteration builds a position-specific scoring matrix (PSSM) from significant hits, increasing sensitivity for remote homologs. Collect sequences with >30% identity over >70% coverage for homology modeling; sequences at 20-30% identity for MSA depth.",
+          "Run HHblits against UniClust30 for 3 iterations. HHblits compares HMM profiles (not just sequences), detecting homologs down to 10-15% sequence identity. The a3m output format preserves insertions relative to the query.",
+          "Search PDB70 (clustered PDB database) with HHsearch to identify structural templates. Evaluate templates by: probability (>70% indicates reliable homology), sequence identity, coverage, and resolution of the crystal structure. Multiple templates covering different domains may be needed for multi-domain proteins.",
+          "Build the final MSA from merged PSI-BLAST and HHblits hits. Remove sequences with >90% identity to reduce redundancy, sequences with <30% coverage to avoid alignment artifacts, and sequences with excessive gaps (>50% gap positions).",
+          "Align the filtered sequence set with MAFFT using the L-INS-i strategy (most accurate for sequences with one alignable domain) or E-INS-i (for sequences with multiple conserved blocks separated by variable regions). For very large alignments (>10,000 sequences), use MAFFT --auto for speed.",
+          "Evaluate MSA quality: effective number of sequences (Neff, calculated by down-weighting similar sequences at 80% identity) should exceed 100 for reliable coevolution analysis. Low Neff indicates insufficient evolutionary information for contact prediction."
+        ],
+        "tags": ["psi-blast", "hhblits", "msa", "homology-search"]
+      },
+      {
+        "flow_name": "structure-prediction-alphafold",
+        "description": "Predict protein structure using AlphaFold2 or template-based homology modeling. AlphaFold2 uses the MSA and template information through an Evoformer network (48 blocks of MSA and pair representation updates) and Structure Module (8 recycling iterations) to predict 3D coordinates. For proteins with templates above 30% identity, classical homology modeling with MODELLER remains effective and faster. Evaluate predictions using pLDDT (per-residue confidence) and PAE (predicted aligned error for domain arrangement).",
+        "inputs": [
+          {"name": "multiple-sequence-alignment", "desc": "Deep MSA from sequence analysis step"},
+          {"name": "homolog-analysis", "desc": "Template structures and their alignments to query"}
+        ],
+        "outputs": [
+          {"name": "predicted-structure", "desc": "3D structure coordinates in PDB format with per-residue confidence scores"},
+          {"name": "confidence-metrics", "desc": "pLDDT scores per residue, PAE matrix for inter-domain confidence, model ranking"}
+        ],
+        "process": [
+          "If high-identity templates exist (>40% sequence identity, >80% coverage): run MODELLER using the template alignment from HHsearch. Build 10-20 models with different random seeds. Evaluate models by MODELLER DOPE score (lower is better) and GA341 assessment (>0.7 indicates native-like fold). MODELLER satisfaction of spatial restraints is fast (minutes) compared to AlphaFold2 (hours).",
+          "For AlphaFold2 prediction: run with full database search (colabfold_search + colabfold_batch for ColabFold, or the full pipeline for AlphaFold2). AlphaFold2 uses the MSA features (row and column attention in Evoformer), template features (if available), and pair representations to predict inter-residue distances and orientations.",
+          "AlphaFold2 generates 5 models (model_1 through model_5) with different random seeds and parameter sets. Rank models by predicted TM-score (pTM) or interface pTM (ipTM for multimers). The top-ranked model is not always the best; examine all 5.",
+          "Interpret pLDDT scores: >90 = very high confidence (backbone and side-chain reliable), 70-90 = confident (backbone reliable, side-chain placement approximate), 50-70 = low confidence (fold may be correct but details unreliable), <50 = disordered or very uncertain (often intrinsically disordered regions, do not interpret as structure).",
+          "Examine the PAE (Predicted Aligned Error) matrix for multi-domain proteins. Low PAE between two regions indicates their relative arrangement is predicted confidently. High PAE between domains means the domains are predicted independently and their relative orientation is uncertain (common for flexibly linked domains).",
+          "For protein complexes, use AlphaFold-Multimer. Provide sequences of all chains in a single FASTA. ipTM > 0.8 indicates a confident interface prediction. Examine the PAE matrix across chains for interface confidence."
+        ],
+        "tags": ["alphafold", "homology-modeling", "modeller", "structure-prediction"]
+      },
+      {
+        "flow_name": "structure-validation-dynamics",
+        "description": "Validate predicted structures using stereochemical analysis and molecular dynamics simulation. MolProbity evaluates Ramachandran geometry, rotamer quality, and steric clashes. GROMACS molecular dynamics tests structural stability: a well-predicted structure should remain stable (low RMSD drift) during simulation. MD also reveals flexible regions and can refine side-chain packing.",
+        "inputs": [
+          {"name": "predicted-structure", "desc": "PDB file of predicted or modeled structure"},
+          {"name": "confidence-metrics", "desc": "pLDDT and PAE from prediction step"}
+        ],
+        "outputs": [
+          {"name": "validated-structure", "desc": "Final structure after validation and optional MD refinement"},
+          {"name": "validation-report", "desc": "Stereochemical quality metrics, MD stability analysis, flexibility profile"}
+        ],
+        "process": [
+          "Run MolProbity analysis: Ramachandran plot (>98% favored, <0.2% outliers for well-refined structures), rotamer analysis (<1% outliers), clashscore (<5 for good structures, <1 for excellent), C-beta deviations (<0.25 Angstrom). AlphaFold2 structures typically have excellent Ramachandran statistics but may have side-chain packing issues.",
+          "Prepare for MD simulation with GROMACS: select force field (CHARMM36m or AMBER ff19SB for proteins), solvate in a TIP3P water box with at least 12 Angstrom buffer from protein to box edge, add counterions (Na+/Cl-) to neutralize and bring to 150mM ionic strength.",
+          "Energy minimization: steepest descent followed by conjugate gradient until maximum force falls below 1000 kJ/mol/nm. This removes steric clashes introduced by solvation.",
+          "Equilibration: 100ps NVT (constant temperature, Berendsen thermostat at 300K, position restraints on protein heavy atoms) followed by 100ps NPT (add Parrinello-Rahman barostat at 1 bar). Release position restraints gradually.",
+          "Production MD: run 50-100ns at minimum for stability assessment. Analyze RMSD of backbone atoms relative to starting structure: stable structures converge to a plateau below 3 Angstrom. Continuously rising RMSD indicates the starting structure is not a stable minimum. RMSF (root mean square fluctuation) per residue reveals flexible loops and rigid core.",
+          "Compare MD-derived flexibility (RMSF) with AlphaFold2 pLDDT: low-pLDDT regions should correspond to high-RMSF regions. Disagreement warrants investigation (the MD simulation may sample alternative conformations not captured by AlphaFold2)."
+        ],
+        "tags": ["molprobity", "gromacs", "molecular-dynamics", "validation"]
+      },
+      {
+        "flow_name": "molecular-docking-analysis",
+        "description": "Predict protein-protein or protein-ligand binding modes and estimate binding affinity. HADDOCK uses ambiguous interaction restraints (AIRs) derived from experimental data (mutagenesis, cross-linking, NMR CSPs) or predicted interface residues. AutoDock Vina performs small-molecule docking using empirical scoring. Docking results guide drug design and interaction studies.",
+        "inputs": [
+          {"name": "validated-structure", "desc": "Validated receptor structure (protein)"},
+          {"name": "ligand-structures", "desc": "Small molecule SDF/MOL2 or partner protein PDB"}
+        ],
+        "outputs": [
+          {"name": "docking-poses", "desc": "Ranked binding poses with scores, interaction fingerprints, and contact residues"},
+          {"name": "binding-analysis", "desc": "Predicted binding affinity, key interactions (H-bonds, hydrophobic, salt bridges), binding site characterization"}
+        ],
+        "process": [
+          "For protein-protein docking with HADDOCK: define active residues (experimentally determined interface residues or predicted by CPORT/InterfaceResidues) and passive residues (surface neighbors of active residues). HADDOCK performs rigid-body docking, semi-flexible refinement, and water refinement in three stages.",
+          "For small-molecule docking with AutoDock Vina: prepare receptor (add hydrogens, assign Gasteiger charges, convert to PDBQT) and ligand (generate 3D coordinates with RDKit, add hydrogens, assign charges, enumerate tautomers and protonation states at pH 7.4). Define search box around the binding site with 5 Angstrom padding.",
+          "Run docking with exhaustiveness proportional to binding site size (default 8 for standard sites, 32 for large or shallow sites). Vina returns up to 20 poses ranked by predicted binding affinity (kcal/mol). Accuracy: the native pose is typically within the top 3 ranked poses for well-defined binding pockets.",
+          "Analyze binding poses: identify hydrogen bonds (donor-acceptor distance < 3.5 Angstrom, angle > 120 degrees), hydrophobic contacts (carbon-carbon distance < 4.0 Angstrom), salt bridges (charged atom distance < 4.0 Angstrom), and pi-stacking (ring centroid distance < 5.5 Angstrom, angle < 30 degrees).",
+          "For higher accuracy, refine top docking poses with short MD simulations (10-20ns) and calculate binding free energy using MM-PBSA or MM-GBSA. MM-PBSA decomposes binding energy into van der Waals, electrostatic, polar solvation, and nonpolar solvation components per residue.",
+          "Cross-validate docking results: redock a known ligand (if crystal structure exists) to verify the protocol reproduces the experimental binding mode (RMSD < 2.0 Angstrom to crystal pose). If self-docking fails, the protocol or scoring function needs adjustment."
+        ],
+        "tags": ["docking", "haddock", "autodock-vina", "binding-affinity"]
+      }
+    ]
+  },
+  {
+    "chain_name": "single-cell-analysis",
+    "description": "Analyze single-cell RNA-seq data from raw counts through clustering, cell type annotation, and trajectory inference using Seurat and Scanpy.",
+    "domain": "bioinformatics",
+    "tags": ["single-cell", "scRNA-seq", "clustering", "cell-type", "trajectory"],
+    "steps": [
+      {
+        "flow_name": "single-cell-qc-preprocessing",
+        "description": "Process raw single-cell count matrices through quality control, doublet removal, and normalization. Filter cells by minimum gene count (200-500 genes), maximum mitochondrial percentage (species-dependent: 5-20%), and minimum UMI count. Detect doublets with Scrublet (simulates doublets by averaging random cell pairs and scores each cell by nearest-neighbor overlap with simulated doublets).",
+        "inputs": [
+          {"name": "raw-count-matrix", "desc": "Genes-by-cells sparse count matrix from Cell Ranger or STARsolo"},
+          {"name": "sample-metadata", "desc": "Sample identifiers, experimental conditions, batch information"}
+        ],
+        "outputs": [
+          {"name": "filtered-adata", "desc": "Quality-filtered AnnData object with normalized and log-transformed counts"},
+          {"name": "qc-metrics", "desc": "Per-cell QC metrics, filtering thresholds applied, cells removed per filter"}
+        ],
+        "process": [
+          "Load count matrix into AnnData (Scanpy) or Seurat object. Calculate per-cell QC metrics: total UMI count (nCount_RNA), number of detected genes (nFeature_RNA), percentage mitochondrial reads (percent.mt from MT- prefixed genes), percentage ribosomal reads.",
+          "Set QC thresholds adaptively: use median absolute deviation (MAD) from the median for each metric. Flag cells more than 3 MAD below median gene count (empty droplets) or more than 3 MAD above median gene count (potential doublets or multiplets). For mitochondrial percentage, cells above 20% (human) or 10% (mouse) are typically dying/damaged cells with compromised membranes.",
+          "Run Scrublet for doublet detection: scrublet.Scrublet(counts_matrix).scrub_doublets(). Scrublet simulates doublets from the data, projects them into the cell embedding, and scores real cells by proximity to simulated doublets. Expected doublet rate depends on cell loading: approximately 0.8% per 1000 cells loaded (10x Chromium). Set threshold at the bimodal distribution minimum between singlet and doublet score peaks.",
+          "Remove ambient RNA contamination with SoupX or CellBender. Ambient RNA from lysed cells is captured in all droplets and inflates counts of highly expressed genes. SoupX estimates the contamination fraction from the empty droplet profile and corrects counts.",
+          "Normalize with SCTransform (Seurat) or scran pooling (Scanpy): SCTransform uses regularized negative binomial regression to model the relationship between mean expression and variance, removing technical variance while preserving biological variance. Standard log-normalization (NormalizeData with scale.factor=10000) is simpler but assumes a constant size factor.",
+          "Select highly variable genes (HVGs): 2000-3000 genes for standard analysis. SCTransform selects HVGs based on residual variance from the regularized model. For standard normalization, use the vst method (variance-stabilizing transformation) to select genes with highest residual variance after controlling for mean expression."
+        ],
+        "tags": ["quality-control", "scrublet", "sctransform", "normalization"]
+      },
+      {
+        "flow_name": "single-cell-clustering-annotation",
+        "description": "Reduce dimensions, cluster cells, and annotate cell types. PCA on highly variable genes followed by UMAP for visualization. Leiden or Louvain community detection on the shared nearest neighbor (SNN) graph identifies cell populations. Cell types are assigned by marker gene expression, reference-based mapping (SingleR, CellTypist), or manual annotation from known markers.",
+        "inputs": [
+          {"name": "filtered-adata", "desc": "Normalized and HVG-selected AnnData with QC filtering applied"},
+          {"name": "reference-atlas", "desc": "Reference single-cell atlas for automated cell type annotation (optional)"}
+        ],
+        "outputs": [
+          {"name": "clustered-adata", "desc": "AnnData with cluster assignments, UMAP coordinates, and cell type labels"},
+          {"name": "marker-genes", "desc": "Top differentially expressed genes per cluster with fold change, p-value, and specificity metrics"}
+        ],
+        "process": [
+          "Run PCA on the HVG expression matrix: sc.tl.pca(adata, n_comps=50). Determine the effective dimensionality from the elbow plot of variance explained per component. Typically 15-30 PCs capture the biologically meaningful variation; including too many PCs adds noise.",
+          "Build nearest-neighbor graph from PCA space: sc.pp.neighbors(adata, n_neighbors=15, n_pcs=30). The number of neighbors (k) controls granularity: smaller k produces more clusters. The graph uses approximate nearest neighbors (annoy or pynndescent) for speed.",
+          "Cluster with Leiden algorithm: sc.tl.leiden(adata, resolution=0.5). Resolution parameter controls cluster granularity: 0.2-0.5 yields broad cell types, 0.5-1.0 yields subtypes, >1.0 yields fine-grained populations. Start with 0.5 and adjust based on biological expectations. Leiden is preferred over Louvain because it guarantees connected communities.",
+          "Compute UMAP embedding: sc.tl.umap(adata, min_dist=0.3, spread=1.0). UMAP is for visualization only, not for clustering (clusters are defined on the graph, not the UMAP). Do not over-interpret distances in UMAP space; only local neighborhood structure is preserved reliably.",
+          "Find marker genes per cluster: sc.tl.rank_genes_groups(adata, groupby='leiden', method='wilcoxon'). For each cluster, report the top genes by fold change with adjusted p-value < 0.05. Also calculate percentage of cells expressing each gene within vs outside the cluster (pct.1 vs pct.2 in Seurat) for specificity assessment.",
+          "Annotate cell types: match marker gene profiles to known cell type signatures (e.g., CD3D/CD3E for T cells, MS4A1/CD19 for B cells, LYZ/CD14 for monocytes, EPCAM for epithelial). For automated annotation, run SingleR against a reference atlas (Human Cell Atlas, Tabula Sapiens): SingleR calculates Spearman correlation between each cell's expression profile and reference cell type centroids, then assigns the best-matching type with a quality score."
+        ],
+        "tags": ["clustering", "umap", "leiden", "cell-type-annotation", "marker-genes"]
+      },
+      {
+        "flow_name": "single-cell-trajectory-analysis",
+        "description": "Infer developmental trajectories and cell state transitions from single-cell data. RNA velocity (scVelo) uses the ratio of spliced to unspliced mRNA to infer the direction of transcriptional change. Monocle3 orders cells along a learned trajectory graph (principal graph) and assigns pseudotime values representing progress along biological processes like differentiation.",
+        "inputs": [
+          {"name": "clustered-adata", "desc": "Clustered and annotated AnnData object"},
+          {"name": "spliced-unspliced-counts", "desc": "Separate spliced and unspliced count matrices from velocyto or STARsolo"}
+        ],
+        "outputs": [
+          {"name": "trajectory-results", "desc": "Pseudotime ordering, branch points, RNA velocity vectors, and trajectory-associated genes"},
+          {"name": "dynamic-genes", "desc": "Genes with significant expression changes along the trajectory, ordered by activation time"}
+        ],
+        "process": [
+          "Generate spliced/unspliced count matrices: run velocyto (velocyto run with BAM and GTF) or STARsolo with --soloFeatures Gene Velocyto. Unspliced counts come from reads mapping to introns; spliced counts from exon-only reads. Typical unspliced fraction is 10-20% of total counts.",
+          "Run scVelo preprocessing: scv.pp.filter_and_normalize(adata, min_shared_counts=20). Compute first and second order moments: scv.pp.moments(adata, n_pcs=30, n_neighbors=30). Moments smooth the count data over the nearest-neighbor graph to reduce noise.",
+          "Fit velocity model: scv.tl.velocity(adata, mode='dynamical'). The dynamical model (preferred over steady-state) fits per-gene kinetic parameters (transcription rate alpha, splicing rate beta, degradation rate gamma) using an expectation-maximization algorithm. This captures genes in induction, repression, and steady-state phases.",
+          "Compute velocity graph: scv.tl.velocity_graph(adata). This projects RNA velocity vectors onto the cell-cell graph, estimating transition probabilities between cells. Visualize with scv.pl.velocity_embedding_stream(adata, basis='umap') to see directional flow overlaid on the UMAP.",
+          "For pseudotime ordering with Monocle3: learn the principal graph (learn_graph), set the root cell (order_cells with root specified at the known progenitor population), and extract pseudotime values. Monocle3 uses reversed graph embedding (SimplePPT or L1-graph) to fit a tree or graph structure to the data.",
+          "Identify trajectory-associated genes: fit gene expression as a function of pseudotime using generalized additive models (Monocle3 graph_test) or scVelo's rank_dynamical_genes. Cluster dynamic genes by their temporal activation pattern to identify gene modules activated at different trajectory stages (early, intermediate, late)."
+        ],
+        "tags": ["rna-velocity", "scvelo", "monocle", "pseudotime", "trajectory"]
+      }
+    ]
+  },
+  {
+    "chain_name": "metagenomics-pipeline",
+    "description": "Analyze shotgun metagenomic sequencing data for taxonomic and functional profiling of microbial communities.",
+    "domain": "bioinformatics",
+    "tags": ["metagenomics", "microbiome", "taxonomic-profiling", "functional-profiling"],
+    "steps": [
+      {
+        "flow_name": "metagenomic-qc-decontamination",
+        "description": "Quality-filter metagenomic reads and remove host contamination. Host removal is critical: human samples typically contain 10-90% host DNA depending on sample type (stool: 5-20%, saliva: 50-90%, tissue: 80-99%). Bowtie2 alignment against the host reference identifies and removes host reads before microbial analysis.",
+        "inputs": [
+          {"name": "raw-metagenomic-fastq", "desc": "Raw shotgun metagenomic FASTQ files"},
+          {"name": "host-reference", "desc": "Host genome reference for decontamination (e.g., GRCh38 for human)"}
+        ],
+        "outputs": [
+          {"name": "decontaminated-fastq", "desc": "Host-removed, quality-filtered metagenomic reads"},
+          {"name": "decontamination-metrics", "desc": "Input read count, host read fraction, surviving read count, quality distribution"}
+        ],
+        "process": [
+          "Run fastp for adapter removal and quality trimming with the same parameters as genomic data: sliding window Q20, minimum length 50bp, poly-G removal for NovaSeq.",
+          "Remove host reads with Bowtie2: align against the host genome (bowtie2 -x host_index -1 R1.fq.gz -2 R2.fq.gz --very-sensitive --no-unal) and retain unmapped reads (samtools fastq -f 12). The --very-sensitive preset maximizes sensitivity for host detection at the cost of speed.",
+          "For additional decontamination, run against PhiX174 (Illumina spike-in control) and common laboratory contaminants (mycoplasma, E. coli lab strains). The KneadData pipeline wraps Bowtie2 host removal with Trimmomatic quality filtering.",
+          "Assess sequencing depth adequacy: for taxonomic profiling, 1-5 million reads per sample is often sufficient. For functional profiling and assembly, 10-50 million reads is standard. Use Nonpareil to estimate the fraction of the metagenome sampled (coverage) and predict how much additional sequencing would improve discovery.",
+          "Report host contamination rate per sample. Samples with >95% host reads may have insufficient microbial data for reliable profiling. Consider alternative wet-lab approaches (differential lysis, propidium monoazide treatment) for high-host samples."
+        ],
+        "tags": ["host-removal", "decontamination", "quality-control"]
+      },
+      {
+        "flow_name": "taxonomic-functional-profiling",
+        "description": "Profile the taxonomic composition and functional potential of the microbial community. MetaPhlAn uses clade-specific marker genes (approximately 1.1 million markers from 13,500 species) for species-level relative abundance estimation. Kraken2 uses exact k-mer matching against a reference database for fast classification. HUMAnN3 maps reads to UniRef90 gene families and MetaCyc pathways for functional profiling.",
+        "inputs": [
+          {"name": "decontaminated-fastq", "desc": "Host-removed metagenomic reads"},
+          {"name": "profiling-databases", "desc": "MetaPhlAn marker database, Kraken2 database, UniRef90, MetaCyc"}
+        ],
+        "outputs": [
+          {"name": "taxonomic-profile", "desc": "Species-level relative abundance table with confidence estimates"},
+          {"name": "functional-profile", "desc": "Gene family and pathway abundance tables normalized per community and per species"}
+        ],
+        "process": [
+          "Run MetaPhlAn for species-level taxonomic profiling: metaphlan input.fq.gz --input_type fastq --nproc threads -o profile.tsv. MetaPhlAn maps reads to clade-specific marker genes and estimates relative abundance. It reports at all taxonomic levels (kingdom through species and strain). Strengths: high specificity, quantitative. Limitation: cannot detect species absent from the marker database.",
+          "Run Kraken2 for complementary taxonomic classification: kraken2 --db kraken_db --paired R1.fq.gz R2.fq.gz --report kreport.txt --output kraken.out. Kraken2 assigns each read to the lowest common ancestor of all species sharing its k-mers. Follow with Bracken for species-level abundance re-estimation from Kraken2's read-level classifications.",
+          "Run HUMAnN3 for functional profiling: humann --input input.fq.gz --output humann_out. HUMAnN3 first performs taxonomic profiling (using MetaPhlAn), then maps reads to pangenomes of detected species (species-specific gene families), and finally maps unclassified reads against UniRef90 (community-level functional potential). Output includes gene family abundance (RPK: reads per kilobase) and pathway abundance (MetaCyc pathways).",
+          "Normalize HUMAnN3 output: convert RPK to relative abundance (sum to 1 within each sample) or CPM (copies per million) for cross-sample comparison. Stratified output separates contributions from each species to each gene family/pathway.",
+          "Compare MetaPhlAn and Kraken2 results: concordant species (both methods detect) are high confidence. Species detected only by MetaPhlAn have strong marker gene evidence. Species detected only by Kraken2 may include false positives from shared k-mers (check Bracken re-estimated abundance).",
+          "Calculate alpha diversity (Shannon, Simpson, observed species richness) and beta diversity (Bray-Curtis dissimilarity, UniFrac if phylogenetic tree available) from the taxonomic profile. Test for significant differences between groups using PERMANOVA (adonis2) on the distance matrix."
+        ],
+        "tags": ["metaphlan", "kraken2", "humann3", "taxonomic", "functional"]
+      },
+      {
+        "flow_name": "metagenomic-assembly-binning",
+        "description": "Assemble metagenomic reads into contigs and bin contigs into metagenome-assembled genomes (MAGs). MEGAHIT uses a succinct de Bruijn graph with multiple k-mer sizes for memory-efficient assembly. MetaBAT2 bins contigs by tetranucleotide frequency and differential coverage across samples. CheckM evaluates MAG quality using single-copy marker genes.",
+        "inputs": [
+          {"name": "decontaminated-fastq", "desc": "Quality-filtered metagenomic reads for assembly"},
+          {"name": "taxonomic-profile", "desc": "Taxonomic composition to guide expected genome recovery"}
+        ],
+        "outputs": [
+          {"name": "metagenome-assembled-genomes", "desc": "Binned MAGs with quality metrics (completeness, contamination, strain heterogeneity)"},
+          {"name": "assembly-statistics", "desc": "Contig N50, total assembly size, number of contigs, coverage distribution"}
+        ],
+        "process": [
+          "Assemble with MEGAHIT: megahit -1 R1.fq.gz -2 R2.fq.gz -o assembly_out --min-contig-len 1000. MEGAHIT iterates through multiple k-mer sizes (21 to 141 by default) and merges assemblies. For deeply sequenced samples (>50M reads), metaSPAdes may produce longer contigs but requires more memory.",
+          "Evaluate assembly: calculate N50 (half the assembly is in contigs this length or longer), total assembly size, number of contigs >1kb, and maximum contig length. Map reads back to the assembly (bowtie2) to calculate per-contig coverage. Good metagenomic assemblies have N50 of 5-50kb depending on community complexity.",
+          "For multi-sample experiments, consider co-assembly (combining reads from all samples for assembly) vs per-sample assembly. Co-assembly improves contiguity for shared species but may create chimeric contigs from closely related strains. Differential coverage binning requires per-sample read mapping to the assembly.",
+          "Bin contigs with MetaBAT2: map reads from each sample to the assembly to generate depth files, then run metabat2 -i contigs.fa -a depth.txt -o bins/bin. MetaBAT2 clusters contigs by tetranucleotide frequency composition and coverage correlation across samples. Alternative binners: CONCOCT, MaxBin2. Running multiple binners and selecting the best bin set with DAS Tool improves overall recovery.",
+          "Evaluate MAG quality with CheckM: checkm lineage_wf bins/ checkm_output/. CheckM uses 104 single-copy marker genes to estimate completeness (fraction of markers present) and contamination (fraction of markers duplicated). MIMAG standards: high-quality (>90% complete, <5% contamination, 23S/16S/5S rRNA, >18 tRNAs), medium-quality (>50% complete, <10% contamination).",
+          "Taxonomically classify MAGs with GTDB-Tk, which places genomes on the Genome Taxonomy Database reference tree using 120 bacterial or 53 archaeal marker genes. GTDB-Tk provides standardized taxonomy that resolves many polyphyletic groups in NCBI taxonomy."
+        ],
+        "tags": ["assembly", "megahit", "binning", "metabat2", "mags"]
+      }
+    ]
+  },
+  {
+    "chain_name": "phylogenetics-methodology",
+    "description": "Reconstruct evolutionary relationships using molecular sequence data with maximum likelihood and Bayesian methods, including molecular clock analysis.",
+    "domain": "bioinformatics",
+    "tags": ["phylogenetics", "evolution", "molecular-clock", "tree-inference"],
+    "steps": [
+      {
+        "flow_name": "phylogenetic-alignment-model-selection",
+        "description": "Prepare sequence alignments for phylogenetic inference and select the best-fitting substitution model. Alignment quality directly determines tree accuracy. trimAl and Gblocks remove poorly aligned regions that introduce noise. ModelTest-NG evaluates substitution models (JC, HKY, GTR for DNA; JTT, WAG, LG for protein) with rate variation (+G gamma, +I invariant sites) using AIC and BIC.",
+        "inputs": [
+          {"name": "homologous-sequences", "desc": "Set of orthologous sequences in FASTA format"},
+          {"name": "sequence-type", "desc": "DNA or protein, coding or non-coding"}
+        ],
+        "outputs": [
+          {"name": "curated-alignment", "desc": "Trimmed multiple sequence alignment in PHYLIP or FASTA format"},
+          {"name": "substitution-model", "desc": "Best-fit model with parameters (base frequencies, rate matrix, gamma shape, invariant proportion)"}
+        ],
+        "process": [
+          "Align sequences with MAFFT: for protein, use the L-INS-i algorithm (--localpair --maxiterate 1000) for best accuracy up to approximately 200 sequences. For DNA coding regions, align as codons: translate to protein, align protein sequences, then back-translate to DNA preserving codon structure (TranslatorX or PAL2NAL).",
+          "Trim unreliable alignment columns with trimAl -automated1 (selects the best trimming strategy automatically) or Gblocks with relaxed parameters (b4=5, b5=h for allowing half gaps). Examine trimmed alignment: if more than 50% of columns are removed, the sequences may be too divergent for reliable phylogenetic inference.",
+          "Run ModelTest-NG: modeltest-ng -i alignment.phy -d nt (nucleotide) or -d aa (amino acid). ModelTest-NG evaluates substitution models by fitting parameters via maximum likelihood and comparing models using AIC (penalizes complexity less) and BIC (penalizes complexity more). For most datasets, BIC is preferred as it selects simpler models that generalize better.",
+          "For DNA: common best-fit models are GTR+G (general time reversible with gamma-distributed rate variation, 6 rate parameters + 4 frequencies + alpha shape) or HKY+G (2 rate parameters: transition/transversion ratio). For protein: LG+G (Le and Gascuel 2008) or WAG+G are typical winners.",
+          "If the dataset has many invariant sites (conserved positions), models with +I (proportion invariant) improve fit. However, +G+I together can be poorly identifiable (both model rate variation). In practice, GTR+G4 (4 gamma categories) is sufficient for most analyses.",
+          "Record the model selection result: tree inference tools (RAxML-NG, IQ-TREE, MrBayes) accept the model specification directly. Misspecified models cause biased branch lengths and can distort tree topology, particularly at deep divergences."
+        ],
+        "tags": ["alignment", "model-selection", "modeltest", "trimal"]
+      },
+      {
+        "flow_name": "tree-inference-support",
+        "description": "Infer phylogenetic trees using maximum likelihood (RAxML-NG, IQ-TREE) and Bayesian (MrBayes, BEAST2) methods, and assess branch support. ML finds the tree topology and branch lengths that maximize the probability of observing the data under the substitution model. Bayesian methods sample the posterior distribution of trees proportional to likelihood times prior, providing credible intervals on topology and parameters.",
+        "inputs": [
+          {"name": "curated-alignment", "desc": "Quality-trimmed alignment in appropriate format"},
+          {"name": "substitution-model", "desc": "Best-fit substitution model from model selection"}
+        ],
+        "outputs": [
+          {"name": "phylogenetic-tree", "desc": "Best ML tree or Bayesian consensus tree with branch support values"},
+          {"name": "tree-diagnostics", "desc": "Bootstrap support distribution, MCMC convergence metrics (ESS, PSRF), tree likelihood"}
+        ],
+        "process": [
+          "Run RAxML-NG for maximum likelihood inference: raxml-ng --all --msa alignment.phy --model GTR+G --bs-trees 1000. The --all flag performs ML tree search (20 random + 20 parsimony starting trees) followed by 1000 bootstrap replicates and maps bootstrap support onto the ML tree. IQ-TREE is an alternative that often finds higher-likelihood trees with ultrafast bootstrap (UFBoot2): iqtree2 -s alignment.phy -m GTR+G -bb 1000 -alrt 1000.",
+          "Interpret bootstrap support: values above 70% (standard bootstrap) or 95% (UFBoot2) indicate well-supported clades. UFBoot2 values are less biased than standard bootstrap for large datasets but the threshold is higher. SH-aLRT (approximate likelihood ratio test) provides a complementary support measure.",
+          "For Bayesian inference with MrBayes: set the substitution model (lset nst=6 rates=gamma for GTR+G), run two independent MCMC chains (nruns=2, nchains=4 per run: 1 cold + 3 heated) for sufficient generations (typically 1-10 million depending on dataset size).",
+          "Assess MCMC convergence: average standard deviation of split frequencies should fall below 0.01. Check effective sample size (ESS) for all parameters in Tracer: ESS > 200 for all parameters. If ESS is low, run longer or adjust heating temperature. Discard burn-in (first 25% of samples by default).",
+          "For the Bayesian consensus tree: 50% majority-rule consensus shows clades appearing in more than half of the posterior sample. Posterior probabilities > 0.95 indicate strong support. Bayesian posterior probabilities tend to be higher than bootstrap values for the same data and should be interpreted with different thresholds.",
+          "Compare ML and Bayesian trees: concordant strongly-supported clades are reliable. Conflicts between methods at well-supported nodes indicate model sensitivity and warrant investigation (e.g., long-branch attraction in ML, prior sensitivity in Bayes)."
+        ],
+        "tags": ["raxml", "iqtree", "mrbayes", "bootstrap", "bayesian"]
+      },
+      {
+        "flow_name": "molecular-clock-dating",
+        "description": "Estimate divergence times using molecular clock models calibrated with fossil or biogeographic data. BEAST2 jointly estimates the tree topology, branch lengths (in substitutions), and divergence times (in years) by combining a substitution model, a clock model (strict or relaxed), a tree prior (birth-death, coalescent), and calibration priors (age constraints on internal nodes from fossil evidence).",
+        "inputs": [
+          {"name": "curated-alignment", "desc": "Sequence alignment for clock analysis"},
+          {"name": "calibration-data", "desc": "Fossil or biogeographic calibration points with age ranges and associated node constraints"}
+        ],
+        "outputs": [
+          {"name": "dated-tree", "desc": "Time-calibrated phylogeny with divergence time estimates and 95% HPD intervals"},
+          {"name": "clock-rate-estimates", "desc": "Substitution rate estimates (substitutions/site/year) with uncertainty"}
+        ],
+        "process": [
+          "Choose clock model: strict clock assumes constant rate across all lineages (appropriate when rate variation is low, e.g., closely related viral sequences). Relaxed clock (uncorrelated lognormal in BEAST2) allows each branch to have its own rate drawn from a lognormal distribution, accommodating rate variation across lineages. Use Bayes factor comparison (path sampling) to select between strict and relaxed clocks.",
+          "Set calibration priors: for each calibration node, define a prior distribution on the node age. Fossil calibrations typically use lognormal or exponential priors with a hard minimum (fossil age = earliest possible divergence) and soft maximum. Minimum age: the age of the oldest fossil assigned to a clade. Maximum age: informed by absence of older fossils or biogeographic constraints.",
+          "Configure BEAST2 XML: select substitution model (from ModelTest-NG results), clock model, tree prior (Yule for species-level analysis, birth-death for trees with extinction, coalescent for population-level), and calibration priors. Use BEAUti GUI to assemble the XML or edit manually for complex analyses.",
+          "Run BEAST2 MCMC: chain length typically 50-200 million generations with sampling every 5000-10000. Monitor ESS for all parameters. Multiple calibration points improve precision and allow cross-validation (remove one calibration and check if the remaining calibrations recover a consistent age).",
+          "Analyze results in Tracer: verify convergence (ESS > 200 for all parameters), check that calibration priors are updated by the data (posterior differs from prior). Summarize tree set with TreeAnnotator: maximum clade credibility tree with median node heights and 95% HPD intervals.",
+          "Report divergence times with uncertainty: give the median estimate and 95% HPD interval. HPD intervals of 50% or more of the estimate are common for deep divergences and reflect genuine uncertainty. Cross-reference with published molecular dating studies and geological/fossil record for consistency."
+        ],
+        "tags": ["beast2", "molecular-clock", "divergence-time", "fossil-calibration"]
+      }
+    ]
+  },
+  {
+    "chain_name": "drug-discovery-computational",
+    "description": "Apply computational methods to drug discovery: target assessment, virtual screening, ADMET prediction, lead optimization, and de novo molecular design.",
+    "domain": "bioinformatics",
+    "tags": ["drug-discovery", "virtual-screening", "admet", "medicinal-chemistry", "molecular-design"],
+    "steps": [
+      {
+        "flow_name": "target-identification-assessment",
+        "description": "Identify and validate drug targets using disease-gene association data, genetic evidence, and structural druggability analysis. Prioritize targets with strong genetic evidence (GWAS, Mendelian disease, loss-of-function intolerance), available structural information (crystal structure or confident AlphaFold2 prediction), and a tractable binding site (defined pocket with appropriate properties for small-molecule binding).",
+        "inputs": [
+          {"name": "disease-indication", "desc": "Target disease or phenotype to address"},
+          {"name": "omics-data", "desc": "Available transcriptomic, proteomic, or genetic data linking genes to the disease"}
+        ],
+        "outputs": [
+          {"name": "target-shortlist", "desc": "Ranked targets with genetic evidence score, druggability assessment, and structural availability"},
+          {"name": "target-profiles", "desc": "Per-target profile: gene, protein function, expression pattern, existing drugs/tools, binding site analysis"}
+        ],
+        "process": [
+          "Mine genetic evidence: query Open Targets Platform for disease-gene associations aggregating GWAS (genome-wide significant loci with eQTL colocalization), rare disease (ClinVar pathogenic variants, OMIM), somatic mutations (COSMIC driver genes), and animal model phenotypes. Targets with multiple independent lines of genetic evidence have higher clinical success probability.",
+          "Assess loss-of-function tolerance from gnomAD constraint metrics: pLI (probability of loss-of-function intolerance) > 0.9 indicates the gene is essential and modulation may have safety concerns. LOEUF (loss-of-function observed/expected upper fraction) < 0.35 indicates strong intolerance. This informs whether inhibition vs activation is safer.",
+          "Evaluate tissue expression: target should be expressed in disease-relevant tissue (GTEx, Human Protein Atlas). Broad essential expression increases on-target toxicity risk. Ideal targets have enriched expression in disease tissue relative to safety-critical organs (heart, liver, brain).",
+          "Structural druggability assessment: obtain structure (PDB experimental or AlphaFold2 prediction with pLDDT > 70 in binding region). Run fpocket or SiteMap to identify and score binding pockets. Druggable pockets: volume 200-1000 cubic Angstrom, hydrophobicity score > 0.5, enclosure > 0.5. Allosteric sites may be identified from MD simulations (cryptic pockets that open during dynamics).",
+          "Check existing chemical matter: search ChEMBL for known bioactive compounds against the target (IC50/Ki < 10 micromolar). Existing tool compounds de-risk the target and provide starting points for lead optimization. If no chemical matter exists, assess tractability from structural features and protein family druggability statistics.",
+          "Compile competitive landscape: identify drugs in clinical trials targeting the same protein (ClinicalTrials.gov) or pathway. First-in-class targets carry higher risk but also higher reward. Fast-follower programs must differentiate on selectivity, safety, or pharmacokinetics."
+        ],
+        "tags": ["target-identification", "druggability", "genetic-evidence", "open-targets"]
+      },
+      {
+        "flow_name": "virtual-screening-hit-finding",
+        "description": "Screen large compound libraries computationally to identify initial hits for a validated target. Structure-based virtual screening uses molecular docking (AutoDock Vina, Glide) to predict binding poses and estimate binding affinity. Ligand-based screening uses pharmacophore models or molecular fingerprint similarity to known actives. Combine approaches for higher hit rates.",
+        "inputs": [
+          {"name": "target-structure", "desc": "3D structure of the target protein with defined binding site"},
+          {"name": "compound-library", "desc": "Chemical library to screen (ZINC, Enamine REAL, in-house collection)"}
+        ],
+        "outputs": [
+          {"name": "hit-list", "desc": "Ranked compounds with predicted binding poses, docking scores, and chemical properties"},
+          {"name": "screening-statistics", "desc": "Library size, compounds passing each filter, score distributions, enrichment over random"}
+        ],
+        "process": [
+          "Prepare the target structure: add hydrogens at physiological pH (7.4), assign partial charges (AM1-BCC or RESP), define the binding site grid from co-crystallized ligand position or pocket detection. Remove water molecules except those making critical bridging interactions (conserved across multiple crystal structures).",
+          "Pre-filter the compound library: apply drug-likeness filters (Lipinski rule of five: MW < 500, LogP < 5, HBD <= 5, HBA <= 10; or extended Veber rules: PSA < 140, rotatable bonds <= 10). Remove reactive functional groups (PAINS: pan-assay interference compounds, BMS filters). This reduces library size by 20-40% and eliminates frequent false positives.",
+          "For structure-based screening, dock with AutoDock Vina or Glide (SP mode for initial screen, XP mode for top hits). Vina uses a scoring function combining gauss (steric), repulsion, hydrogen bonding, hydrophobic, and rotational entropy terms. Screen in batches: dock the full filtered library, rank by score, select top 1-5% for detailed analysis.",
+          "For ligand-based screening (when actives are known): generate pharmacophore model from aligned active compounds (shared features: hydrogen bond donors/acceptors, hydrophobic centers, aromatic rings, positive/negative ionizable). Screen library for pharmacophore matches. Alternatively, calculate Morgan fingerprints (ECFP4) for all compounds and rank by Tanimoto similarity to known actives (threshold > 0.3 for scaffold-hopping, > 0.6 for analogs).",
+          "Consensus scoring: combine structure-based and ligand-based rankings. Compounds scoring well in both approaches are enriched for true actives. Calculate enrichment factor: (hits in top N%) / (expected hits from random selection). A good screen achieves EF > 10 at 1%.",
+          "Select 50-200 compounds for experimental testing: prioritize chemical diversity (cluster by Tanimoto distance, select centroids), favorable predicted properties (solubility, permeability), and synthetic accessibility (SA score < 4). Include known actives as positive controls and decoys as negative controls."
+        ],
+        "tags": ["virtual-screening", "docking", "pharmacophore", "hit-finding"]
+      },
+      {
+        "flow_name": "admet-lead-optimization",
+        "description": "Predict absorption, distribution, metabolism, excretion, and toxicity (ADMET) properties and optimize lead compounds through iterative structure-activity relationship analysis. ADMET prediction uses QSAR models trained on experimental data. Lead optimization balances potency, selectivity, and drug-like properties through medicinal chemistry design guided by free energy perturbation calculations.",
+        "inputs": [
+          {"name": "hit-list", "desc": "Confirmed hits from virtual screening or experimental assays with IC50/Ki values"},
+          {"name": "target-structure", "desc": "Target protein structure for binding mode analysis"}
+        ],
+        "outputs": [
+          {"name": "optimized-leads", "desc": "Lead compounds with improved potency, selectivity, and ADMET profiles"},
+          {"name": "sar-analysis", "desc": "Structure-activity relationship maps showing how modifications affect activity and properties"}
+        ],
+        "process": [
+          "Predict ADMET properties for all hits using validated QSAR models: lipophilicity (XLOGP3 or consensus LogP), aqueous solubility (ESOL model: LogS from molecular descriptors), Caco-2 permeability (predictor of oral absorption), CYP inhibition (CYP3A4, 2D6, 2C9: major metabolic liabilities), plasma protein binding, hERG channel inhibition (cardiac toxicity: pIC50 > 6 is a red flag), and blood-brain barrier permeability (TopoPSA < 90 for CNS penetration, > 90 for peripherally restricted).",
+          "Triage hits by ADMET profile: remove compounds with predicted hERG IC50 < 10 micromolar, insoluble (LogS < -6), metabolically unstable (multiple CYP liabilities), or Ames-positive (mutagenic). Remaining compounds are lead candidates for optimization.",
+          "Analyze binding mode of top leads: examine docking poses in the context of the binding site. Identify key interactions: which hydrogen bonds, hydrophobic contacts, and water-mediated bridges drive binding. Map SAR by comparing active vs inactive analogs: which substituent positions tolerate changes (solvent-exposed) vs are critical (buried in the pocket).",
+          "Design optimization analogs using free energy perturbation (FEP+): relative binding free energy calculations predict how chemical modifications affect binding affinity within approximately 1 kcal/mol accuracy. Plan modifications: replace metabolic soft spots (oxidizable groups: benzylic CH, anilines), improve solubility (add polar groups at solvent-exposed positions), tune LogP toward the 1-3 range, and explore bioisosteric replacements for problematic groups.",
+          "Assess selectivity: dock leads against anti-targets (closely related family members, hERG, off-target GPCRs) and calculate selectivity ratios. Counter-screen predictions guide modifications that improve selectivity: identify residues that differ between the target and anti-target binding sites, design substituents that exploit those differences.",
+          "Iterate: synthesize top-ranked designs (prioritize by predicted affinity improvement, synthetic accessibility, and ADMET improvement), test experimentally, update the SAR model, and design the next round. Typically 3-5 optimization cycles are needed to advance from a micromolar hit to a sub-100 nanomolar lead with acceptable ADMET."
+        ],
+        "tags": ["admet", "lead-optimization", "sar", "fep", "medicinal-chemistry"]
+      }
+    ]
+  },
+  {
+    "chain_name": "epigenomics-analysis",
+    "description": "Analyze epigenomic data including DNA methylation (bisulfite-seq), histone modifications (ChIP-seq, CUT&Tag), chromatin accessibility (ATAC-seq), and 3D genome organization (Hi-C).",
+    "domain": "bioinformatics",
+    "tags": ["epigenomics", "methylation", "chip-seq", "atac-seq", "chromatin"],
+    "steps": [
+      {
+        "flow_name": "dna-methylation-analysis",
+        "description": "Analyze whole-genome bisulfite sequencing (WGBS) or reduced-representation bisulfite sequencing (RRBS) data. Bismark aligns bisulfite-converted reads to an in-silico converted reference genome, then extracts per-CpG methylation levels. Differential methylation analysis identifies regions with statistically significant methylation differences between conditions using DSS (beta-binomial model) or methylKit.",
+        "inputs": [
+          {"name": "bisulfite-fastq", "desc": "Bisulfite-converted sequencing reads (WGBS or RRBS)"},
+          {"name": "reference-genome", "desc": "Reference genome FASTA for bisulfite alignment"}
+        ],
+        "outputs": [
+          {"name": "methylation-calls", "desc": "Per-CpG methylation levels (beta values) with coverage depth across the genome"},
+          {"name": "differential-methylation", "desc": "Differentially methylated regions (DMRs) with effect size, p-value, and gene annotations"}
+        ],
+        "process": [
+          "Prepare bisulfite genome with Bismark: bismark_genome_preparation --bowtie2 genome_folder/. This creates C-to-T and G-to-A converted versions of the reference for alignment of bisulfite-converted reads from both strands.",
+          "Align with Bismark: bismark --bowtie2 --genome genome_folder/ -1 R1.fq.gz -2 R2.fq.gz. Bismark handles the four possible alignment scenarios (original top/bottom strand, complementary top/bottom strand) and reports the uniquely mapping strand. Typical mapping rates: 60-80% for WGBS (lower than genomic because bisulfite conversion reduces sequence complexity).",
+          "Deduplicate: deduplicate_bismark aligned.bam. Bisulfite libraries amplified by PCR require deduplication. PCR-free WGBS protocols skip this step.",
+          "Extract methylation: bismark_methylation_extractor --comprehensive --bedGraph --cytosine_report --genome_folder genome_folder/ aligned.bam. Output includes per-CpG methylation level (methylated reads / total reads), coverage depth, and strand information. Filter CpGs with coverage < 5x for statistical reliability.",
+          "Identify DMRs with DSS: DMLtest for pairwise comparison, callDMR for region calling. DSS models methylation as beta-binomial (accounts for both biological and sampling variability) and uses a Wald test. DMR criteria: minimum 3 CpGs, minimum length 50bp, minimum absolute methylation difference 0.1 (10%), smoothing window for spatial correlation.",
+          "Annotate DMRs: map to genomic features (promoter: -2kb to +500bp from TSS, gene body, intergenic, CpG island/shore/shelf). Hypermethylation of CpG island promoters typically correlates with gene silencing. Gene body methylation often correlates with active transcription. Integrate with expression data to identify functional methylation changes."
+        ],
+        "tags": ["bisulfite-sequencing", "methylation", "bismark", "dmr"]
+      },
+      {
+        "flow_name": "chromatin-accessibility-histone-analysis",
+        "description": "Analyze chromatin accessibility (ATAC-seq) and histone modification (ChIP-seq, CUT&Tag) data. ATAC-seq uses Tn5 transposase to identify open chromatin regions. ChIP-seq and CUT&Tag profile histone marks (H3K4me3: active promoters, H3K27ac: active enhancers, H3K27me3: Polycomb repression, H3K36me3: active gene bodies). MACS2 calls peaks (enriched regions) against input/IgG control.",
+        "inputs": [
+          {"name": "chromatin-bam", "desc": "Aligned BAM files from ATAC-seq, ChIP-seq, or CUT&Tag experiments"},
+          {"name": "control-bam", "desc": "Input DNA or IgG control BAM for background normalization"}
+        ],
+        "outputs": [
+          {"name": "peak-calls", "desc": "Genomic regions of enrichment (peaks) with signal intensity, fold enrichment, and statistical significance"},
+          {"name": "chromatin-state-map", "desc": "Genome-wide chromatin state segmentation from combinatorial histone marks"}
+        ],
+        "process": [
+          "For ATAC-seq preprocessing: shift reads to account for Tn5 insertion offset (+4bp on positive strand, -5bp on negative strand). Remove mitochondrial reads (typically 30-60% of ATAC-seq reads map to chrM). Filter for nucleosome-free fragments (insert size < 150bp) for open chromatin analysis, or mono-nucleosome fragments (180-247bp) for nucleosome positioning.",
+          "Call peaks with MACS2: macs2 callpeak -t treatment.bam -c control.bam -f BAMPE -g hs --nomodel (for ATAC-seq paired-end). For ChIP-seq: use --broad for histone marks with broad domains (H3K36me3, H3K27me3, H3K9me3) and narrow mode (default) for sharp marks (H3K4me3, H3K27ac, transcription factors). Set q-value threshold 0.01 (narrow) or 0.05 (broad).",
+          "For CUT&Tag data: use SEACR (Sparse Enrichment Analysis for CUT&Tag) instead of MACS2, as CUT&Tag has lower background and different noise characteristics. SEACR uses a data-driven threshold from IgG control or the signal distribution itself.",
+          "Assess peak reproducibility between replicates using IDR (Irreproducible Discovery Rate): idr --samples rep1_peaks.narrowPeak rep2_peaks.narrowPeak. IDR models the concordance between replicates. ENCODE standards: IDR < 0.05 threshold should recover >100,000 peaks for open chromatin, >20,000 peaks for most histone marks.",
+          "For chromatin state segmentation from multiple histone marks: run ChromHMM (chromHMM.jar LearnModel). ChromHMM trains a multivariate hidden Markov model where each state is defined by a combination of histone mark enrichments. Standard 15-state model resolves: active TSS, flanking TSS, active enhancers, bivalent enhancers, bivalent/poised TSS, repressed Polycomb, heterochromatin, and quiescent regions.",
+          "Perform differential peak analysis between conditions using DiffBind: establish a consensus peak set, count reads in peaks for all samples, and test for differential enrichment using DESeq2 (negative binomial) or edgeR. Normalize for library size and peak composition differences. Report differentially accessible/modified regions with fold change, p-value, and nearest gene annotation."
+        ],
+        "tags": ["atac-seq", "chip-seq", "cut-and-tag", "macs2", "chromhmm"]
+      },
+      {
+        "flow_name": "three-dimensional-genome-analysis",
+        "description": "Analyze 3D genome organization from Hi-C data. Hi-C captures chromatin interactions by proximity ligation: crosslinked chromatin is digested with a restriction enzyme, ligated at proximity, and sequenced. Contact matrices reveal topologically associating domains (TADs), A/B compartments (active/inactive chromatin), and chromatin loops (enhancer-promoter contacts). Analysis uses HiC-Pro for processing and cooltools/HiCExplorer for downstream analysis.",
+        "inputs": [
+          {"name": "hic-fastq", "desc": "Hi-C paired-end FASTQ files"},
+          {"name": "restriction-enzyme", "desc": "Enzyme used for chromatin digestion (HindIII, DpnII, MboI, or Arima for multiple enzymes)"}
+        ],
+        "outputs": [
+          {"name": "contact-matrix", "desc": "Normalized chromatin interaction matrix at multiple resolutions (1kb, 5kb, 25kb, 100kb, 1Mb)"},
+          {"name": "three-d-features", "desc": "TAD boundaries, A/B compartments, and chromatin loops with statistical confidence"}
+        ],
+        "process": [
+          "Process Hi-C reads with HiC-Pro: align each mate independently to the reference (Hi-C mates map to different genomic locations due to ligation), assign read pairs to restriction fragments, filter invalid pairs (dangling ends, self-circles, PCR duplicates), and build the contact matrix. Valid interaction rate should be 40-60% of total read pairs for a good library.",
+          "Generate contact matrices at multiple resolutions using cooler: 1kb (requires >1 billion valid contacts), 5kb, 25kb (standard for TAD calling), 100kb, and 1Mb (for compartment analysis). Normalize with ICE (iterative correction and eigenvector decomposition) or KR (Knight-Ruiz) balancing to correct for biases from GC content, mappability, and restriction fragment length.",
+          "Call A/B compartments at 100kb or 1Mb resolution: compute the correlation matrix from the normalized contact matrix, then extract the first eigenvector (PC1) using cooltools eigs-cis. PC1 values partition the genome into A compartment (positive: gene-dense, GC-rich, active chromatin, early replicating) and B compartment (negative: gene-poor, AT-rich, repressive marks, late replicating). Correlate PC1 with GC content to orient the sign correctly.",
+          "Call TADs at 25kb or 40kb resolution: use insulation score method (cooltools insulation --window-sizes 500000). Insulation score measures the aggregate interaction frequency across each genomic position. TAD boundaries are local minima in the insulation score profile. Alternative methods: TopDom, HiCExplorer hicFindTADs. TAD boundaries are enriched for CTCF binding sites and cohesin.",
+          "Detect chromatin loops with HiCCUPS (from Juicer) or cooltools dots. Loops appear as focal enrichments (bright spots) in the contact matrix, representing stable interactions between specific loci (e.g., enhancer-promoter pairs). Loop detection requires high resolution (5-10kb) and deep sequencing (>1 billion valid contacts for genome-wide detection).",
+          "Integrate Hi-C features with other data: overlay TAD boundaries with CTCF ChIP-seq peaks (boundaries should be enriched for convergent CTCF motifs), compare compartment calls with histone marks (A compartment with H3K27ac, B compartment with H3K27me3 or H3K9me3), and intersect loops with enhancer-promoter predictions from H3K27ac and gene expression data."
+        ],
+        "tags": ["hi-c", "tad", "compartments", "chromatin-loops", "3d-genome"]
+      }
+    ]
+  },
+  {
+    "chain_name": "clinical-genomics-pipeline",
+    "description": "Run a clinical-grade genomic analysis pipeline from panel design through variant interpretation and pharmacogenomics, meeting CAP/CLIA accreditation standards.",
+    "domain": "bioinformatics",
+    "tags": ["clinical-genomics", "acmg", "pharmacogenomics", "variant-interpretation", "diagnostics"],
+    "steps": [
+      {
+        "flow_name": "clinical-panel-validation",
+        "description": "Design and validate a clinical sequencing panel for diagnostic use. Panel design specifies target genes, capture probes, and performance criteria. Validation establishes analytical sensitivity, specificity, reproducibility, and reportable range using reference materials (Genome in a Bottle, Horizon Discovery controls). Meeting CAP/CLIA requirements for laboratory-developed tests.",
+        "inputs": [
+          {"name": "clinical-indication", "desc": "Disease area and gene list for the diagnostic panel"},
+          {"name": "reference-materials", "desc": "Well-characterized samples with known variants for validation (NA12878/HG001, NA24385/HG002)"}
+        ],
+        "outputs": [
+          {"name": "validated-panel-spec", "desc": "Panel design with target regions, expected coverage, and validated performance metrics"},
+          {"name": "validation-report", "desc": "Analytical validation data: sensitivity, specificity, reproducibility, and limitations"}
+        ],
+        "process": [
+          "Define target regions: gene list from clinical guidelines (e.g., NCCN for cancer predisposition, ACMG SF v3.2 for incidental findings). Include coding exons plus 20bp flanking intronic sequence (covers canonical splice sites). For known pathogenic deep intronic variants, add those specific positions. Total target size determines sequencing cost and required depth.",
+          "Select capture method: hybridization capture (Twist, IDT, Agilent) for panels > 50 genes or amplicon-based (QIAseq, AmpliSeq) for small focused panels (< 50 genes). Hybridization capture provides more uniform coverage and better CNV detection. Amplicon has lower input DNA requirements (10ng vs 200ng).",
+          "Define coverage requirements: minimum 250x mean coverage for germline, 500x for somatic (to detect low allele fractions). At least 95% of target bases must reach 20x (germline) or 100x (somatic). Regions consistently below threshold are excluded from the reportable range and listed as limitations.",
+          "Validate analytical performance: run at least 5 replicates of reference samples with known variants (Genome in a Bottle truth set for NA12878). Calculate sensitivity (true positives / (true positives + false negatives)) targeting >99% for SNVs, >95% for indels. Specificity (true negatives / (true negatives + false positives)) targeting >99.9%. Include intra-run and inter-run reproducibility.",
+          "Establish limit of detection for somatic panels: serial dilutions of a tumor cell line into normal DNA at 50%, 25%, 10%, 5%, 2.5% variant allele fractions. Determine the minimum allele fraction detected at 95% sensitivity for each variant type.",
+          "Document the validation in a format meeting CAP checklist requirements: test description, specimen types, analytical performance characteristics, reference range, reportable range, limitations (regions with insufficient coverage, variant types not detected), and validation study data."
+        ],
+        "tags": ["panel-design", "validation", "cap-clia", "analytical-performance"]
+      },
+      {
+        "flow_name": "clinical-variant-interpretation",
+        "description": "Classify variants according to ACMG/AMP guidelines (5-tier system: pathogenic, likely pathogenic, variant of uncertain significance, likely benign, benign) using a structured evidence framework. Each evidence criterion (population frequency, computational predictions, functional data, segregation, de novo status) contributes weighted evidence toward pathogenicity or benignity. ClinGen expert panels provide gene-specific rule modifications.",
+        "inputs": [
+          {"name": "annotated-variants", "desc": "Variants annotated with population frequency, computational predictions, and ClinVar status"},
+          {"name": "clinical-phenotype", "desc": "Patient phenotype, family history, and inheritance pattern"}
+        ],
+        "outputs": [
+          {"name": "classified-variants", "desc": "Each variant classified as P/LP/VUS/LB/B with evidence criteria applied"},
+          {"name": "clinical-report-draft", "desc": "Structured report with variant table, interpretation, methodology, and limitations"}
+        ],
+        "process": [
+          "Apply ACMG/AMP evidence criteria systematically for each variant. Population data: BA1 (allele frequency > 5% in any population, standalone benign), BS1 (frequency greater than expected for disorder), PM2 (absent or extremely low frequency in gnomAD: use the filtering allele frequency framework from Whiffin et al. to set gene-specific thresholds rather than a fixed cutoff).",
+          "Computational evidence: PP3 (multiple computational tools predict damaging: REVEL > 0.7, CADD > 25, SpliceAI > 0.5 for splice variants), BP4 (tools predict benign: REVEL < 0.15). Use REVEL as the primary missense predictor (outperforms individual tools). For splice variants, SpliceAI delta scores > 0.2 indicate potential splicing impact, > 0.5 is strong evidence.",
+          "Functional evidence: PS3 (well-established functional study shows damaging effect: protein stability, enzyme activity, transport, splicing assay), BS3 (functional study shows no damaging effect). Evaluate the assay: is it validated, does it measure the relevant protein function, is the effect size clinically meaningful? ClinGen Sequence Variant Interpretation working group provides functional assay evaluation criteria.",
+          "Segregation and de novo evidence: PS2 (de novo, confirmed by maternity and paternity testing: strong pathogenic), PM6 (assumed de novo without parental confirmation: moderate), PP1 (co-segregation with disease in multiple affected family members: supporting to strong depending on LOD score). For recessive conditions, PM3 (variant detected in trans with a known pathogenic variant).",
+          "Combine evidence following ACMG/AMP combining rules: pathogenic requires (PVS1 + >= 1 moderate) or (>= 2 strong) or (1 strong + >= 2 moderate/supporting) etc. Check ClinGen gene-specific recommendations that modify default criteria (e.g., specific functional domains where missense variants are pathogenic, adjusted PP3 thresholds).",
+          "Handle VUS appropriately: do not report VUS as causative. Provide a clear statement that VUS may be reclassified as more evidence becomes available. Recommend periodic reassessment. For clinical decision-making, VUS should not drive treatment changes but may inform surveillance decisions in context."
+        ],
+        "tags": ["acmg", "variant-interpretation", "classification", "clinical-genetics"]
+      },
+      {
+        "flow_name": "pharmacogenomics-reporting",
+        "description": "Genotype pharmacogenes, assign star alleles and metabolizer phenotypes, and report drug-gene interactions following CPIC (Clinical Pharmacogenetics Implementation Consortium) guidelines. Pharmacogenomics translates genetic variation in drug-metabolizing enzymes, transporters, and targets into actionable prescribing recommendations.",
+        "inputs": [
+          {"name": "sequencing-data", "desc": "Targeted sequencing or WGS data covering pharmacogene regions"},
+          {"name": "medication-list", "desc": "Patient's current and planned medications for interaction checking"}
+        ],
+        "outputs": [
+          {"name": "pharmacogenomics-results", "desc": "Star allele calls, diplotypes, predicted phenotypes, and drug interaction table for each pharmacogene"},
+          {"name": "prescribing-recommendations", "desc": "CPIC guideline-based dose adjustments or alternative drug recommendations"}
+        ],
+        "process": [
+          "Call star alleles using Stargazer or PharmCAT for each pharmacogene. Star alleles represent defined haplotypes of functional variants (e.g., CYP2D6*4 is a splice-site variant causing no enzyme activity). Key genes: CYP2D6 (codeine, tamoxifen, many antidepressants), CYP2C19 (clopidogrel, proton pump inhibitors), CYP2C9 (warfarin, phenytoin), DPYD (fluoropyrimidines), TPMT/NUDT15 (thiopurines), UGT1A1 (irinotecan), SLCO1B1 (statins), HLA-B (abacavir, carbamazepine).",
+          "CYP2D6 requires special handling: the gene has common copy number variations (deletions: *5, duplications/multiplications: *1xN, *2xN) and hybrid alleles with CYP2D7 (e.g., *13, *36). Use read depth analysis for copy number and phasing information (or long reads) to resolve complex genotypes. An activity score system converts diplotype to phenotype: each allele gets a score (0, 0.25, 0.5, 1, or 1.5 per copy), and the sum determines metabolizer status.",
+          "Assign metabolizer phenotypes from diplotypes: poor metabolizer (PM: no functional alleles), intermediate metabolizer (IM: reduced function), normal metabolizer (NM: two functional alleles), rapid metabolizer (RM: increased function), ultrarapid metabolizer (UM: gene duplication of functional allele). Phenotype definitions are gene-specific and standardized by CPIC.",
+          "Map phenotypes to drug recommendations using CPIC guidelines. Example: CYP2D6 PM receiving codeine should avoid codeine (no conversion to morphine, lack of efficacy). CYP2C19 PM receiving clopidogrel should use alternative antiplatelet (prasugrel, ticagrelor) because clopidogrel is a prodrug requiring CYP2C19 activation. DPYD PM should avoid fluorouracil/capecitabine (risk of fatal toxicity).",
+          "For HLA-mediated adverse drug reactions: HLA-B*57:01 testing is required before abacavir (HIV treatment) to prevent hypersensitivity. HLA-B*15:02 testing before carbamazepine in Southeast Asian populations to prevent Stevens-Johnson syndrome. These are binary results (allele present/absent), not activity-score-based.",
+          "Generate the clinical report: list each tested pharmacogene with star allele result, diplotype, phenotype, associated medications, and CPIC recommendation level (A: prescribing action recommended, B: informational). Include the version of CPIC guidelines used, the genotyping/sequencing methodology, and limitations (variants not detected by the assay, genes not included in the panel)."
+        ],
+        "tags": ["pharmacogenomics", "cpic", "star-alleles", "cyp2d6", "drug-gene"]
+      }
+    ]
+  }
+]

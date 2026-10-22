@@ -1,0 +1,762 @@
+[
+  {
+    "chain_name": "optical-system-design",
+    "description": "Design an optical system from first-order layout through aberration analysis, tolerance budgeting, and coating specification to a verified build-ready prescription.",
+    "domain": "photonics",
+    "tags": ["optics", "lens-design", "imaging", "aberration"],
+    "steps": [
+      {
+        "flow_name": "first-order-optical-layout",
+        "description": "Derive the first-order parameters of an optical system: focal length, magnification, f-number, field of view, entrance and exit pupil positions, and working distance from the application requirements.",
+        "inputs": [
+          {"name": "application-requirements", "desc": "Target specifications: object distance, image size or sensor size, resolution, wavelength band, packaging constraints"},
+          {"name": "system-constraints", "desc": "Physical envelope, weight budget, cost target, environmental conditions (temperature range, vibration)"}
+        ],
+        "outputs": [
+          {"name": "first-order-prescription", "desc": "Focal length, back focal distance, f-number, full field angle, working distance, track length, magnification"},
+          {"name": "gaussian-beam-parameters", "desc": "Beam waist, Rayleigh range, M-squared, divergence half-angle, waist location for each propagation stage (if coherent source)"}
+        ],
+        "process": [
+          "From sensor size and required field of view, compute focal length: f = sensor_half / tan(half_FOV).",
+          "Compute f-number from the required resolution and diffraction limit: f/# = 1.22 * lambda * (1 + mag) / (2 * spot_diameter). Check that this is achievable within the cost and complexity budget.",
+          "For coherent sources, propagate the Gaussian beam through the system using the ABCD matrix method: q_out = (A*q_in + B) / (C*q_in + D). Compute beam waist and Rayleigh range at each conjugate plane.",
+          "Check back focal distance against the mechanical clearance required for filters, fold mirrors, or detector windows.",
+          "Document entrance pupil position and diameter. For telecentric systems, verify that the chief ray is parallel to the optical axis in the required space (object-side, image-side, or both)."
+        ],
+        "tags": ["optics", "first-order", "gaussian-beam"]
+      },
+      {
+        "flow_name": "aberration-analysis-and-correction",
+        "description": "Analyze and correct the five Seidel aberrations plus chromatic aberration in the optical design. Select lens forms, materials, and aspheric surfaces to meet the image quality target.",
+        "inputs": [
+          {"name": "first-order-prescription", "desc": "Focal length, f-number, field angle, magnification from the first-order layout"},
+          {"name": "gaussian-beam-parameters", "desc": "Beam parameters if coherent source, otherwise null"}
+        ],
+        "outputs": [
+          {"name": "lens-prescription", "desc": "Surface radii, thicknesses, glass types, aspheric coefficients, aperture stop position for every element"},
+          {"name": "aberration-budget", "desc": "Residual wavefront error by field point: spherical, coma, astigmatism, field curvature, distortion, axial color, lateral color in waves at the primary wavelength"}
+        ],
+        "process": [
+          "Start with a thin-lens solution that meets the first-order requirements. For a doublet, choose glass pair with Abbe numbers V1 and V2 separated by at least 15 to correct axial chromatic aberration: f1 = f * (V1 / (V1 - V2)), f2 = f * (-V2 / (V1 - V2)).",
+          "Compute the Seidel sums S_I through S_V and the chromatic sums C_I, C_II for the starting design. Identify which aberrations dominate at the edge of the field.",
+          "Bend lens elements (vary the shape factor q = (R2 + R1) / (R2 - R1)) to minimize coma while holding the focal length. The minimum-coma shape for a single thin lens at the stop: q_min_coma = -(2*(n^2 - 1)) / (n + 2) * (y_bar / y).",
+          "Add aspheric surfaces where needed. Place the first asphere on the surface with the largest beam footprint for maximum leverage on spherical aberration. Use conic constant and polynomial coefficients A4, A6, A8.",
+          "Evaluate the design at three or more field points (on-axis, 0.7 field, full field) and three wavelengths (short, center, long). Target: wavefront error below lambda/4 RMS for diffraction-limited performance, or the MTF specification at Nyquist."
+        ],
+        "tags": ["optics", "aberration", "lens-design", "seidel"]
+      },
+      {
+        "flow_name": "mtf-and-stray-light-analysis",
+        "description": "Verify the modulation transfer function meets the resolution requirement and analyze stray light paths that degrade contrast.",
+        "inputs": [
+          {"name": "lens-prescription", "desc": "Complete surface data for the optical system"},
+          {"name": "aberration-budget", "desc": "Residual aberration by field point"}
+        ],
+        "outputs": [
+          {"name": "mtf-curves", "desc": "MTF vs spatial frequency at each field point, tangential and sagittal, polychromatic, with diffraction limit for comparison"},
+          {"name": "stray-light-report", "desc": "Ghost image locations, relative irradiance of each ghost, narcissus analysis (for IR systems), scattered light contribution to background"}
+        ],
+        "process": [
+          "Compute the polychromatic MTF at the image plane from the OPD (optical path difference) data. For each field point, Fourier-transform the pupil function to get the PSF, then take the modulus of the Fourier transform of the PSF to get the MTF.",
+          "Compare the system MTF against the Nyquist frequency of the detector: f_Nyquist = 1 / (2 * pixel_pitch). The system MTF at Nyquist must exceed the minimum contrast requirement (typically 0.2 to 0.5 depending on application).",
+          "Trace ghost rays by reflecting from each pair of surfaces. For N surfaces, there are N*(N-1)/2 ghost paths. Calculate the ghost image position and relative irradiance: I_ghost / I_signal = R1 * R2 * (f / d_ghost)^2 where R1, R2 are the reflectances and d_ghost is the ghost image distance from the focal plane.",
+          "For thermal IR systems, compute narcissus: cold reflections from the detector back through the optics that create a non-uniformity pattern on the detector. The narcissus contribution depends on the reflectance variation across the last lens surface.",
+          "Specify baffles and aperture masks to block direct illumination of the detector from out-of-field sources. Compute the point source transmittance (PST) as a function of off-axis angle."
+        ],
+        "tags": ["optics", "mtf", "stray-light", "image-quality"]
+      },
+      {
+        "flow_name": "optical-tolerance-analysis",
+        "description": "Assign fabrication and assembly tolerances to each optical element and verify that the as-built performance meets the specification with the required yield.",
+        "inputs": [
+          {"name": "lens-prescription", "desc": "Nominal surface data for every element"},
+          {"name": "mtf-curves", "desc": "Nominal MTF performance to establish the degradation budget"}
+        ],
+        "outputs": [
+          {"name": "tolerance-table", "desc": "For each element: radius tolerance, thickness tolerance, tilt, decenter, wedge, surface irregularity, index tolerance, Abbe number tolerance, with the sensitivity (waves/unit) for each"},
+          {"name": "compensator-strategy", "desc": "Which elements or spacings adjust during assembly to recover performance, and the range of adjustment needed"}
+        ],
+        "process": [
+          "Run a sensitivity analysis: perturb each parameter one at a time by a standard manufacturing tolerance and record the change in wavefront error or MTF. Rank the parameters by sensitivity.",
+          "For radius of curvature, start with test-plate tolerances for spherical surfaces (3 fringes = 0.15% on radius for standard, 1 fringe = 0.05% for precision). For aspheric surfaces, specify the departure from best-fit sphere and the slope error.",
+          "Assign tighter tolerances to the most sensitive parameters. Use a cost model: standard (low cost), precision (2x), high-precision (5x). Iterate to find the minimum-cost assignment that meets the performance budget.",
+          "Run a Monte Carlo analysis with 1000+ random draws from the tolerance distributions. Compute the cumulative probability of meeting the MTF specification. Target: 90% yield or better.",
+          "Identify 1-2 compensators (usually a spacer thickness or a lens axial position) that can be adjusted during assembly. Re-run Monte Carlo with compensation and verify that yield improves to the required level."
+        ],
+        "tags": ["optics", "tolerancing", "manufacturing", "yield"]
+      },
+      {
+        "flow_name": "optical-coating-specification",
+        "description": "Specify the anti-reflection, high-reflection, and filter coatings for every optical surface to maximize throughput, minimize ghosting, and meet spectral requirements.",
+        "inputs": [
+          {"name": "lens-prescription", "desc": "Glass types and surface curvatures for coating substrate specification"},
+          {"name": "stray-light-report", "desc": "Ghost analysis identifying which surface pairs need the lowest reflectance"}
+        ],
+        "outputs": [
+          {"name": "coating-specifications", "desc": "For each surface: coating type (AR, HR, dichroic, filter), target reflectance or transmittance vs wavelength, angle of incidence, polarization sensitivity limit, environmental durability class"},
+          {"name": "system-throughput", "desc": "Total system transmission vs wavelength accounting for all surface coatings, bulk absorption, and vignetting"}
+        ],
+        "process": [
+          "For each refracting surface, specify a broadband anti-reflection coating. The target reflectance depends on the ghost analysis: critical ghost-forming surface pairs need R < 0.25% per surface; others can use standard BBAR at R < 0.5%.",
+          "For AR coating design, start from the quarter-wave MgF2 single layer (R_min at n_film = sqrt(n_substrate)). For lower reflectance, use V-coat (two-layer) for narrow band or W-coat / multi-layer for broadband. Specify the wavelength range and the maximum reflectance at each edge.",
+          "For mirrors, specify the reflectance and the damage threshold if laser illuminated. Protected aluminum: R > 90% from 400-700nm. Enhanced silver: R > 98% from 500-1100nm. Dielectric HR: R > 99.5% at the design wavelength with specified bandwidth.",
+          "For dichroic beamsplitters and filters, specify the transition wavelength, the slope (nm from 10% to 90% transmission), the passband ripple, and the blocking OD in the rejection band. State the angle of incidence and the cone half-angle.",
+          "Compute the total system throughput by multiplying the transmission of every surface and the internal transmittance of every glass element over the wavelength band. Verify this meets the radiometric or photometric specification."
+        ],
+        "tags": ["optics", "thin-film", "coating", "AR", "throughput"]
+      }
+    ]
+  },
+  {
+    "chain_name": "laser-system-design",
+    "description": "Design a laser system from gain medium selection through resonator design, mode control, pulse generation, thermal management, and beam delivery to a specified target.",
+    "domain": "photonics",
+    "tags": ["laser", "resonator", "gain-medium", "mode-locking"],
+    "steps": [
+      {
+        "flow_name": "gain-medium-and-resonator-selection",
+        "description": "Select the gain medium and resonator geometry to meet the required wavelength, power, beam quality, and pulse format. Compute the threshold pump power, slope efficiency, and cavity stability.",
+        "inputs": [
+          {"name": "laser-requirements", "desc": "Wavelength, CW or pulsed (rep rate, pulse duration, pulse energy), average power, beam quality (M-squared), linewidth, polarization, environmental constraints"},
+          {"name": "application-context", "desc": "End use (materials processing, communications, sensing, medical), beam delivery distance, target material properties if relevant"}
+        ],
+        "outputs": [
+          {"name": "gain-medium-selection", "desc": "Medium type, emission cross-section, upper-state lifetime, absorption band, thermal conductivity, doping concentration, crystal or fiber length"},
+          {"name": "resonator-layout", "desc": "Mirror radii, cavity length, stability parameters g1 and g2, output coupler reflectivity, intracavity elements (polarizer, etalon, Q-switch)"}
+        ],
+        "process": [
+          "From the wavelength requirement, narrow the gain medium candidates. 1064nm: Nd:YAG (high gain, short upper-state lifetime 230us) or Nd:YVO4 (higher cross-section, lower thermal conductivity). 1030-1080nm: Yb:YAG (quasi-three-level, long upper-state lifetime 1ms, good for ultrafast). 1550nm: Er:fiber (eye-safe, telecom compatible). 10.6um: CO2 gas. 800nm: Ti:sapphire (broadest bandwidth for ultrafast).",
+          "Compute the threshold pump power: P_th = (h * v_p * pi * w_p^2) / (sigma_e * tau * eta_p) * (delta + T_oc) where delta is the round-trip loss, T_oc is the output coupler transmission, w_p is the pump waist, sigma_e is the emission cross-section, tau is the upper-state lifetime, and eta_p is the pump quantum efficiency.",
+          "Choose the resonator geometry for the required beam quality. Plane-parallel: simple but alignment-sensitive and mode-degenerate. Hemispherical (one flat, one curved): stable and easy to align. Confocal: minimizes diffraction loss. Check stability: 0 < g1*g2 < 1 where g = 1 - L/R.",
+          "Compute the TEM00 mode waist: w0 = sqrt(lambda * L / pi) * (g1*g2*(1-g1*g2) / (g1+g2-2*g1*g2)^2)^(1/4). Verify that the mode fills the gain medium for efficient extraction but does not clip on apertures.",
+          "Optimize the output coupler reflectivity using the Rigrod analysis for CW or the Lowdermilk-Murray analysis for pulsed. Maximum output power at R_opt = 1 - sqrt(delta * (2*g0*l - delta)) where g0 is the small-signal gain coefficient and l is the gain length."
+        ],
+        "tags": ["laser", "gain-medium", "resonator", "threshold"]
+      },
+      {
+        "flow_name": "laser-pulse-generation",
+        "description": "Implement Q-switching or mode-locking to generate the required pulse format. Calculate pulse energy, peak power, pulse duration, and repetition rate.",
+        "inputs": [
+          {"name": "gain-medium-selection", "desc": "Medium properties including upper-state lifetime, emission cross-section, saturation fluence"},
+          {"name": "resonator-layout", "desc": "Cavity geometry, round-trip time, intracavity loss"}
+        ],
+        "outputs": [
+          {"name": "pulse-parameters", "desc": "Pulse energy, peak power, pulse duration (FWHM), repetition rate, temporal pulse shape, spectral bandwidth, time-bandwidth product"},
+          {"name": "pulse-module-specification", "desc": "Q-switch type and timing (AO: RF drive power and frequency; EO: half-wave voltage, Pockels cell material) or mode-locker specification (SESAM: modulation depth, recovery time; Kerr lens: slit position and width)"}
+        ],
+        "process": [
+          "For Q-switching: compute the stored energy E_stored = P_pump * tau * eta_abs * eta_qd (for pump duration >> tau, use steady-state inversion). The extractable energy is E_pulse = E_stored * eta_extraction where eta_extraction depends on the initial-to-threshold inversion ratio r = n_i/n_th.",
+          "Q-switched pulse duration: t_pulse = (3.5 * t_rt) / (r - 1 - ln(r)) where t_rt is the round-trip time. For Nd:YAG at 10cm cavity length, t_rt = 0.67ns, giving ns-class pulses. Peak power = E_pulse / t_pulse.",
+          "For active Q-switching, select AO (acousto-optic) for rep rates above 1kHz (rise time limits max rep rate) or EO (electro-optic) for single-pulse or low-rep-rate with fast switching. AO: specify the RF drive power (typically 10-50W at 24-80MHz), TeO2 or fused silica. EO: specify the half-wave voltage (BBO ~4kV, RTP ~1.6kV, KD*P ~6kV at 1064nm).",
+          "For mode-locking: the pulse duration is limited by the gain bandwidth. Transform-limited: t_pulse * delta_v >= 0.315 (sech^2 pulse) or 0.441 (Gaussian). Ti:sapphire with 128THz bandwidth supports sub-10fs. Yb:YAG with 5nm bandwidth supports ~200fs. Nd:YAG with 0.45nm bandwidth supports ~8ps.",
+          "For Kerr lens mode-locking (KLM): the nonlinear index n2 of the gain crystal creates a self-focusing lens proportional to intensity. Design the cavity so that the mode size on a hard or soft aperture decreases for pulsed operation (lower loss for high peak power). For SESAM mode-locking: specify the modulation depth (0.5-5%), saturation fluence (10-100 uJ/cm^2), and recovery time (faster than round-trip time for clean starting)."
+        ],
+        "tags": ["laser", "q-switch", "mode-locking", "ultrafast", "pulse"]
+      },
+      {
+        "flow_name": "laser-thermal-management",
+        "description": "Design the thermal management system to remove waste heat from the gain medium, minimize thermal lensing and stress birefringence, and maintain beam quality at operating power.",
+        "inputs": [
+          {"name": "gain-medium-selection", "desc": "Crystal or fiber geometry, absorption efficiency, quantum defect, thermal conductivity, dn/dT, thermal expansion coefficient"},
+          {"name": "pulse-parameters", "desc": "Average power, heat load distribution along the gain medium"}
+        ],
+        "outputs": [
+          {"name": "thermal-design", "desc": "Cooling method (conduction to heatsink, liquid cooling, jet impingement), heatsink temperature, predicted temperature rise at center of gain medium, thermal lens focal length, stress-induced birefringence and depolarization loss"},
+          {"name": "beam-quality-at-power", "desc": "M-squared degradation from thermal effects, power limit before beam quality exceeds specification"}
+        ],
+        "process": [
+          "Compute the heat load: P_heat = P_pump * (1 - eta_laser) where eta_laser = eta_abs * eta_qd * eta_extraction * eta_mode_overlap. For diode-pumped Nd:YAG, the quantum defect heating is (1 - 808/1064) = 24% of absorbed pump power. Additional heating from upconversion and non-radiative relaxation.",
+          "For a cylindrical rod, the radial temperature distribution is: T(r) - T_surface = (Q_heat / (4*pi*k)) * (1 - (r/r0)^2) where Q_heat is the volumetric heat density, k is the thermal conductivity, and r0 is the rod radius. The thermal lens focal length: f_thermal = (pi * k * r0^2) / (P_heat * dn/dT * L) for end-pumped geometry.",
+          "For slab geometry, the temperature gradient is one-dimensional (across the thin dimension). Slab advantage: the thermal lens is cylindrical, correctable with a single cylindrical lens. Compute the OPD variation across the beam due to dn/dT, stress-optic effect, and end-face bulging.",
+          "For disk (thin-disk) geometry, the heat flow is axial through the thin dimension to the heatsink. The thermal lens is weak (f_thermal >> 10m for typical thin-disk Yb:YAG). But the low single-pass gain requires many passes (24-72 bounces on the disk), making alignment and ASE management the primary challenges.",
+          "For fiber lasers, the distributed heat load along meters of fiber is removed radially. The temperature rise is small (typically < 50K above coolant for kW-class), but the onset of transverse mode instability (TMI) at high average power limits the single-fiber power. TMI threshold scales approximately as: P_TMI ~ (A_eff * eta_qd) / (g * chi_T * lambda_s) where chi_T is the thermo-optic coefficient."
+        ],
+        "tags": ["laser", "thermal", "beam-quality", "thermal-lens"]
+      },
+      {
+        "flow_name": "laser-beam-delivery-design",
+        "description": "Design the beam delivery system from the laser output to the target: beam expansion, steering, focusing, fiber coupling, and safety interlocks.",
+        "inputs": [
+          {"name": "resonator-layout", "desc": "Output beam diameter, divergence, M-squared, polarization"},
+          {"name": "thermal-design", "desc": "Thermal lens effects that modify the output beam parameters"}
+        ],
+        "outputs": [
+          {"name": "beam-delivery-layout", "desc": "Beam expander magnification and element focal lengths, steering mirror angles and scan speed, focusing lens focal length and working distance, fiber coupling efficiency and fiber NA/core diameter"},
+          {"name": "safety-classification", "desc": "Laser class per IEC 60825-1, required engineering controls, interlocks, enclosure design, nominal ocular hazard distance"}
+        ],
+        "process": [
+          "Design the beam expander from the output beam diameter to the delivery aperture. Galilean (negative-positive): shorter, no intermediate focus (safer for high power). Keplerian (positive-positive): allows spatial filter at intermediate focus. Magnification M = -f2/f1. Output divergence = input divergence / M.",
+          "For scanning applications, select galvanometer mirrors for scan speeds up to 10 m/s with 20mm aperture. Polygon mirrors for higher speed, fixed scan pattern. For the scan lens (f-theta), specify: f-theta distortion < 1%, telecentricity if needed, flat field over the scan area.",
+          "For fiber delivery: compute the coupling efficiency from the beam parameter product (BPP = w0 * theta) into the fiber acceptance (NA * core_radius / 2). The beam BPP must be less than or equal to the fiber BPP. For single-mode fiber: BPP = lambda / pi. Multi-mode: BPP = NA * D_core / 4. Use a coupling lens with f = (D_beam/2) / NA_fiber.",
+          "Laser safety classification: compute the accessible emission limit (AEL) for the wavelength and pulse format from IEC 60825-1 tables. For a Class 4 laser, compute the nominal ocular hazard distance (NOHD) = sqrt(4*P / (pi * MPE)) / divergence. Specify interlocks: door switches, beam dump, emission indicator, key switch, remote interlock connector.",
+          "For high-power beam transport in atmosphere, account for thermal blooming at P > 10kW: the beam heats the air, creating a negative lens that defocuses the beam. Mitigation: slew the beam to use fresh air, use shorter wavelength (less absorption), or use adaptive optics."
+        ],
+        "tags": ["laser", "beam-delivery", "scanning", "fiber-coupling", "safety"]
+      }
+    ]
+  },
+  {
+    "chain_name": "fiber-optic-communication",
+    "description": "Design a fiber optic communication link from transmitter to receiver: fiber selection, link budget, dispersion management, WDM architecture, and coherent detection.",
+    "domain": "photonics",
+    "tags": ["fiber", "telecom", "WDM", "coherent"],
+    "steps": [
+      {
+        "flow_name": "fiber-link-budget-analysis",
+        "description": "Compute the optical power budget for a fiber link: transmitter power, all losses, receiver sensitivity, and power margin.",
+        "inputs": [
+          {"name": "link-requirements", "desc": "Data rate, distance, BER target, protocol (Ethernet, SONET/OTN, CWDM/DWDM), wavelength band"},
+          {"name": "infrastructure-constraints", "desc": "Fiber type already installed (if brownfield), number of connectors and splices, environmental conditions"}
+        ],
+        "outputs": [
+          {"name": "link-budget-table", "desc": "Transmitter power (dBm), connector losses (dB each), splice losses (dB each), fiber attenuation (dB/km * distance), receiver sensitivity (dBm at target BER), system margin (dB)"},
+          {"name": "fiber-selection", "desc": "Fiber type (SMF-28, G.652.D, G.655, G.654.E for submarine, OM3/OM4/OM5 for multimode), attenuation at operating wavelength, chromatic dispersion coefficient"}
+        ],
+        "process": [
+          "Select the wavelength band from the distance and data rate. Short reach (< 300m): 850nm multimode (VCSEL source, OM3/OM4 fiber). Metro (2-80km): 1310nm (zero dispersion in G.652) or 1550nm (lowest attenuation at 0.2 dB/km). Long-haul (> 80km): 1550nm with EDFA amplification.",
+          "Compute fiber attenuation loss: L_fiber = alpha * distance. For G.652.D: alpha = 0.35 dB/km at 1310nm, 0.20 dB/km at 1550nm. For multimode OM4: 3.0 dB/km at 850nm (bandwidth-distance product 4700 MHz*km for effective modal bandwidth).",
+          "Allocate connector and splice losses: standard single-mode connector = 0.3 dB (measured pair), fusion splice = 0.05 dB, mechanical splice = 0.2 dB. Count all connections including patch panels, ODF (optical distribution frame), and equipment connectors.",
+          "Look up receiver sensitivity for the transceiver at the target BER (typically 1e-12 pre-FEC or 1e-5 with FEC). Example: 10GBASE-LR SFP+: Tx = -1 to +2 dBm, Rx sensitivity = -14.4 dBm at 1e-12. 100GBASE-LR4: Tx = -1 to +2 dBm per lane, Rx = -10.6 dBm per lane.",
+          "Compute the system margin: Margin = P_tx - L_fiber - L_connectors - L_splices - P_rx_sensitivity. Require >= 3 dB margin for aging, temperature variation, and repair splices. If margin is negative, options include: higher Tx power, better Rx (APD vs PIN), optical amplifier (EDFA), or lower-loss fiber."
+        ],
+        "tags": ["fiber", "link-budget", "attenuation", "transceiver"]
+      },
+      {
+        "flow_name": "chromatic-dispersion-management",
+        "description": "Analyze and compensate chromatic dispersion and polarization mode dispersion to meet the required transmission distance and data rate.",
+        "inputs": [
+          {"name": "link-budget-table", "desc": "Operating wavelength, fiber type, link distance"},
+          {"name": "fiber-selection", "desc": "Chromatic dispersion coefficient of the selected fiber"}
+        ],
+        "outputs": [
+          {"name": "dispersion-analysis", "desc": "Total chromatic dispersion (ps/nm), dispersion limit for the data rate, PMD (ps), DGD statistics, dispersion-limited reach vs power-limited reach"},
+          {"name": "compensation-plan", "desc": "DCF module length and dispersion, fiber Bragg grating specifications, or electronic dispersion compensation method and DSP requirements"}
+        ],
+        "process": [
+          "Compute the total chromatic dispersion: D_total = D * L (ps/nm) where D is the fiber dispersion coefficient. For G.652.D at 1550nm: D = 17 ps/(nm*km). Over 100km: D_total = 1700 ps/nm.",
+          "Compute the dispersion-limited distance: L_max = 1 / (16 * B^2 * |D| * delta_lambda) where B is the bit rate and delta_lambda is the source spectral width. For 10 Gb/s NRZ on G.652 at 1550nm with a DFB laser (delta_lambda = 0.1nm): L_max = 1 / (16 * (10e9)^2 * 17e-6 * 0.1) = about 60km.",
+          "For compensation, option 1: dispersion compensating fiber (DCF) with D = -100 ps/(nm*km). Length needed: L_DCF = D_total / 100. DCF adds insertion loss (~0.5 dB/km) and nonlinear penalty from small core area. Option 2: chirped fiber Bragg grating (compact, low loss, but narrower bandwidth).",
+          "For polarization mode dispersion: compute the mean DGD = PMD_coefficient * sqrt(L). For modern fiber (PMD < 0.1 ps/sqrt(km)) over 100km: DGD = 1 ps. The system penalty becomes significant when DGD > 10% of the bit period. At 10 Gb/s (100 ps bit period): DGD limit is 10 ps.",
+          "For 100G and above, electronic dispersion compensation in the coherent receiver DSP replaces optical compensation. The DSP applies an inverse filter matched to the measured channel response, compensating both chromatic dispersion and PMD adaptively."
+        ],
+        "tags": ["fiber", "dispersion", "PMD", "DCF", "compensation"]
+      },
+      {
+        "flow_name": "wdm-system-architecture",
+        "description": "Design the wavelength division multiplexing architecture: channel plan, multiplexer/demultiplexer, optical amplification, and OSNR management.",
+        "inputs": [
+          {"name": "dispersion-analysis", "desc": "Dispersion budget per channel to verify channel spacing is compatible"},
+          {"name": "compensation-plan", "desc": "Per-channel or per-band compensation strategy"}
+        ],
+        "outputs": [
+          {"name": "wdm-channel-plan", "desc": "Center wavelengths (ITU grid), channel spacing, number of channels, per-channel data rate, total system capacity"},
+          {"name": "amplification-scheme", "desc": "EDFA placement, gain per span, noise figure, OSNR at receiver, Raman pump power and wavelength if hybrid amplification"}
+        ],
+        "process": [
+          "Select the channel spacing from the per-channel data rate and modulation format. 10G NRZ: 100 GHz spacing (0.8nm) on 50 GHz ITU grid with guard band. 100G DP-QPSK: 50 GHz spacing. 400G DP-16QAM: 75 or 100 GHz spacing. Flex-grid: 12.5 GHz granularity for spectral efficiency.",
+          "Design the EDFA chain. Each span: fiber loss (0.2 dB/km * span_length). EDFA gain = span loss. EDFA noise figure: NF = 5-6 dB for a two-stage design with mid-stage access for DCF or WSS. The ASE noise accumulates: OSNR at receiver = P_ch - NF - 10*log10(N_spans) - 10*log10(h*v*B_ref) where B_ref = 12.5 GHz (0.1nm).",
+          "Verify the OSNR meets the modulation format requirement. DP-QPSK requires ~12 dB OSNR at 1e-3 BER (before FEC). DP-16QAM requires ~18 dB. DP-64QAM requires ~24 dB. Add 2 dB margin for aging and nonlinear penalty.",
+          "For long-haul systems (> 1000km), consider Raman amplification to improve OSNR. Backward-pumped Raman: the gain is distributed along the fiber, reducing the effective noise figure. Typical Raman gain: 10-15 dB with pump at 1450nm for signal at 1550nm. This reduces the required EDFA gain and improves OSNR by 3-5 dB.",
+          "Design the ROADM (reconfigurable optical add-drop multiplexer) nodes for network flexibility. Wavelength selective switch (WSS) with port count matching the node degree. Specify the passband width, adjacent channel isolation (> 25 dB), and the cascadability (number of ROADM passes before filter narrowing degrades the signal)."
+        ],
+        "tags": ["fiber", "WDM", "EDFA", "OSNR", "ROADM"]
+      },
+      {
+        "flow_name": "coherent-receiver-design",
+        "description": "Design the coherent optical receiver: local oscillator, 90-degree hybrid, balanced detectors, ADC, and DSP algorithms for carrier recovery and equalization.",
+        "inputs": [
+          {"name": "wdm-channel-plan", "desc": "Per-channel modulation format, symbol rate, target OSNR"},
+          {"name": "amplification-scheme", "desc": "Expected OSNR at receiver input"}
+        ],
+        "outputs": [
+          {"name": "receiver-specification", "desc": "Local oscillator linewidth, 90-degree hybrid CMRR, photodetector bandwidth and responsivity, ADC sample rate and ENOB, DSP clock rate and algorithm chain"},
+          {"name": "system-performance", "desc": "Achieved BER vs OSNR, implementation penalty, maximum reach with the selected FEC"}
+        ],
+        "process": [
+          "Specify the local oscillator (LO) laser: linewidth requirement depends on the modulation format. DP-QPSK: < 1 MHz (tolerant). DP-16QAM: < 100 kHz. DP-64QAM: < 10 kHz. Tunable external cavity laser or integrated tunable laser assembly (ITLA) for flex-grid operation.",
+          "The 90-degree optical hybrid mixes the signal with the LO in four phase states (0, 90, 180, 270 degrees) for both polarizations. Output: 8 optical signals to 4 balanced photodetector pairs (I and Q for X and Y polarizations). Specify CMRR > 20 dB and phase error < 5 degrees.",
+          "Balanced photodetectors: bandwidth >= 0.75 * symbol_rate (for Nyquist-shaped signals). Responsivity > 0.6 A/W at 1550nm (InGaAs PIN). The balanced detection cancels the LO RIN and common-mode ASE-ASE beat noise.",
+          "ADC: sample rate >= 2 * symbol_rate (Nyquist). ENOB >= 5 for DP-QPSK, >= 6 for DP-16QAM, >= 7 for DP-64QAM. Interleaved ADC architectures achieve 64-128 GSa/s at 6 ENOB in current CMOS.",
+          "DSP processing chain: (1) IQ imbalance correction (Gram-Schmidt orthogonalization), (2) chromatic dispersion compensation (frequency-domain FIR filter), (3) clock recovery (Gardner timing error detector), (4) adaptive equalization and polarization demux (CMA for pre-convergence, then decision-directed LMS for 16QAM+), (5) carrier frequency estimation (FFT-based), (6) carrier phase estimation (Viterbi-Viterbi for QPSK, blind phase search for 16QAM), (7) FEC decoding (soft-decision LDPC, overhead 15-25%)."
+        ],
+        "tags": ["fiber", "coherent", "DSP", "receiver", "modulation"]
+      }
+    ]
+  },
+  {
+    "chain_name": "lidar-system-design",
+    "description": "Design a lidar system from the range equation through scanner selection, detector design, signal processing, and point cloud generation.",
+    "domain": "photonics",
+    "tags": ["lidar", "ranging", "scanning", "point-cloud"],
+    "steps": [
+      {
+        "flow_name": "lidar-range-equation-analysis",
+        "description": "Compute the signal-to-noise ratio and maximum range from the lidar range equation for the target reflectance and atmospheric conditions.",
+        "inputs": [
+          {"name": "lidar-requirements", "desc": "Maximum range, range resolution, angular resolution, update rate, target reflectance (diffuse Lambertian or specular), wavelength, eye safety class"},
+          {"name": "operating-environment", "desc": "Atmospheric visibility, rain/fog/dust conditions, ambient background level (sunlight), temperature range"}
+        ],
+        "outputs": [
+          {"name": "link-budget-results", "desc": "Transmitted pulse energy, received signal power vs range, noise equivalent power, SNR vs range curve, maximum range at minimum SNR"},
+          {"name": "wavelength-and-power-selection", "desc": "Selected wavelength (905nm or 1550nm), pulse energy, pulse repetition rate, average power, eye safety classification and NOHD"}
+        ],
+        "process": [
+          "Write the lidar range equation for a diffuse (Lambertian) target: P_received = (P_tx * rho * A_rx * eta_atm^2 * eta_opt) / (pi * R^2) where P_tx is the transmitted power (or pulse energy / pulse_width), rho is the target reflectance (10% for dark surfaces, 80% for white), A_rx is the receiver aperture area, eta_atm is the one-way atmospheric transmission, and eta_opt is the system optical efficiency.",
+          "Compute the atmospheric transmission: eta_atm = exp(-alpha * R) where alpha is the extinction coefficient. Clear air at 905nm: alpha = 0.2/km. Light rain: alpha = 1-3/km. Dense fog: alpha = 10-30/km. At 1550nm, alpha is similar for aerosol scattering but lower for molecular absorption in clear conditions.",
+          "Compute the noise: N_total = N_signal_shot + N_background + N_dark + N_electronic. Shot noise from signal: variance = 2*e*I_signal*B. Background noise from solar illumination: P_bg = L_sun * A_rx * Omega_fov * delta_lambda * eta_opt where L_sun is the solar spectral radiance and Omega_fov is the solid angle of the receiver field of view. Narrow bandpass filter (1-10nm) reduces background.",
+          "Select the wavelength: 905nm uses cheaper Si detectors (APD or SPAD) but has lower eye-safe power limit (AEL at 905nm is much lower than 1550nm because the cornea focuses 905nm onto the retina). 1550nm is eye-safe at higher power (cornea absorbs, does not focus on retina) but requires InGaAs detectors (more expensive, higher dark current).",
+          "Compute the required pulse energy for the target range at the minimum acceptable SNR (typically SNR = 10 for single-pulse detection). If the required energy exceeds the eye-safe limit, either: (1) use 1550nm for higher AEL, (2) use a larger beam divergence to reduce the irradiance at the cornea, or (3) use multi-pulse accumulation (N pulses improve SNR by sqrt(N) at the cost of update rate)."
+        ],
+        "tags": ["lidar", "range-equation", "SNR", "eye-safety"]
+      },
+      {
+        "flow_name": "lidar-scanner-and-detector-design",
+        "description": "Select the scanning mechanism and detector technology for the required angular coverage, resolution, frame rate, and detection range.",
+        "inputs": [
+          {"name": "link-budget-results", "desc": "Required pulse energy, received power vs range, noise budget"},
+          {"name": "wavelength-and-power-selection", "desc": "Wavelength, pulse format, eye safety constraints"}
+        ],
+        "outputs": [
+          {"name": "scanner-specification", "desc": "Scanner type (mechanical, MEMS, OPA, flash), FOV (horizontal and vertical), angular resolution, scan rate, number of points per second"},
+          {"name": "detector-specification", "desc": "Detector type (APD, SPAD, SiPM, linear-mode InGaAs), responsivity, gain, dark count rate, timing jitter, pixel count for array detectors"}
+        ],
+        "process": [
+          "For a rotating mechanical scanner (e.g., spinning mirror or Velodyne-style multi-beam): horizontal FOV = 360 degrees, vertical FOV set by the number of laser/detector channels. Rotation rate 10-20 Hz gives 100k-2M points per second depending on channel count and pulse rate per channel. High reliability concern: bearings, slip ring or optical data transfer.",
+          "For MEMS mirror scanner: FOV typically 60-120 degrees horizontal, 20-30 degrees vertical. Resonant frequency determines the max scan rate: f_res = (1/(2*pi)) * sqrt(k/J) where k is the torsion spring constant and J is the mirror moment of inertia. Larger mirrors (for lower divergence) have lower resonant frequency. Trade: angular range * mirror size * scan speed.",
+          "For optical phased array (OPA): no moving parts. Steering angle: theta = arcsin(lambda * delta_phi / (2*pi*d)) where d is the element pitch and delta_phi is the phase shift between elements. FOV limited by grating lobes: FOV < arcsin(lambda/d). Requires d < lambda for hemisphere steering. At 1550nm, element pitch < 1.55um (challenging at scale).",
+          "For flash lidar: illuminate the entire FOV simultaneously and use a detector array (InGaAs SPAD array or linear-mode APD array). No scanner needed. Trade: high instantaneous power required (spread over the full FOV), detector pixel count limits resolution. Good for short-range (< 30m) high-resolution applications.",
+          "Detector selection for 905nm: Si APD (gain 50-200, NEP ~1e-14 W/sqrt(Hz), bandwidth to 1GHz), Si SPAD (single-photon sensitivity, timing jitter 50-200ps, dead time 10-100ns, dark count rate 100-10k cps). For 1550nm: InGaAs APD (gain 10-30, higher dark current than Si, lower bandwidth), InGaAs SPAD (higher dark count rate, afterpulsing limits max count rate). SiPM (array of SPADs in parallel): high fill factor, photon-number resolution, but high DCR and limited dynamic range."
+        ],
+        "tags": ["lidar", "scanner", "MEMS", "detector", "SPAD"]
+      },
+      {
+        "flow_name": "lidar-signal-processing",
+        "description": "Process the raw lidar returns into range measurements and point clouds: timing extraction, multi-return detection, background rejection, and coordinate transformation.",
+        "inputs": [
+          {"name": "scanner-specification", "desc": "Scan pattern, angular positions for each pulse"},
+          {"name": "detector-specification", "desc": "Detector response, timing resolution, dynamic range"}
+        ],
+        "outputs": [
+          {"name": "point-cloud-specification", "desc": "Point density (points per square meter at reference range), range accuracy and precision, maximum number of returns per pulse, intensity calibration method"},
+          {"name": "processing-architecture", "desc": "FPGA or ASIC signal processing blocks, TDC resolution, matched filter or threshold detection, coordinate frame and timestamp synchronization"}
+        ],
+        "process": [
+          "For direct detection (ToF): the range is R = c * t_round_trip / 2. Range resolution = c * t_pulse / 2 for pulse detection, or c / (2 * B_chirp) for FMCW. Timing precision determines range precision: 1ns timing jitter = 15cm range uncertainty.",
+          "Implement multi-return detection: a single pulse can produce returns from multiple surfaces (e.g., tree canopy and ground). Use a constant-fraction discriminator (CFD) to detect each return above a threshold while rejecting noise. The CFD triggers at a fixed fraction of the pulse amplitude, reducing walk error (timing shift with amplitude).",
+          "For FMCW lidar: the laser frequency chirps linearly over bandwidth B during time T_chirp. The beat frequency between transmitted and received signals: f_beat = (2*R*B) / (c*T_chirp). Range resolution = c / (2*B). Velocity from the Doppler shift: v = (f_up - f_down) * lambda / 4 where f_up and f_down are the beat frequencies for the up-chirp and down-chirp.",
+          "Convert each range measurement to a 3D point: (x, y, z) = R * (sin(theta_h)*cos(theta_v), cos(theta_h)*cos(theta_v), sin(theta_v)) where theta_h and theta_v are the horizontal and vertical scanner angles at the time of the pulse. Synchronize the scanner angle encoder with the pulse timestamp to better than 1/10 of the angular resolution.",
+          "Background rejection: use time-gating to accept returns only within the range window of interest. Narrow optical bandpass filter (1-3nm FWHM) centered on the laser wavelength rejects broadband solar background. For SPAD detectors, time-correlated single photon counting (TCSPC) with histogram accumulation rejects uncorrelated background photons."
+        ],
+        "tags": ["lidar", "signal-processing", "FMCW", "point-cloud", "ToF"]
+      }
+    ]
+  },
+  {
+    "chain_name": "silicon-photonics-design",
+    "description": "Design a silicon photonic integrated circuit: waveguide layout, passive components, active modulators and detectors, thermal tuning, and process design kit usage.",
+    "domain": "photonics",
+    "tags": ["silicon-photonics", "PIC", "waveguide", "modulator"],
+    "steps": [
+      {
+        "flow_name": "silicon-waveguide-design",
+        "description": "Design the silicon waveguide cross-section and routing for single-mode operation, low loss, and efficient coupling to fiber or other external interfaces.",
+        "inputs": [
+          {"name": "pic-requirements", "desc": "Operating wavelength (1310nm or 1550nm), number of channels, modulation bandwidth, detector bandwidth, integration density"},
+          {"name": "foundry-process", "desc": "SOI wafer (220nm Si on 2um BOX typical), available etch depths (full etch, partial etch for rib), minimum feature size, metal layers"}
+        ],
+        "outputs": [
+          {"name": "waveguide-design", "desc": "Cross-section dimensions (width, height, slab thickness for rib), effective index, group index, propagation loss (dB/cm), bend radius for < 0.01 dB loss per 90-degree bend"},
+          {"name": "fiber-coupling-design", "desc": "Grating coupler: period, duty cycle, etch depth, coupling efficiency, 1dB bandwidth, angle. Or edge coupler: taper tip width, mode size at facet, coupling loss to SMF-28"}
+        ],
+        "process": [
+          "For the standard 220nm SOI platform at 1550nm: strip waveguide (full etch) width 450-500nm for single-mode TE. The cutoff for the first higher-order mode occurs at ~600nm width. Propagation loss: 2-3 dB/cm for strip, 0.5-1 dB/cm for rib (partial etch, 90nm slab).",
+          "Compute the effective index using the effective index method or a 2D mode solver: n_eff ~ 2.4 for 500nm x 220nm strip at 1550nm (TE fundamental). Group index: n_g = n_eff - lambda * (dn_eff/d_lambda) ~ 4.2. The high group index increases the sensitivity to fabrication variations.",
+          "Minimum bend radius: for strip waveguide, R_min ~ 5um for < 0.01 dB per bend (the high index contrast provides strong confinement). For rib waveguide, R_min ~ 20-50um. Use Euler bends (clothoid spirals) instead of circular bends for lower mode mismatch loss at the straight-to-bend transition.",
+          "Grating coupler design: period Lambda = lambda / (n_eff_grating - n_clad * sin(theta)) where theta is the fiber angle (typically 8-12 degrees off-vertical to avoid back-reflection). Duty cycle ~ 50%. Coupling efficiency: -3 to -5 dB for standard single-etch, -1 to -2 dB for dual-etch or apodized designs. 1dB bandwidth: 30-40nm.",
+          "Edge coupler design: taper the waveguide from 500nm width down to a ~150nm tip over 200-500um length. The mode expands as the waveguide narrows, matching the 10um mode field diameter of SMF-28. Use an SiN overlay waveguide to capture the expanded mode. Coupling loss: 1-2 dB with good alignment. Edge couplers are polarization-insensitive and broadband, but require facet preparation (dicing, polishing)."
+        ],
+        "tags": ["silicon-photonics", "waveguide", "grating-coupler", "SOI"]
+      },
+      {
+        "flow_name": "silicon-photonic-modulator-design",
+        "description": "Design the optical modulator for high-speed data encoding: Mach-Zehnder interferometer with carrier depletion phase shifter, traveling-wave electrode, and driver interface.",
+        "inputs": [
+          {"name": "waveguide-design", "desc": "Waveguide dimensions and effective index at the operating wavelength"},
+          {"name": "pic-requirements", "desc": "Modulation bandwidth, data rate, modulation format, extinction ratio, insertion loss budget"}
+        ],
+        "outputs": [
+          {"name": "modulator-design", "desc": "MZI arm length, phase shifter doping profile (p-n junction position, doping concentrations), V-pi * L product, 3dB electro-optic bandwidth, insertion loss, extinction ratio"},
+          {"name": "electrode-design", "desc": "Traveling-wave electrode geometry (CPW: signal width, gap, ground), impedance (target 50 ohm), RF loss, velocity matching (n_RF vs n_group_optical), termination"}
+        ],
+        "process": [
+          "The carrier-depletion MZM uses a reverse-biased p-n junction embedded in the waveguide. Applying reverse bias widens the depletion region, changing the free-carrier concentration and thus the refractive index via the Soref-Bennett relations: delta_n = -8.8e-22 * delta_N_e - 8.5e-18 * (delta_N_h)^0.8 at 1550nm.",
+          "Design the p-n junction: lateral junction at the center of the waveguide for maximum overlap with the optical mode. P-type doping: 5e17 to 2e18 /cm^3. N-type: 3e17 to 1e18 /cm^3. Higher doping gives larger delta_n per volt but higher optical loss from free carrier absorption. Typical trade-off: V-pi*L = 1-2 V*cm with 5-10 dB/cm phase shifter loss.",
+          "For 50 Gbaud operation, design a traveling-wave electrode. The RF and optical signals co-propagate along the phase shifter. Velocity matching: n_RF (from the CPW geometry and oxide cladding) must equal n_group_optical (~4.2). Since n_RF in oxide is ~2, use a slow-wave electrode (capacitively loaded transmission line) to increase n_RF.",
+          "Impedance matching: the CPW characteristic impedance with the loaded junction capacitance must be 50 ohm for impedance matching to the driver. Z_loaded = sqrt(L_line / (C_line + C_junction)). The junction capacitance per unit length depends on the doping and bias: C_j = epsilon_Si * W / x_d where x_d is the depletion width.",
+          "Compute the 3dB electro-optic bandwidth from the RF loss, velocity mismatch, and impedance mismatch: the bandwidth is limited by the slowest of these three effects. For a 4mm phase shifter with good velocity matching and 50-ohm termination, typical 3dB bandwidth is 35-50 GHz, supporting 50-100 Gbaud with PAM-4 or higher modulation."
+        ],
+        "tags": ["silicon-photonics", "modulator", "MZI", "carrier-depletion", "high-speed"]
+      },
+      {
+        "flow_name": "silicon-photonic-ring-and-filter-design",
+        "description": "Design ring resonators and wavelength filters for WDM multiplexing, switching, and sensing applications on the silicon photonic platform.",
+        "inputs": [
+          {"name": "waveguide-design", "desc": "Waveguide dimensions, effective index, group index, propagation loss"},
+          {"name": "modulator-design", "desc": "Modulator specifications if rings are used for modulation (ring modulator)"}
+        ],
+        "outputs": [
+          {"name": "ring-resonator-design", "desc": "Ring radius, coupling gap, coupling coefficient (kappa), free spectral range (FSR), Q-factor, finesse, extinction ratio, through and drop port spectra"},
+          {"name": "thermal-tuning-design", "desc": "Heater type (doped Si or metal), heater resistance, power per FSR tuning, thermal time constant, feedback control for wavelength locking"}
+        ],
+        "process": [
+          "Compute the free spectral range: FSR = lambda^2 / (n_g * 2*pi*R) where n_g is the group index and R is the ring radius. For n_g = 4.2 and R = 10um: FSR = 9.1nm at 1550nm. For WDM with 100GHz (0.8nm) channel spacing, FSR must exceed the channel count * spacing, so FSR > N_channels * 0.8nm.",
+          "Design the coupling region: the coupling coefficient kappa^2 is set by the gap between the bus waveguide and the ring, and the coupling length. For a point coupler (no straight coupling section): kappa depends exponentially on the gap. Typical gap: 100-200nm for 220nm SOI. Use a directional coupler (straight coupling section) for precise kappa control.",
+          "Compute the Q-factor and extinction ratio. For an all-pass ring (single bus): Q = (pi * n_g * L_rt * sqrt(a * r)) / (lambda * (1 - a*r)) where a = round-trip amplitude transmission and r = self-coupling coefficient (r^2 + kappa^2 = 1). Critical coupling (maximum extinction) when a = r. For add-drop (two bus waveguides): design symmetric coupling for flat-top passband.",
+          "Thermal tuning: silicon has dn/dT = 1.86e-4 /K. One FSR tuning requires delta_T = FSR * n_g / (lambda * dn/dT). For FSR = 9nm: delta_T = 9e-9 * 4.2 / (1550e-9 * 1.86e-4) = 131K. Power dissipation depends on the thermal resistance of the heater structure to the substrate. Typical: 20-50 mW per FSR for a micro-heater directly above the ring.",
+          "For wavelength locking: monitor the through-port power with an integrated Ge photodetector. Use a dither-and-lock feedback loop: modulate the heater current at a frequency above the signal bandwidth, demodulate the detected power at the dither frequency, and drive the heater to maintain the ring resonance at the signal wavelength. Bandwidth of the control loop: > 1 kHz to track thermal transients."
+        ],
+        "tags": ["silicon-photonics", "ring-resonator", "WDM", "thermal-tuning", "filter"]
+      }
+    ]
+  },
+  {
+    "chain_name": "spectroscopy-methodology",
+    "description": "Design and execute a spectroscopic measurement campaign: select the technique, configure the instrument, acquire data, and extract quantitative results from the spectra.",
+    "domain": "photonics",
+    "tags": ["spectroscopy", "Raman", "fluorescence", "absorption"],
+    "steps": [
+      {
+        "flow_name": "spectroscopy-technique-selection",
+        "description": "Select the spectroscopic technique and instrument configuration matched to the analyte, matrix, required sensitivity, and information type (identification, quantification, structural).",
+        "inputs": [
+          {"name": "measurement-objective", "desc": "What to measure (chemical identity, concentration, molecular structure, material composition), target analyte, matrix (gas, liquid, solid, biological tissue), required detection limit, spatial resolution"},
+          {"name": "sample-constraints", "desc": "Destructive vs non-destructive, in-situ vs ex-situ, sample size, transparency, fluorescence interference, sample preparation options"}
+        ],
+        "outputs": [
+          {"name": "technique-selection", "desc": "Primary technique (UV-Vis absorption, FTIR, Raman, fluorescence, NMR, mass spec) with rationale, secondary confirmatory technique if needed"},
+          {"name": "instrument-configuration", "desc": "Source (lamp, laser wavelength and power), dispersive element (grating lines/mm, FT interferometer), detector (CCD, InGaAs, MCT), spectral range, resolution, integration time"}
+        ],
+        "process": [
+          "Map the measurement objective to technique categories. Molecular functional groups: FTIR (mid-IR, 4000-400 cm^-1) for strong absorption bands of O-H, N-H, C=O, C-H; Raman for symmetric vibrations and aqueous samples (water is a weak Raman scatterer but strong IR absorber). Crystal structure: XRD. Elemental composition: XRF, ICP-OES, ICP-MS. Trace organics: MS (GC-MS, LC-MS).",
+          "For absorption spectroscopy, compute the required path length from Beer-Lambert: A = epsilon * c * l. At the detection limit concentration, the absorbance must exceed the instrument noise floor (typically A > 0.001 for a good spectrometer). Path length l = A_min / (epsilon * c_limit). For gases, use a multipass cell (White or Herriott) to achieve path lengths of meters to kilometers.",
+          "For Raman spectroscopy, select the excitation wavelength based on the trade-off between scattering cross-section (proportional to 1/lambda^4: shorter wavelength gives stronger signal) and fluorescence background (longer wavelength reduces fluorescence). 532nm: strong signal, high fluorescence risk. 785nm: good compromise for organic materials. 1064nm (FT-Raman): minimal fluorescence but requires InGaAs detector.",
+          "For fluorescence: check if the analyte is natively fluorescent or requires a fluorescent label. Select excitation wavelength at the absorption maximum of the fluorophore. Stokes shift (emission wavelength - excitation wavelength) must be large enough for the emission filter to reject scattered excitation light. Quantum yield and molar extinction coefficient together determine the detection limit.",
+          "Specify the spectral resolution: for gas-phase molecules with narrow rotational lines, resolution < 0.5 cm^-1 (FTIR or high-resolution grating). For liquids and solids with broad bands, 4-8 cm^-1 is sufficient. For Raman, the spectrograph resolution depends on the grating groove density, slit width, and focal length: delta_lambda = slit_width * cos(beta) / (m * n * f) where m is the diffraction order, n is the groove density, and f is the focal length."
+        ],
+        "tags": ["spectroscopy", "technique-selection", "instrument"]
+      },
+      {
+        "flow_name": "spectral-data-acquisition",
+        "description": "Acquire high-quality spectral data: optimize the signal-to-noise ratio, calibrate the wavelength and intensity axes, and handle baseline artifacts.",
+        "inputs": [
+          {"name": "technique-selection", "desc": "Selected spectroscopic method and its operating parameters"},
+          {"name": "instrument-configuration", "desc": "Source, detector, spectral range, resolution settings"}
+        ],
+        "outputs": [
+          {"name": "raw-spectra", "desc": "Spectral data (intensity vs wavelength or wavenumber) for all samples, references, and blanks, with metadata (integration time, accumulations, date, sample ID)"},
+          {"name": "calibration-data", "desc": "Wavelength calibration (reference lamp lines or known absorption features), intensity calibration (standard reference material or blackbody), dark current and background spectra"}
+        ],
+        "process": [
+          "Collect a dark spectrum (source blocked) to measure the detector dark current and electronic offset. Collect a reference spectrum (no sample in beam for transmission, or white reference for reflectance) to establish the 100% baseline.",
+          "Optimize the integration time: the signal-to-noise ratio scales as sqrt(t) for shot-noise-limited detection and sqrt(N) for N co-added scans. Set the integration time so that the detector is near (but not at) saturation at the strongest spectral feature. For CCD detectors, check for cosmic ray spikes and remove them by median-filtering multiple accumulations.",
+          "For FTIR: set the mirror velocity (slow for MCT detector with long time constant, fast for DTGS). The spectral resolution is set by the maximum optical path difference: delta_sigma = 1 / (2 * OPD_max) in cm^-1. Apodization function (triangular, Happ-Genzel, Blackman-Harris) trades resolution for sidelobe suppression.",
+          "Wavelength calibration: for grating spectrometers, use a calibration lamp (Hg-Ar, Ne) with known emission lines spanning the spectral range. Fit a polynomial (wavelength vs pixel) of order 2-3. For FTIR, the HeNe reference laser provides intrinsic wavelength calibration (Connes advantage).",
+          "Collect multiple replicates (3-5 minimum) to assess measurement precision. Randomize the measurement order to separate drift from sample-to-sample variation. Include quality control samples (known concentration) at regular intervals."
+        ],
+        "tags": ["spectroscopy", "data-acquisition", "calibration", "SNR"]
+      },
+      {
+        "flow_name": "spectral-analysis-and-quantification",
+        "description": "Process the raw spectra to extract quantitative results: baseline correction, peak fitting, multivariate calibration, and uncertainty estimation.",
+        "inputs": [
+          {"name": "raw-spectra", "desc": "Measured spectral data for all samples and references"},
+          {"name": "calibration-data", "desc": "Wavelength and intensity calibration, reference standards of known concentration"}
+        ],
+        "outputs": [
+          {"name": "quantitative-results", "desc": "Analyte concentrations or composition for each sample, with uncertainty (confidence interval or prediction interval from the calibration model)"},
+          {"name": "spectral-identification", "desc": "Peak assignments to molecular vibrations or electronic transitions, library match scores for unknown identification"}
+        ],
+        "process": [
+          "Baseline correction: for absorption/Raman spectra with sloping or curved baselines, fit a polynomial or use the asymmetric least squares (ALS) algorithm to estimate the baseline. Subtract it. For derivative spectroscopy (1st or 2nd derivative), the baseline is removed automatically but noise is amplified.",
+          "Peak fitting: model each spectral feature as a Voigt profile (convolution of Gaussian instrument broadening and Lorentzian natural linewidth) or simplified as Gaussian or Lorentzian. Fit the peak position, width, and amplitude using nonlinear least squares (Levenberg-Marquardt). Report the goodness of fit (reduced chi-squared, residuals).",
+          "Univariate calibration: for a single analyte with a well-resolved peak, plot peak area or height vs concentration for the standards. Fit a linear (Beer-Lambert) or polynomial model. Compute R^2, standard error of calibration (SEC), and limit of detection (LOD = 3.3 * sigma_blank / slope).",
+          "Multivariate calibration: for complex mixtures with overlapping peaks, use partial least squares (PLS) regression. Build the model on the calibration set: optimize the number of latent variables by cross-validation (leave-one-out or k-fold), minimizing the root mean squared error of cross-validation (RMSECV). Validate on an independent test set: report RMSEP (root mean squared error of prediction).",
+          "For unknown identification: search the spectrum against a reference library (NIST, SDBS, or in-house). The match algorithm computes the correlation coefficient or hit quality index (HQI) between the unknown and each library entry. Report the top matches with HQI scores. For mixtures, use spectral subtraction or MCR-ALS (multivariate curve resolution) to deconvolve overlapping spectra."
+        ],
+        "tags": ["spectroscopy", "quantification", "PLS", "peak-fitting", "chemometrics"]
+      }
+    ]
+  },
+  {
+    "chain_name": "imaging-system-design",
+    "description": "Design an imaging system from sensor selection through optics, illumination, image processing pipeline, and performance verification.",
+    "domain": "photonics",
+    "tags": ["imaging", "camera", "microscopy", "sensor"],
+    "steps": [
+      {
+        "flow_name": "image-sensor-and-optics-selection",
+        "description": "Select the image sensor and lens combination to meet the resolution, sensitivity, dynamic range, and frame rate requirements.",
+        "inputs": [
+          {"name": "imaging-requirements", "desc": "Field of view, spatial resolution (um or line pairs/mm), frame rate, spectral band, dynamic range (dB), sensitivity (minimum detectable signal)"},
+          {"name": "operating-conditions", "desc": "Working distance, ambient illumination, vibration, temperature range, size and weight constraints"}
+        ],
+        "outputs": [
+          {"name": "sensor-selection", "desc": "Sensor format, pixel count, pixel size, full well capacity, read noise (e-), dark current (e-/s), quantum efficiency at operating wavelength, readout architecture (global shutter vs rolling shutter), frame rate at full resolution"},
+          {"name": "lens-selection", "desc": "Focal length, f-number, mount type, resolution (lp/mm at center and corner), distortion, working distance, depth of field"}
+        ],
+        "process": [
+          "From the required field of view and spatial resolution, compute the minimum pixel count: N_pixels = FOV / GSD where GSD (ground sample distance) = resolution / 2 (Nyquist). For a 100mm FOV with 50um resolution: N_pixels = 100mm / 25um = 4000 pixels, requiring at least a 4k sensor.",
+          "Select the pixel size: smaller pixels give higher resolution per unit sensor area but collect fewer photons per pixel. The signal per pixel: S = E * A_pixel * t * QE / (h*v) where E is the irradiance at the sensor, A_pixel is the pixel area, t is the integration time, and QE is the quantum efficiency. The pixel must not saturate (S < full_well) and must exceed the noise floor (S > k * sqrt(read_noise^2 + dark_current*t + S)).",
+          "Dynamic range in dB = 20*log10(full_well_capacity / read_noise). Scientific CCD: 70-80 dB. Scientific CMOS (sCMOS): 80-90 dB with dual-gain readout. Consumer CMOS: 60-70 dB. If the scene dynamic range exceeds the sensor, use HDR mode (multiple exposures) or logarithmic response sensors.",
+          "For the lens: focal length f = (sensor_size / 2) / tan(half_FOV). Or equivalently, f = working_distance * sensor_size / FOV for the object-space FOV. Select an f-number that balances depth of field (larger f/# = more DOF) against diffraction limit (Airy disk diameter = 2.44 * lambda * f/#). The lens resolving power must exceed the Nyquist frequency: MTF > 0.2 at 1/(2*pixel_pitch) lp/mm.",
+          "Depth of field: DOF = 2 * N * c * (1 + M) / M^2 where N is the f-number, c is the circle of confusion (= pixel size for diffraction-limited), and M is the magnification. For large DOF at high magnification, consider focus stacking or telecentric lenses (constant magnification across the DOF)."
+        ],
+        "tags": ["imaging", "sensor", "lens", "resolution", "dynamic-range"]
+      },
+      {
+        "flow_name": "illumination-design-for-imaging",
+        "description": "Design the illumination system to maximize the contrast of the features of interest while minimizing artifacts from specular reflections, shadows, and non-uniformity.",
+        "inputs": [
+          {"name": "sensor-selection", "desc": "Sensor spectral response, sensitivity, frame rate (which sets the maximum integration time)"},
+          {"name": "imaging-requirements", "desc": "Feature type (surface defect, edge detection, 3D measurement, fluorescence), sample material and geometry"}
+        ],
+        "outputs": [
+          {"name": "illumination-design", "desc": "Source type (LED, laser, halogen, xenon), wavelength, geometry (bright field, dark field, backlight, coaxial, dome, structured light), uniformity specification, power required to achieve the target SNR within the integration time"},
+          {"name": "contrast-analysis", "desc": "Predicted contrast for the features of interest vs background under the selected illumination, rejection of unwanted reflections or fluorescence"}
+        ],
+        "process": [
+          "Select the illumination geometry based on what needs to be visible. Bright field (on-axis or near-axis): shows color, texture, and printed features. Dark field (high-angle): makes surface scratches and edges bright against a dark background. Backlight (transmission): silhouettes for edge detection and dimensional measurement. Coaxial (beamsplitter): flat specular surfaces reflect back into the camera, non-specular defects appear dark.",
+          "For machine vision, LED illumination dominates: long lifetime, stable output, fast strobing (< 1us), narrow spectral band available. Select the LED wavelength to maximize the contrast of the target feature. Example: for inspecting red objects against a red background, use a narrow-band blue or green LED (the red feature absorbs blue/green differently than the background). For fluorescence excitation, use UV LEDs (365nm or 395nm) with a longpass emission filter.",
+          "Compute the required illumination power: the sensor needs S_min photons per pixel per frame. The illumination must deliver: P_illum = S_min * h*v * (pi * f/#^2) / (QE * rho * t_int * A_pixel * tau_lens) where rho is the object reflectance and tau_lens is the lens transmission. For high-speed inspection (short integration time), consider pulsed illumination (strobe) to freeze motion without motion blur.",
+          "Structured light for 3D measurement: project a pattern (stripe, grid, or random dot) onto the object. The deformation of the pattern encodes the surface height. Phase-shifting: project sinusoidal fringes at 3 or 4 phase shifts, compute the phase at each pixel: phi = atan2(I1-I3, I2-I4) for 4-step. Phase unwrapping recovers the absolute height. Accuracy depends on the fringe period and the triangulation angle.",
+          "Verify illumination uniformity across the field of view: capture an image of a white reference target. The pixel-to-pixel variation should be < 10% for quantitative measurement or < 20% for defect detection (correct residual non-uniformity with flat-field division: I_corrected = I_raw * mean(I_flat) / I_flat)."
+        ],
+        "tags": ["imaging", "illumination", "dark-field", "structured-light", "machine-vision"]
+      },
+      {
+        "flow_name": "image-processing-pipeline-design",
+        "description": "Design the image processing pipeline from raw sensor data to the final measurement or classification result.",
+        "inputs": [
+          {"name": "illumination-design", "desc": "Illumination geometry and spectrum, expected image characteristics"},
+          {"name": "contrast-analysis", "desc": "Predicted contrast and feature appearance"}
+        ],
+        "outputs": [
+          {"name": "processing-pipeline", "desc": "Ordered list of processing steps with algorithm selection and parameters for each: preprocessing, segmentation, feature extraction, measurement or classification, output format"},
+          {"name": "performance-specification", "desc": "Processing latency per frame, measurement accuracy and repeatability (gauge R&R), false positive and false negative rates for defect detection"}
+        ],
+        "process": [
+          "Preprocessing: (1) Dark-frame subtraction (remove fixed-pattern noise), (2) Flat-field correction (divide by normalized reference image to correct illumination non-uniformity and pixel-to-pixel sensitivity variation), (3) Lens distortion correction (apply the inverse of the distortion model from camera calibration), (4) Noise reduction (Gaussian blur for Gaussian noise, median filter for salt-and-pepper).",
+          "Segmentation: separate the regions of interest from the background. Thresholding: Otsu's method for bimodal histograms, adaptive thresholding for non-uniform illumination. Edge detection: Canny (gradient magnitude + non-maximum suppression + hysteresis thresholding). For complex scenes: watershed segmentation, connected components analysis.",
+          "Feature extraction: from each segmented region, compute the relevant features. Dimensional: area, perimeter, bounding box, centroid, orientation (principal axis from the second central moments), circularity = 4*pi*area / perimeter^2. Intensity: mean, min, max, standard deviation within the region. Texture: Haralick features from the gray-level co-occurrence matrix (GLCM).",
+          "For sub-pixel measurement accuracy: fit an analytic model to the intensity profile across an edge. The edge position can be determined to 0.1-0.01 pixel by fitting an error function (erf) or sigmoid to the intensity transition. Calibrate the pixel-to-mm conversion using a certified calibration target (dot grid or checkerboard) and a camera calibration procedure (Zhang's method).",
+          "For defect detection: train a classifier (threshold-based rules, or machine learning: SVM, random forest, CNN) on labeled images of good and defective parts. Report the false positive rate (good parts rejected) and false negative rate (defective parts accepted) on a validation set. For safety-critical applications, target false negative rate < 0.1% with statistical confidence."
+        ],
+        "tags": ["imaging", "image-processing", "segmentation", "measurement", "defect-detection"]
+      }
+    ]
+  },
+  {
+    "chain_name": "photovoltaic-design",
+    "description": "Design a photovoltaic system from cell physics through module construction, system sizing, energy yield prediction, and economic analysis.",
+    "domain": "photonics",
+    "tags": ["solar", "photovoltaic", "energy", "module"],
+    "steps": [
+      {
+        "flow_name": "solar-cell-physics-and-selection",
+        "description": "Select the solar cell technology based on efficiency, cost, temperature coefficient, and degradation characteristics for the target application.",
+        "inputs": [
+          {"name": "system-requirements", "desc": "Target system size (kW or MW), site location (latitude, irradiance, temperature profile), application (rooftop, ground-mount, BIPV, portable), budget range"},
+          {"name": "performance-targets", "desc": "Minimum module efficiency, temperature coefficient tolerance, warranty requirements (years), aesthetic constraints"}
+        ],
+        "outputs": [
+          {"name": "cell-technology-selection", "desc": "Cell type (mono-PERC, TOPCon, HJT, IBC, CdTe, CIGS, perovskite tandem), rated efficiency, temperature coefficient of Pmax (typically -0.3 to -0.45 %/K for Si), bifaciality factor, expected degradation rate (%/year)"},
+          {"name": "cell-electrical-model", "desc": "Single-diode model parameters: I_L (photocurrent), I_0 (saturation current), n (ideality factor), R_s (series resistance), R_sh (shunt resistance), and their temperature and irradiance dependencies"}
+        ],
+        "process": [
+          "The Shockley-Queisser limit sets the theoretical maximum efficiency for a single-junction cell: 33.7% for a 1.34 eV bandgap under AM1.5G. Silicon (1.12 eV): SQ limit = 32.3%. Current commercial efficiencies: mono-PERC 22-23%, TOPCon 24-25%, HJT (heterojunction) 24-26%, IBC (interdigitated back contact) 25-26%. Tandem (perovskite on Si): lab records above 33%.",
+          "PERC (Passivated Emitter and Rear Cell): standard technology, lowest cost. Rear passivation reduces recombination at the back surface, adding 1-2% absolute efficiency over Al-BSF. Temperature coefficient: -0.35 to -0.40 %/K.",
+          "TOPCon (Tunnel Oxide Passivated Contact): thin tunnel oxide + doped poly-Si on the rear. Lower surface recombination velocity than PERC. Higher Voc (710-720mV vs 680-690mV for PERC). Temperature coefficient: -0.30 to -0.35 %/K (better than PERC due to higher Voc).",
+          "HJT: amorphous Si passivation on both surfaces of a thin (120-150um) n-type wafer. Excellent passivation (Voc > 730mV). Symmetric structure enables high bifaciality (>90%). Temperature coefficient: -0.25 to -0.30 %/K (best among commercial Si). No LID (light-induced degradation) because n-type base. Higher manufacturing cost from ITO sputtering and low-temperature processing requirement.",
+          "Extract the single-diode model parameters from the I-V curve data sheet: I_sc, V_oc, I_mp, V_mp at STC (1000 W/m^2, 25C, AM1.5G). The five parameters (I_L, I_0, n, R_s, R_sh) are determined by fitting the diode equation: I = I_L - I_0*(exp((V+I*Rs)/(n*Vt)) - 1) - (V+I*Rs)/R_sh where Vt = kT/q. Use the Lambert-W function for the explicit solution, or Newton-Raphson iteration."
+        ],
+        "tags": ["solar", "cell-physics", "PERC", "TOPCon", "HJT", "SQ-limit"]
+      },
+      {
+        "flow_name": "pv-module-and-system-design",
+        "description": "Size the PV array, select the inverter, design the string configuration, and compute the expected energy yield.",
+        "inputs": [
+          {"name": "cell-technology-selection", "desc": "Module efficiency, temperature coefficient, rated power, dimensions"},
+          {"name": "cell-electrical-model", "desc": "Single-diode parameters for modeling under varying irradiance and temperature"}
+        ],
+        "outputs": [
+          {"name": "system-design", "desc": "Number of modules, string configuration (modules in series per string, strings in parallel), inverter model and count, DC/AC ratio, mounting structure (fixed tilt, single-axis tracker, dual-axis tracker)"},
+          {"name": "energy-yield-prediction", "desc": "Annual energy production (kWh/kWp), performance ratio, specific yield, monthly production profile, losses breakdown (temperature, soiling, shading, wiring, inverter, clipping)"}
+        ],
+        "process": [
+          "String sizing: the number of modules in series is set by the inverter MPPT voltage window. At the coldest expected temperature: V_oc_max_string = N_series * V_oc_STC * (1 + (T_min - 25) * beta_Voc/100) must not exceed the inverter maximum input voltage. At the hottest temperature: V_mp_min_string = N_series * V_mp_STC * (1 + (T_max - 25) * beta_Vmp/100) must stay within the MPPT range.",
+          "DC/AC ratio (inverter loading ratio): typically 1.1 to 1.4. Higher ratios increase energy harvest in low-irradiance conditions but clip power during peak irradiance. Optimal ratio depends on the cost of additional modules vs the value of additional energy. For high-irradiance sites with time-of-use pricing that values afternoon energy: lower ratio. For cloudy sites: higher ratio.",
+          "Energy yield simulation: for each hour of the TMY (typical meteorological year) data, compute: (1) plane-of-array irradiance from GHI, DHI, DNI using the Perez transposition model, (2) cell temperature from irradiance and ambient temperature: T_cell = T_amb + (NOCT - 20) * G/800, (3) module power from the single-diode model at (G, T_cell), (4) DC power after mismatch, soiling, and wiring losses, (5) AC power after inverter efficiency curve.",
+          "Loss budget: temperature loss 3-10% (depending on climate), soiling 2-5%, mismatch 1-2%, DC wiring 1-2%, inverter loss 2-4%, transformer loss 0.5-1% (for central inverters), clipping 0-3% (depends on DC/AC ratio), shading 0-5% (site-specific).",
+          "For tracking systems: single-axis tracker (horizontal N-S axis, tracking E-W) increases annual yield by 15-25% over fixed-tilt in high-DNI locations. The tracking algorithm for backtracking near sunrise/sunset prevents row-to-row shading at the cost of some energy loss. Dual-axis tracking adds another 5-10% but at much higher cost and maintenance."
+        ],
+        "tags": ["solar", "system-design", "string-sizing", "energy-yield", "inverter"]
+      },
+      {
+        "flow_name": "pv-economic-analysis",
+        "description": "Compute the levelized cost of energy, financial returns, and project economics for the photovoltaic system.",
+        "inputs": [
+          {"name": "system-design", "desc": "Total system size, component costs, installation costs"},
+          {"name": "energy-yield-prediction", "desc": "Annual energy production and degradation rate"}
+        ],
+        "outputs": [
+          {"name": "economic-analysis", "desc": "LCOE (cents/kWh), NPV, IRR, simple payback period, discounted payback period, cash flow table over the project lifetime"},
+          {"name": "sensitivity-analysis", "desc": "LCOE sensitivity to module price, discount rate, degradation rate, electricity price escalation"}
+        ],
+        "process": [
+          "LCOE = (sum of discounted lifetime costs) / (sum of discounted lifetime energy production). Costs include: CAPEX (modules, inverters, BOS, installation, permitting, interconnection), annual OPEX (O&M, insurance, land lease), and inverter replacement at year 12-15. Energy production degrades annually: E_year_n = E_year_1 * (1 - degradation_rate)^(n-1).",
+          "LCOE formula: LCOE = (CAPEX * CRF + OPEX_annual) / E_annual_year1 * (1 + d_deg) where CRF = r*(1+r)^N / ((1+r)^N - 1) is the capital recovery factor, r is the real discount rate, N is the project lifetime, and d_deg is the degradation correction factor.",
+          "For commercial projects: compute the after-tax IRR including the investment tax credit (ITC, currently 30% in the US), accelerated depreciation (MACRS 5-year), and the value of energy (retail rate for behind-the-meter, PPA rate for utility-scale). Cash flow: Year 0 = -CAPEX + ITC. Years 1-5: revenue - OPEX + depreciation tax shield. Years 6-N: revenue - OPEX.",
+          "Sensitivity analysis: vary each key parameter by +/- 20% and recompute LCOE. Plot a tornado diagram showing which parameters have the greatest impact. Typically: module price and discount rate dominate for utility-scale. Electricity price and self-consumption rate dominate for residential behind-the-meter.",
+          "Risk factors: module degradation faster than warranted (first-year LID can be 1-3% for PERC), inverter failure, extreme weather damage, curtailment (utility-mandated), PPA counterparty credit risk. Mitigation: bankable module warranty with independent engineering review, inverter service contract, insurance, PPA credit assessment."
+        ],
+        "tags": ["solar", "LCOE", "economics", "IRR", "financial-modeling"]
+      }
+    ]
+  },
+  {
+    "chain_name": "optical-metrology",
+    "description": "Design and execute optical metrology measurements: interferometry, profilometry, thin-film characterization, and dimensional measurement with uncertainty analysis.",
+    "domain": "photonics",
+    "tags": ["metrology", "interferometry", "profilometry", "measurement"],
+    "steps": [
+      {
+        "flow_name": "interferometric-measurement",
+        "description": "Measure surface form, flatness, or optical path difference using interferometry with phase-shifting analysis.",
+        "inputs": [
+          {"name": "measurement-target", "desc": "What to measure (surface flatness, radius of curvature, transmitted wavefront, surface roughness), target accuracy, surface type (reflective, transmissive), size"},
+          {"name": "environment-conditions", "desc": "Vibration level, temperature stability, air turbulence, cleanroom class"}
+        ],
+        "outputs": [
+          {"name": "interferometer-setup", "desc": "Interferometer type (Fizeau, Twyman-Green, Michelson), reference surface specification, light source (HeNe 633nm, tunable diode), camera resolution, phase-shifting method (PZT, wavelength tuning)"},
+          {"name": "surface-map", "desc": "Height map (nm RMS), Zernike decomposition (piston, tilt, power, astigmatism, coma, spherical removed as appropriate), PSD (power spectral density), surface statistics (Ra, RMS, PV)"}
+        ],
+        "process": [
+          "Select the interferometer type: Fizeau is the standard for flat and spherical surface testing (common path: reference and test beams share most of the optics, reducing sensitivity to vibration). Twyman-Green for testing lenses and prisms in transmission. Michelson for measuring surface roughness or thin-film step height.",
+          "Phase-shifting interferometry (PSI): introduce known phase steps between frames (typically 4 or 5 frames with pi/2 step). For 4-frame PSI, the phase at each pixel: phi(x,y) = atan2(I4-I2, I1-I3). The height is: h(x,y) = phi(x,y) * lambda / (4*pi) for reflection. Phase resolution: lambda/1000 is achievable (0.3nm for HeNe at 633nm).",
+          "For vibrating environments where PSI fails: use dynamic (simultaneous) phase measurement. Pixelated phase-mask: a micro-polarizer array in front of the camera captures 4 phase-shifted images simultaneously. Or carrier-fringe analysis: tilt the reference to introduce spatial fringes and extract the phase from a single frame using Fourier analysis. Lower accuracy than PSI but vibration-immune.",
+          "Remove systematic errors: subtract the reference surface map (measured by the three-flat test or calibrated against a master). Remove the alignment terms (piston, tilt) and power if testing flatness. Decompose the residual into Zernike polynomials to identify specific aberrations.",
+          "Uncertainty budget: sources include phase measurement noise (from camera noise and vibration), reference surface error, retrace error (ray tracing through the test optic), environmental effects (air index change: dn/dT_air = -1e-6 /K), and pixel calibration. Combine by root-sum-square for the total measurement uncertainty."
+        ],
+        "tags": ["metrology", "interferometry", "phase-shifting", "surface-form"]
+      },
+      {
+        "flow_name": "optical-profilometry",
+        "description": "Measure surface topography with vertical resolution from nm to mm using confocal, focus variation, or coherence scanning techniques.",
+        "inputs": [
+          {"name": "interferometer-setup", "desc": "If interferometry is used as a complementary technique, its parameters"},
+          {"name": "measurement-target", "desc": "Surface roughness range, lateral resolution, measurement area, sample material (reflective, transparent, rough)"}
+        ],
+        "outputs": [
+          {"name": "profilometer-setup", "desc": "Instrument type (confocal, focus variation, coherence scanning/white-light interferometry, stylus for comparison), objective magnification, vertical range and resolution, lateral resolution, scan speed"},
+          {"name": "topography-results", "desc": "3D surface map, line profiles, surface roughness parameters (Sa, Sq, Sz, Ssk, Sku per ISO 25178), bearing area curve, PSD"}
+        ],
+        "process": [
+          "Select the technique by the roughness range: stylus profilometry (contact, Ra 0.01-100um, highest dynamic range but 2D only and may scratch soft surfaces), confocal microscopy (optical, Sa 0.01-10um, 3D, good for steep slopes up to 70 degrees), coherence scanning interferometry (optical, Sa 0.1nm-100um, highest vertical resolution but fails on rough or steep surfaces), focus variation (optical, Sa 0.01-1000um, works on rough surfaces with diffuse reflection).",
+          "For confocal microscopy: the depth discrimination comes from the pinhole rejecting out-of-focus light. Axial resolution = 0.64 * lambda / (n - sqrt(n^2 - NA^2)). Lateral resolution = 0.61 * lambda / NA. Scan the objective vertically through the surface height range, recording the intensity at each pixel at each z-position. The z-position of maximum intensity is the surface height.",
+          "For coherence scanning interferometry (CSI / white-light interferometry): the short coherence length of the broadband source (10-20um for a white LED) produces fringes only when the path difference is near zero. Scan the objective vertically and record the fringe contrast at each pixel. The z-position of maximum fringe contrast (or the peak of the coherence envelope) gives the surface height. Vertical resolution: < 1nm.",
+          "Compute the surface roughness parameters per ISO 25178: Sa (arithmetic mean height), Sq (root mean square height), Sz (maximum height), Ssk (skewness: negative = valleys dominate, positive = peaks dominate), Sku (kurtosis: > 3 = sharp peaks/valleys, < 3 = rounded). Apply the appropriate spatial filter (S-filter and L-filter) to separate roughness from waviness and form.",
+          "Measurement uncertainty for optical profilometry: sources include vertical noise (from detector noise and vibration), lateral resolution (limits the ability to measure steep slopes: slope > arctan(lambda / (2 * lateral_resolution)) causes signal dropout), reference mirror flatness, scanner linearity, and environmental effects. For sub-nm measurements, temperature stability of 0.1K and vibration isolation to < 1um/s are needed."
+        ],
+        "tags": ["metrology", "profilometry", "confocal", "CSI", "roughness"]
+      },
+      {
+        "flow_name": "thin-film-and-dimensional-measurement",
+        "description": "Measure thin-film thickness and optical constants by ellipsometry and reflectometry, and dimensional features by optical coordinate measurement.",
+        "inputs": [
+          {"name": "profilometer-setup", "desc": "Complementary surface measurement if topography is part of the measurement scope"},
+          {"name": "measurement-target", "desc": "Film material and expected thickness range, substrate, number of layers; or dimensional features (line width, step height, overlay) to measure"}
+        ],
+        "outputs": [
+          {"name": "thin-film-results", "desc": "Film thickness (nm), refractive index n and extinction coefficient k vs wavelength (dispersion curve), uniformity map across the wafer or sample"},
+          {"name": "dimensional-results", "desc": "Critical dimensions with measurement uncertainty, overlay error, calibration traceability to SI through the reference standard"}
+        ],
+        "process": [
+          "Spectroscopic ellipsometry: measure the change in polarization state (psi and delta) of light reflected from the film stack at multiple wavelengths and angles of incidence. Psi = atan(|rp/rs|), Delta = phase(rp) - phase(rs) where rp and rs are the Fresnel reflection coefficients for p and s polarization.",
+          "Build an optical model of the film stack: substrate (known n,k), film 1 (thickness t1, dispersion model), film 2 (t2, dispersion model), etc. Common dispersion models: Cauchy (n = A + B/lambda^2 + C/lambda^4) for transparent films (SiO2, Si3N4). Tauc-Lorentz for absorbing films (a-Si, TiO2). Drude for metals (Au, Ag, Cu). Fit the model to the measured (psi, delta) vs wavelength by minimizing chi-squared.",
+          "For reflectometry (simpler, single measurement per point): measure the reflectance spectrum R(lambda) at normal incidence. The thin-film interference produces oscillations: the thickness determines the fringe spacing, and the refractive index determines the fringe amplitude. Fit the calculated reflectance from the Fresnel equations to the measured spectrum. Works well for single films > 50nm on known substrates.",
+          "Optical dimensional measurement: for line widths and overlay on semiconductor wafers, scatterometry (OCD: optical critical dimension) measures the diffraction signature from periodic structures. The diffraction efficiency vs wavelength and angle is compared to a rigorous coupled-wave analysis (RCWA) model of the grating profile (width, height, sidewall angle). Sub-nm sensitivity to profile changes.",
+          "Calibration traceability: for dimensional measurements, calibrate against a certified reference standard (NIST-traceable step height standard for z-axis, pitch standard for x-y). For ellipsometry, use a certified SiO2/Si reference wafer with known oxide thickness and Si optical constants. Report measurement uncertainty following GUM (Guide to the expression of Uncertainty in Measurement): combine type A (statistical) and type B (systematic) contributions."
+        ],
+        "tags": ["metrology", "ellipsometry", "thin-film", "scatterometry", "dimensional"]
+      }
+    ]
+  },
+  {
+    "chain_name": "display-technology-design",
+    "description": "Design a display system: select the display technology, design the pixel architecture, backlight or emission layer, driving electronics, and color management.",
+    "domain": "photonics",
+    "tags": ["display", "LCD", "OLED", "micro-LED", "color"],
+    "steps": [
+      {
+        "flow_name": "display-technology-selection",
+        "description": "Select the display technology and pixel architecture based on the application requirements: size, resolution, brightness, contrast, viewing angle, power, lifetime, and cost.",
+        "inputs": [
+          {"name": "display-requirements", "desc": "Diagonal size, resolution (PPI), peak brightness (nits), contrast ratio, color gamut, viewing angle, refresh rate, response time, power budget, operating temperature range, lifetime (hours to half-brightness)"},
+          {"name": "application-context", "desc": "Use case (smartphone, TV, automotive HUD, VR/AR headset, signage, avionics), ambient light conditions, user distance, form factor constraints"}
+        ],
+        "outputs": [
+          {"name": "technology-selection", "desc": "Display type (IPS-LCD, VA-LCD, AMOLED, micro-LED, LCoS, DLP), pixel structure (RGB stripe, PenTile, white OLED + CF), subpixel rendering if applicable"},
+          {"name": "performance-specification", "desc": "Achievable brightness, contrast (static and dynamic), color gamut coverage (% sRGB, DCI-P3, BT.2020), response time (GtG), power consumption estimate, expected lifetime"}
+        ],
+        "process": [
+          "For high contrast in dark environments (home theater, mobile): OLED or micro-LED. OLED contrast ratio is theoretically infinite (pixel off = 0 nits). OLED lifetime concern: blue emitter degradation limits lifetime to 30k-100k hours depending on brightness. Micro-LED eliminates the organic degradation but mass transfer yield is the manufacturing bottleneck.",
+          "For high brightness in ambient light (outdoor signage, automotive): LCD with high-brightness backlight (1000-3000 nits achievable), or micro-LED (can exceed 5000 nits). OLED peak brightness is limited by thermal and lifetime constraints (1000-1500 nits peak for HDR, 200-400 nits sustained for full-screen white).",
+          "LCD sub-types: IPS (In-Plane Switching): wide viewing angle (178 degrees), moderate contrast (1000:1 to 1500:1), good color accuracy. VA (Vertical Alignment): high native contrast (3000:1 to 6000:1), narrower viewing angle (shifts in gamma at off-axis), good for TVs. TN (Twisted Nematic): fastest response time (1ms GtG), lowest cost, but poor viewing angle and color. Use for gaming monitors where speed matters most.",
+          "For VR/AR headsets: high PPI (> 1000 PPI to avoid screen-door effect at close eye distance), low persistence (< 3ms illumination per frame to reduce motion blur), high refresh rate (90-120 Hz). Micro-OLED on Si backplane achieves > 3000 PPI. LCoS (liquid crystal on silicon) for AR waveguide coupling. Micro-LED for brightness in see-through AR.",
+          "Color gamut: sRGB = 72% of NTSC, covers standard web/photo content. DCI-P3 = 126% of sRGB, the cinema standard, now targeted by premium displays. BT.2020 = 152% of sRGB, the HDR/UHD standard, not fully achievable by current single-emitter technologies. Quantum dot enhancement (QD-LCD or QD-OLED) narrows the emission peaks to expand the gamut toward BT.2020."
+        ],
+        "tags": ["display", "LCD", "OLED", "micro-LED", "technology-selection"]
+      },
+      {
+        "flow_name": "display-optical-stack-design",
+        "description": "Design the optical layers of the display: backlight or emission layer, color filter, polarizer, and enhancement films for LCD; or emission stack and encapsulation for OLED.",
+        "inputs": [
+          {"name": "technology-selection", "desc": "Display type and pixel architecture"},
+          {"name": "performance-specification", "desc": "Target brightness, contrast, gamut, viewing angle"}
+        ],
+        "outputs": [
+          {"name": "optical-stack-design", "desc": "Layer-by-layer specification: for LCD (backlight: LED type, light guide, diffuser, prism sheets, DBEF, polarizer, LC cell, color filter, cover glass); for OLED (substrate, TFT, OLED stack: HIL/HTL/EML/ETL/EIL, cathode, thin-film encapsulation, cover)"},
+          {"name": "optical-performance", "desc": "Luminance uniformity, angular luminance distribution, spectral output, power efficiency (lumens per watt of electrical input)"}
+        ],
+        "process": [
+          "For LCD backlight: edge-lit (LEDs along one or more edges of a light guide plate) for slim form factor. Direct-lit (LED array behind the panel) for local dimming with high dynamic range. Mini-LED backlight: thousands of small (100-200um) LEDs for fine-grained local dimming (1000+ dimming zones) to approach OLED-like contrast.",
+          "Backlight optical films: diffuser (homogenizes the light from the light guide), BEF (brightness enhancement film: prismatic sheet that recycles off-axis light, increasing on-axis brightness by 1.5-1.8x), DBEF (dual brightness enhancement film: reflects one polarization back for recycling, increasing polarized output by 1.3-1.5x). Total backlight efficiency from LED to panel: 5-8% of electrical power becomes screen luminance.",
+          "For OLED emission stack: the organic layers are deposited by vacuum thermal evaporation (small molecule) or inkjet printing (polymer). Stack order: anode (ITO) / HIL (hole injection) / HTL (hole transport) / EML (emissive layer: host + dopant) / ETL (electron transport) / EIL (electron injection) / cathode (thin metal or transparent). For white OLED (WOLED) in large panels: stack blue + yellow-green emitters, use color filter array for RGB subpixels.",
+          "OLED encapsulation: organic materials degrade in the presence of moisture and oxygen. Thin-film encapsulation (TFE): alternating layers of inorganic (Al2O3, SiNx by ALD or PECVD) and organic (polymer by inkjet). WVTR (water vapor transmission rate) target: < 1e-6 g/m^2/day. Edge seal with desiccant for additional moisture protection.",
+          "For micro-LED: each pixel is an individual LED chip (InGaN for blue/green, AlInGaP for red). Mass transfer from epitaxial wafer to display backplane is the key manufacturing challenge. Approaches: pick-and-place (slow but proven for large pixels), stamp transfer (elastomer stamp picks up arrays), laser lift-off + fluidic self-assembly. Defect management: redundant sub-pixels or post-transfer repair by laser."
+        ],
+        "tags": ["display", "backlight", "OLED-stack", "encapsulation", "optical-films"]
+      },
+      {
+        "flow_name": "display-color-management",
+        "description": "Calibrate the display color output and implement color management: gamma correction, white point, gamut mapping, and uniformity compensation.",
+        "inputs": [
+          {"name": "optical-stack-design", "desc": "Spectral output of the display at each primary color"},
+          {"name": "optical-performance", "desc": "Measured luminance and chromaticity across the panel"}
+        ],
+        "outputs": [
+          {"name": "color-calibration", "desc": "3x3 color matrix (display RGB to XYZ), gamma curves per channel, white point (CCT and chromaticity), color accuracy (average and maximum delta-E 2000 across a test patch set)"},
+          {"name": "uniformity-compensation", "desc": "Per-pixel or per-zone gain and offset corrections to achieve luminance uniformity < 5% and chrominance uniformity < delta-u'v' 0.005 across the panel"}
+        ],
+        "process": [
+          "Characterize the display: measure the spectral power distribution of each primary (R, G, B) and white at multiple drive levels (0-255 in 8-bit). From the spectra, compute the CIE 1931 XYZ tristimulus values. The chromaticity of each primary defines the display's color gamut triangle on the CIE diagram.",
+          "Gamma calibration: the electro-optical transfer function (EOTF) relates the digital input value to the luminance output. Measure L(digital_value) for each channel. For sRGB: the EOTF is approximately gamma 2.2 with a linear segment near black. For HDR (PQ/ST 2084): the EOTF is perceptual quantizer, mapping code values to absolute luminance up to 10,000 nits. Build a 1D LUT per channel to correct the native gamma to the target EOTF.",
+          "White point: target D65 (6504K) for most applications. Measure the native white point and compute the 3x3 matrix to transform from display RGB to D65-referenced XYZ. Apply this matrix in the display controller or GPU. For cinema (DCI-P3): white point is D63 (6300K, slight green shift from D65).",
+          "Gamut mapping: when the source content gamut exceeds the display gamut, out-of-gamut colors must be mapped to the nearest displayable color. Perceptual mapping (compress the entire gamut proportionally) for photo/video. Relative colorimetric (clip only out-of-gamut, preserve in-gamut) for proofing. Compute delta-E 2000 for the 24 patches of the ColorChecker chart: target average delta-E < 2.0 for a calibrated display, < 1.0 for a reference monitor.",
+          "Uniformity compensation: measure the luminance and chromaticity at a grid of points (9x9 minimum) at full white and at 50% gray. Compute the correction gain and offset for each zone to equalize the output. For OLED: per-pixel aging compensation tracks the cumulative usage of each sub-pixel and adjusts the drive current to compensate for differential degradation (the blue sub-pixels degrade faster than red and green)."
+        ],
+        "tags": ["display", "color-management", "gamma", "calibration", "delta-E"]
+      }
+    ]
+  }
+]
